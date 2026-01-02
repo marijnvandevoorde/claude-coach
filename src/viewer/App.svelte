@@ -23,6 +23,11 @@
   let settingsOpen = $state(false);
   let selectedWorkout = $state<{ workout: Workout; day: TrainingDay } | null>(null);
 
+  // Apply theme to document
+  $effect(() => {
+    document.documentElement.setAttribute("data-theme", settings.theme);
+  });
+
   // Apply completed state to plan workouts
   $effect(() => {
     planData.weeks.forEach((week) => {

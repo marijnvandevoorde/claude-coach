@@ -1,6 +1,7 @@
 <script lang="ts">
   import {
     type Settings,
+    type Theme,
     recalculateHrZones,
     recalculatePowerZones,
     recalculateRunPaceZones,
@@ -32,6 +33,11 @@
     onChange(localSettings);
   }
 
+  function setTheme(theme: Theme) {
+    localSettings.theme = theme;
+    save();
+  }
+
   function recalcHr(sport: "run" | "bike") {
     localSettings[sport].hrZones = recalculateHrZones(localSettings[sport].lthr);
     save();
@@ -57,14 +63,14 @@
 
 <div class="modal-overlay active" onclick={handleBackdropClick} role="dialog" aria-modal="true">
   <div class="modal settings-modal">
-    <div class="modal-header">
-      <h2 class="modal-title">Settings</h2>
-      <button class="modal-close" onclick={onClose}>×</button>
-    </div>
+    <div class="modal-fixed-header">
+      <div class="modal-header">
+        <h2 class="modal-title">Settings</h2>
+        <button class="modal-close" onclick={onClose}>×</button>
+      </div>
 
-    <div class="modal-body">
       <div class="settings-tabs">
-        {#each [["general", "General"], ["run", "🏃 Run"], ["bike", "🚴 Bike"], ["swim", "🏊 Swim"], ["help", "How to Calculate"]] as [id, label]}
+        {#each [["general", "General"], ["run", "Run"], ["bike", "Bike"], ["swim", "Swim"]] as [id, label]}
           <button
             class="settings-tab"
             class:active={activeTab === id}
@@ -74,33 +80,65 @@
           </button>
         {/each}
       </div>
+    </div>
 
+    <div class="modal-body">
       <!-- General Tab -->
       {#if activeTab === "general"}
         <div class="settings-section">
+          <h4 class="settings-section-title">Appearance</h4>
+          <div class="theme-toggle">
+            <button
+              class="theme-btn"
+              class:active={localSettings.theme === "light"}
+              onclick={() => setTheme("light")}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5" />
+                <path
+                  d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+                />
+              </svg>
+              Light
+            </button>
+            <button
+              class="theme-btn"
+              class:active={localSettings.theme === "dark"}
+              onclick={() => setTheme("dark")}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+              Dark
+            </button>
+          </div>
+        </div>
+
+        <div class="settings-section">
           <h4 class="settings-section-title">Distance Units</h4>
           <div class="settings-row">
-            <span class="settings-label">🏊 Swim</span>
+            <span class="settings-label">Swim</span>
             <select class="settings-select" bind:value={localSettings.units.swim} onchange={save}>
               <option value="meters">Meters</option>
               <option value="yards">Yards</option>
             </select>
           </div>
           <div class="settings-row">
-            <span class="settings-label">🚴 Bike</span>
+            <span class="settings-label">Bike</span>
             <select class="settings-select" bind:value={localSettings.units.bike} onchange={save}>
               <option value="kilometers">Kilometers</option>
               <option value="miles">Miles</option>
             </select>
           </div>
           <div class="settings-row">
-            <span class="settings-label">🏃 Run</span>
+            <span class="settings-label">Run</span>
             <select class="settings-select" bind:value={localSettings.units.run} onchange={save}>
               <option value="kilometers">Kilometers</option>
               <option value="miles">Miles</option>
             </select>
           </div>
         </div>
+
         <div class="settings-section">
           <h4 class="settings-section-title">Calendar</h4>
           <div class="settings-row">
@@ -120,7 +158,7 @@
       <!-- Run Tab -->
       {#if activeTab === "run"}
         <div class="settings-section">
-          <h4 class="settings-section-title">Run Heart Rate Zones</h4>
+          <h4 class="settings-section-title">Heart Rate Zones</h4>
           <div class="threshold-row">
             <span class="threshold-label">Run LTHR</span>
             <input
@@ -155,9 +193,21 @@
               </div>
             {/each}
           </div>
+          <details class="help-details">
+            <summary>How to find your LTHR</summary>
+            <div class="help-content">
+              <p><strong>30-Minute Test:</strong></p>
+              <ol>
+                <li>Warm up for 15 minutes</li>
+                <li>Run as hard as you can sustain for 30 minutes</li>
+                <li>Your average HR for the last 20 minutes is your LTHR</li>
+              </ol>
+            </div>
+          </details>
         </div>
+
         <div class="settings-section">
-          <h4 class="settings-section-title">Run Pace Zones</h4>
+          <h4 class="settings-section-title">Pace Zones</h4>
           <div class="threshold-row">
             <span class="threshold-label">Threshold Pace</span>
             <input
@@ -185,13 +235,25 @@
               </div>
             {/each}
           </div>
+          <details class="help-details">
+            <summary>How to find your Threshold Pace</summary>
+            <div class="help-content">
+              <p><strong>Option 1: Race-Based</strong></p>
+              <ul>
+                <li>Recent 5K race pace + 15-20 sec/km</li>
+                <li>Recent 10K race pace + 5-10 sec/km</li>
+              </ul>
+              <p><strong>Option 2: 30-Minute Test</strong></p>
+              <p>Run 30 minutes at max sustainable effort. Average pace = threshold.</p>
+            </div>
+          </details>
         </div>
       {/if}
 
       <!-- Bike Tab -->
       {#if activeTab === "bike"}
         <div class="settings-section">
-          <h4 class="settings-section-title">Bike Heart Rate Zones</h4>
+          <h4 class="settings-section-title">Heart Rate Zones</h4>
           <div class="threshold-row">
             <span class="threshold-label">Bike LTHR</span>
             <input
@@ -226,9 +288,22 @@
               </div>
             {/each}
           </div>
+          <details class="help-details">
+            <summary>How to find your LTHR</summary>
+            <div class="help-content">
+              <p><strong>30-Minute Test:</strong></p>
+              <ol>
+                <li>Warm up for 15 minutes</li>
+                <li>Bike as hard as you can sustain for 30 minutes</li>
+                <li>Your average HR for the last 20 minutes is your LTHR</li>
+              </ol>
+              <p class="help-note">Bike LTHR is typically 5-10 bpm lower than run.</p>
+            </div>
+          </details>
         </div>
+
         <div class="settings-section">
-          <h4 class="settings-section-title">Bike Power Zones</h4>
+          <h4 class="settings-section-title">Power Zones</h4>
           <div class="threshold-row">
             <span class="threshold-label">FTP (watts)</span>
             <input
@@ -263,15 +338,29 @@
               </div>
             {/each}
           </div>
+          <details class="help-details">
+            <summary>How to find your FTP</summary>
+            <div class="help-content">
+              <p><strong>20-Minute Test:</strong></p>
+              <ol>
+                <li>Warm up for 20 minutes including a few hard efforts</li>
+                <li>Ride as hard as you can sustain for 20 minutes</li>
+                <li>FTP = Average power × 0.95</li>
+              </ol>
+              <p>
+                <strong>Ramp Test:</strong> Most trainer apps (Zwift, TrainerRoad) have built-in FTP tests.
+              </p>
+            </div>
+          </details>
         </div>
       {/if}
 
       <!-- Swim Tab -->
       {#if activeTab === "swim"}
         <div class="settings-section">
-          <h4 class="settings-section-title">Swim Pace Zones</h4>
+          <h4 class="settings-section-title">Pace Zones</h4>
           <div class="threshold-row">
-            <span class="threshold-label">CSS (Critical Swim Speed)</span>
+            <span class="threshold-label">CSS (per 100m)</span>
             <input
               type="text"
               class="threshold-input"
@@ -298,75 +387,25 @@
               </div>
             {/each}
           </div>
+          <details class="help-details">
+            <summary>How to find your CSS</summary>
+            <div class="help-content">
+              <p><strong>CSS Test (Critical Swim Speed):</strong></p>
+              <ol>
+                <li>Warm up for 10 minutes</li>
+                <li>Swim 400m all-out, record time (T400)</li>
+                <li>Rest 5-10 minutes</li>
+                <li>Swim 200m all-out, record time (T200)</li>
+                <li>CSS = (T400 - T200) ÷ 2 = pace per 100m</li>
+              </ol>
+              <p>
+                <strong>Example:</strong> 400m in 6:40 (400s), 200m in 3:00 (180s)<br />
+                CSS = (400 - 180) ÷ 2 = 110 sec/100m = 1:50/100m
+              </p>
+            </div>
+          </details>
         </div>
       {/if}
-
-      <!-- Help Tab -->
-      {#if activeTab === "help"}
-        <div class="settings-section">
-          <h4 class="settings-section-title">How to Find Your Lactate Threshold HR (LTHR)</h4>
-          <div class="help-content">
-            <p><strong>30-Minute Test (Recommended):</strong></p>
-            <ol>
-              <li>Warm up for 15 minutes</li>
-              <li>Run or bike as hard as you can sustain for 30 minutes</li>
-              <li>Your average HR for the last 20 minutes is your LTHR</li>
-            </ol>
-            <p class="settings-note">
-              Run and bike LTHR are usually different. Bike LTHR is typically 5-10 bpm lower than
-              run.
-            </p>
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <h4 class="settings-section-title">How to Find Your FTP (Functional Threshold Power)</h4>
-          <div class="help-content">
-            <p><strong>20-Minute Test:</strong></p>
-            <ol>
-              <li>Warm up for 20 minutes including a few hard efforts</li>
-              <li>Ride as hard as you can sustain for 20 minutes</li>
-              <li>FTP = Average power × 0.95</li>
-            </ol>
-            <p>
-              <strong>Ramp Test:</strong> Most trainer apps (Zwift, TrainerRoad) have built-in FTP tests.
-            </p>
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <h4 class="settings-section-title">How to Find Your CSS (Critical Swim Speed)</h4>
-          <div class="help-content">
-            <p><strong>CSS Test:</strong></p>
-            <ol>
-              <li>Warm up for 10 minutes</li>
-              <li>Swim 400m all-out, record time (T400)</li>
-              <li>Rest 5-10 minutes</li>
-              <li>Swim 200m all-out, record time (T200)</li>
-              <li>CSS = (T400 - T200) ÷ 2 = pace per 100m</li>
-            </ol>
-            <p>
-              <strong>Example:</strong> 400m in 6:40 (400s), 200m in 3:00 (180s)<br />
-              CSS = (400 - 180) ÷ 2 = 110 sec/100m = 1:50/100m
-            </p>
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <h4 class="settings-section-title">How to Find Your Threshold Run Pace</h4>
-          <div class="help-content">
-            <p><strong>Option 1: Race-Based</strong></p>
-            <ul>
-              <li>Recent 5K race pace + 15-20 sec/km</li>
-              <li>Recent 10K race pace + 5-10 sec/km</li>
-            </ul>
-            <p><strong>Option 2: 30-Minute Test</strong></p>
-            <p>Run 30 minutes at max sustainable effort. Average pace ≈ threshold.</p>
-          </div>
-        </div>
-      {/if}
-
-      <p class="settings-note">All changes are auto-saved.</p>
     </div>
   </div>
 </div>
@@ -400,11 +439,18 @@
     max-height: 90vh;
     overflow: hidden;
     border: 1px solid var(--border-medium);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-fixed-header {
+    flex-shrink: 0;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-subtle);
   }
 
   .modal-header {
-    padding: 1.5rem 2rem;
-    border-bottom: 1px solid var(--border-subtle);
+    padding: 1.5rem 2rem 1rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -435,29 +481,20 @@
     color: var(--text-primary);
   }
 
-  .modal-body {
-    padding: 1.5rem 2rem;
-    overflow-y: auto;
-    max-height: calc(90vh - 80px);
-  }
-
   .settings-tabs {
     display: flex;
     gap: 0.25rem;
-    margin-bottom: 1.5rem;
-    border-bottom: 1px solid var(--border-subtle);
-    padding-bottom: 0.5rem;
-    flex-wrap: wrap;
+    padding: 0 2rem 1rem;
   }
 
   .settings-tab {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.8rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
     font-weight: 500;
     border: none;
     background: transparent;
     color: var(--text-muted);
-    border-radius: 6px;
+    border-radius: 8px;
     transition: all var(--transition-fast);
   }
 
@@ -471,6 +508,12 @@
     color: var(--bg-primary);
   }
 
+  .modal-body {
+    padding: 1.5rem 2rem 2rem;
+    overflow-y: auto;
+    flex: 1;
+  }
+
   .settings-section {
     margin-bottom: 1.5rem;
     padding-bottom: 1.5rem;
@@ -479,6 +522,8 @@
 
   .settings-section:last-of-type {
     border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
   }
 
   .settings-section-title {
@@ -487,6 +532,44 @@
     letter-spacing: 0.1em;
     color: var(--text-muted);
     margin-bottom: 1rem;
+  }
+
+  /* Theme toggle */
+  .theme-toggle {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .theme-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-medium);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all var(--transition-fast);
+  }
+
+  .theme-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .theme-btn:hover {
+    border-color: var(--text-muted);
+    color: var(--text-primary);
+  }
+
+  .theme-btn.active {
+    background: var(--accent);
+    color: var(--bg-primary);
+    border-color: var(--accent);
   }
 
   .settings-row {
@@ -631,10 +714,37 @@
     border-color: var(--accent);
   }
 
-  .help-content {
-    font-size: 0.85rem;
+  /* Help details */
+  .help-details {
+    margin-top: 1rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .help-details summary {
+    padding: 0.75rem 1rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    cursor: pointer;
+    background: var(--bg-tertiary);
+    transition: all var(--transition-fast);
+  }
+
+  .help-details summary:hover {
     color: var(--text-secondary);
-    line-height: 1.7;
+  }
+
+  .help-details[open] summary {
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .help-content {
+    padding: 1rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
   }
 
   .help-content ol,
@@ -650,10 +760,12 @@
     margin-bottom: 0.5rem;
   }
 
-  .settings-note {
-    font-size: 0.75rem;
-    color: var(--text-muted);
+  .help-content p:last-child {
+    margin-bottom: 0;
+  }
+
+  .help-note {
     font-style: italic;
-    margin-top: 1rem;
+    color: var(--text-muted);
   }
 </style>

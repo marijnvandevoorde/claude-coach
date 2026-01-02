@@ -21,7 +21,10 @@ export interface PaceZone {
   offset?: number;
 }
 
+export type Theme = "dark" | "light";
+
 export interface Settings {
+  theme: Theme;
   units: {
     swim: "meters" | "yards";
     bike: "kilometers" | "miles";
@@ -48,6 +51,7 @@ export interface Settings {
 }
 
 const defaultSettings: Settings = {
+  theme: "dark",
   units: { swim: "meters", bike: "kilometers", run: "kilometers" },
   firstDayOfWeek: "monday",
   run: {
@@ -168,6 +172,7 @@ export function loadSettings(): Settings {
   const saved = localStorage.getItem(storageKey);
   if (saved) {
     const userSettings = JSON.parse(saved);
+    if (userSettings.theme) settings.theme = userSettings.theme;
     if (userSettings.units) settings.units = { ...settings.units, ...userSettings.units };
     if (userSettings.firstDayOfWeek) settings.firstDayOfWeek = userSettings.firstDayOfWeek;
     if (userSettings.run) settings.run = { ...settings.run, ...userSettings.run };

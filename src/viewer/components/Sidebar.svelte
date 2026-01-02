@@ -66,8 +66,18 @@
   const progressOffset = $derived(377 - (stats().progress / 100) * 377);
   const daysToEvent = $derived(getDaysToEvent(plan.meta.eventDate));
 
-  function setSportFilter(sport: string) {
-    onFilterChange({ ...filters, sport });
+  const availableSports = $derived(
+    Object.entries(stats().sportHours)
+      .filter(([_, h]) => h > 0)
+      .map(([sport]) => sport)
+  );
+
+  function toggleSportFilter(sport: string) {
+    if (filters.sport === sport) {
+      onFilterChange({ ...filters, sport: "all" });
+    } else {
+      onFilterChange({ ...filters, sport });
+    }
   }
 
   function setStatusFilter(status: string) {
@@ -127,38 +137,33 @@
   </div>
 
   <div class="sport-stats">
-    {#each Object.entries(stats().sportHours).filter(([_, h]) => h > 0) as [sport, hours]}
-      <div class="sport-stat">
+    <div class="sport-stats-header">
+      <h3>Filter by Sport</h3>
+      {#if filters.sport !== "all"}
+        <button class="clear-filter" onclick={() => onFilterChange({ ...filters, sport: "all" })}>
+          Clear
+        </button>
+      {/if}
+    </div>
+    {#each availableSports as sport}
+      <button
+        class="sport-stat {sport}"
+        class:active={filters.sport === sport}
+        onclick={() => toggleSportFilter(sport)}
+      >
         <div class="sport-icon {sport}">{getSportIcon(sport as Sport)}</div>
         <div class="sport-info">
           <div class="sport-name">{sport.charAt(0).toUpperCase() + sport.slice(1)}</div>
-          <div class="sport-hours">{hours.toFixed(1)} hours</div>
+          <div class="sport-hours">{stats().sportHours[sport].toFixed(1)} hours</div>
         </div>
-      </div>
+        {#if filters.sport === sport}
+          <div class="check-icon">✓</div>
+        {/if}
+      </button>
     {/each}
   </div>
 
   <div class="filters-section">
-    <h3>Filter by Sport</h3>
-    <div class="filter-group">
-      <button
-        class="filter-chip"
-        class:active={filters.sport === "all"}
-        onclick={() => setSportFilter("all")}
-      >
-        All
-      </button>
-      {#each ["swim", "bike", "run", "brick", "strength", "race"] as sport}
-        <button
-          class="filter-chip {sport}"
-          class:active={filters.sport === sport}
-          onclick={() => setSportFilter(sport)}
-        >
-          {sport.charAt(0).toUpperCase() + sport.slice(1)}
-        </button>
-      {/each}
-    </div>
-
     <h3>Filter by Status</h3>
     <div class="filter-group">
       {#each [["all", "All"], ["pending", "Pending"], ["completed", "Completed"]] as [value, label]}
@@ -175,10 +180,10 @@
 
   <button class="settings-btn" onclick={onSettingsClick}>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <circle cx="12" cy="12" r="3" />
       <path
-        d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+        d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
       />
+      <circle cx="12" cy="12" r="3" />
     </svg>
     Settings
   </button>
@@ -326,7 +331,37 @@
   .sport-stats {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .sport-stats-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.25rem;
+  }
+
+  .sport-stats-header h3 {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+  }
+
+  .clear-filter {
+    font-size: 0.7rem;
+    color: var(--accent);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+  }
+
+  .clear-filter:hover {
+    text-decoration: underline;
   }
 
   .sport-stat {
@@ -337,6 +372,44 @@
     background: var(--bg-tertiary);
     border-radius: 10px;
     border: 1px solid var(--border-subtle);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    width: 100%;
+    text-align: left;
+  }
+
+  .sport-stat:hover {
+    border-color: var(--border-medium);
+    transform: translateX(4px);
+  }
+
+  .sport-stat.active {
+    border-color: var(--text-muted);
+  }
+
+  .sport-stat.active.swim {
+    border-color: var(--swim);
+    background: var(--swim-glow);
+  }
+  .sport-stat.active.bike {
+    border-color: var(--bike);
+    background: var(--bike-glow);
+  }
+  .sport-stat.active.run {
+    border-color: var(--run);
+    background: var(--run-glow);
+  }
+  .sport-stat.active.strength {
+    border-color: var(--strength);
+    background: var(--strength-glow);
+  }
+  .sport-stat.active.brick {
+    border-color: var(--brick);
+    background: var(--brick-glow);
+  }
+  .sport-stat.active.race {
+    border-color: var(--race);
+    background: var(--race-glow);
   }
 
   .sport-icon {
@@ -347,6 +420,7 @@
     align-items: center;
     justify-content: center;
     font-size: 1.1rem;
+    flex-shrink: 0;
   }
 
   .sport-icon.swim {
@@ -384,6 +458,12 @@
     color: var(--text-muted);
   }
 
+  .check-icon {
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
   /* Filters */
   .filters-section h3 {
     font-size: 0.7rem;
@@ -397,7 +477,6 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    margin-bottom: 1rem;
   }
 
   .filter-chip {
@@ -420,32 +499,6 @@
     background: var(--text-primary);
     color: var(--bg-primary);
     border-color: var(--text-primary);
-  }
-
-  .filter-chip.swim.active {
-    background: var(--swim);
-    border-color: var(--swim);
-  }
-  .filter-chip.bike.active {
-    background: var(--bike);
-    border-color: var(--bike);
-  }
-  .filter-chip.run.active {
-    background: var(--run);
-    border-color: var(--run);
-  }
-  .filter-chip.strength.active {
-    background: var(--strength);
-    border-color: var(--strength);
-  }
-  .filter-chip.brick.active {
-    background: var(--brick);
-    border-color: var(--brick);
-  }
-  .filter-chip.race.active {
-    background: var(--race);
-    border-color: var(--race);
-    color: var(--bg-primary);
   }
 
   /* Settings Button */
