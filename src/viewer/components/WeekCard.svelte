@@ -275,9 +275,9 @@
   }
 
   .add-workout-btn:hover {
-    background: var(--bg-tertiary);
-    border-color: var(--accent);
-    color: var(--accent);
+    background: var(--bg-elevated);
+    border-color: var(--border-medium);
+    color: var(--text-primary);
   }
 
   .add-workout-btn svg {

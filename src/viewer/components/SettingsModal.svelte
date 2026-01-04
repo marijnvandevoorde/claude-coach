@@ -57,6 +57,78 @@
     localSettings.swim.paceZones = recalculateSwimPaceZones(localSettings.swim.css);
     save();
   }
+
+  // Data import/export
+  let importStatus = $state<{ message: string; isError: boolean } | null>(null);
+  let fileInput: HTMLInputElement;
+
+  function exportData() {
+    const data: Record<string, string> = {};
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key) {
+        data[key] = localStorage.getItem(key) || "";
+      }
+    }
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `training-plan-backup-${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  function handleImportClick() {
+    fileInput?.click();
+  }
+
+  async function handleFileSelect(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+
+      if (typeof data !== "object" || data === null) {
+        throw new Error("Invalid file format");
+      }
+
+      // Clear and restore localStorage
+      localStorage.clear();
+      for (const [key, value] of Object.entries(data)) {
+        if (typeof value === "string") {
+          localStorage.setItem(key, value);
+        }
+      }
+
+      importStatus = { message: "Data restored! Reloading...", isError: false };
+      setTimeout(() => window.location.reload(), 1500);
+    } catch {
+      importStatus = {
+        message: "Could not read file. Make sure it's a valid backup.",
+        isError: true,
+      };
+      setTimeout(() => (importStatus = null), 4000);
+    }
+
+    // Reset file input
+    input.value = "";
+  }
+
+  function clearAllData() {
+    if (
+      confirm("This will delete all your settings, completed workouts, and changes. Are you sure?")
+    ) {
+      localStorage.clear();
+      window.location.reload();
+    }
+  }
 </script>
 
 <svelte:window on:keydown={handleKeydown} />
@@ -70,7 +142,7 @@
       </div>
 
       <div class="settings-tabs">
-        {#each [["general", "General"], ["run", "Run"], ["bike", "Bike"], ["swim", "Swim"]] as [id, label]}
+        {#each [["general", "General"], ["run", "Run"], ["bike", "Bike"], ["swim", "Swim"], ["data", "Data"]] as [id, label]}
           <button
             class="settings-tab"
             class:active={activeTab === id}
@@ -406,6 +478,96 @@
           </details>
         </div>
       {/if}
+
+      <!-- Data Tab -->
+      {#if activeTab === "data"}
+        <div class="settings-section">
+          <h4 class="settings-section-title">Your Data</h4>
+          <div class="data-explainer">
+            <p>
+              Your training data is stored <strong>only on this device</strong>, in your browser's
+              local storage. This includes your settings, completed workouts, and any changes you've
+              made to your plan.
+            </p>
+            <p>
+              If you clear your browser data, switch browsers, or use a different device, your
+              progress won't be there. Use the backup feature below to save your data and restore it
+              later.
+            </p>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <h4 class="settings-section-title">Backup & Restore</h4>
+
+          <div class="data-action">
+            <div class="data-action-info">
+              <span class="data-action-title">Export Backup</span>
+              <span class="data-action-desc"
+                >Download a file containing all your data. Keep it somewhere safe.</span
+              >
+            </div>
+            <button class="data-btn export" onclick={exportData}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Export
+            </button>
+          </div>
+
+          <div class="data-action">
+            <div class="data-action-info">
+              <span class="data-action-title">Import Backup</span>
+              <span class="data-action-desc"
+                >Restore from a backup file. This will replace your current data.</span
+              >
+            </div>
+            <button class="data-btn import" onclick={handleImportClick}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+              Import
+            </button>
+            <input
+              type="file"
+              accept=".json"
+              bind:this={fileInput}
+              onchange={handleFileSelect}
+              style="display: none"
+            />
+          </div>
+
+          {#if importStatus}
+            <div class="import-status" class:error={importStatus.isError}>
+              {importStatus.message}
+            </div>
+          {/if}
+        </div>
+
+        <div class="settings-section">
+          <h4 class="settings-section-title">Danger Zone</h4>
+          <div class="data-action danger">
+            <div class="data-action-info">
+              <span class="data-action-title">Clear All Data</span>
+              <span class="data-action-desc"
+                >Delete everything and start fresh. This cannot be undone.</span
+              >
+            </div>
+            <button class="data-btn danger" onclick={clearAllData}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path
+                  d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                />
+              </svg>
+              Clear
+            </button>
+          </div>
+        </div>
+      {/if}
     </div>
   </div>
 </div>
@@ -418,12 +580,14 @@
     backdrop-filter: blur(8px);
     z-index: 1000;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     padding: 2rem;
+    padding-top: 5vh;
     opacity: 0;
     visibility: hidden;
     transition: all var(--transition-normal);
+    overflow-y: auto;
   }
 
   .modal-overlay.active {
@@ -436,11 +600,12 @@
     border-radius: 20px;
     max-width: 640px;
     width: 100%;
-    max-height: 90vh;
+    max-height: calc(100vh - 10vh - 4rem);
     overflow: hidden;
     border: 1px solid var(--border-medium);
     display: flex;
     flex-direction: column;
+    flex-shrink: 0;
   }
 
   .modal-fixed-header {
@@ -562,7 +727,8 @@
   }
 
   .theme-btn:hover {
-    border-color: var(--text-muted);
+    background: var(--bg-elevated);
+    border-color: var(--border-medium);
     color: var(--text-primary);
   }
 
@@ -767,5 +933,117 @@
   .help-note {
     font-style: italic;
     color: var(--text-muted);
+  }
+
+  /* Data tab */
+  .data-explainer {
+    background: var(--bg-tertiary);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+  }
+
+  .data-explainer p {
+    margin-bottom: 0.75rem;
+  }
+
+  .data-explainer p:last-child {
+    margin-bottom: 0;
+  }
+
+  .data-action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--bg-tertiary);
+    border-radius: 10px;
+    margin-bottom: 0.75rem;
+  }
+
+  .data-action:last-of-type {
+    margin-bottom: 0;
+  }
+
+  .data-action.danger {
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+
+  .data-action-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .data-action-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .data-action-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  .data-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-medium);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+  }
+
+  .data-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .data-btn:hover {
+    background: var(--bg-elevated);
+    border-color: var(--border-medium);
+    color: var(--text-primary);
+  }
+
+  .data-btn.export:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg-primary);
+  }
+
+  .data-btn.danger {
+    border-color: rgba(239, 68, 68, 0.5);
+    color: #ef4444;
+  }
+
+  .data-btn.danger:hover {
+    background: #ef4444;
+    border-color: #ef4444;
+    color: white;
+  }
+
+  .import-status {
+    margin-top: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    text-align: center;
+    background: var(--accent-glow);
+    color: var(--accent);
+  }
+
+  .import-status.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
   }
 </style>

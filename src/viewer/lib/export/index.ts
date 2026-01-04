@@ -5,6 +5,7 @@
  * Supports:
  * - ZWO (Zwift workouts) - bike/run only
  * - FIT (Garmin workouts) - all sports
+ * - MRC (ERG/MRC) - bike only, for indoor trainers
  * - ICS (iCalendar) - full plan calendar events
  */
 
@@ -12,9 +13,10 @@ import type { Workout, TrainingPlan, TrainingDay, Sport } from "../../../schema/
 import type { Settings } from "../../stores/settings.js";
 import { generateZwo, isZwoSupported } from "./zwo.js";
 import { generateFit, isFitSupported } from "./fit.js";
+import { generateMrc, isErgSupported } from "./erg.js";
 import { generateIcs } from "./ics.js";
 
-export type ExportFormat = "zwo" | "fit" | "ics";
+export type ExportFormat = "zwo" | "fit" | "mrc" | "ics";
 
 export interface ExportResult {
   success: boolean;
@@ -69,6 +71,10 @@ export function getAvailableFormats(sport: Sport): ExportFormat[] {
     formats.push("fit");
   }
 
+  if (isErgSupported(sport)) {
+    formats.push("mrc");
+  }
+
   return formats;
 }
 
@@ -112,6 +118,20 @@ export async function exportWorkout(
         return { success: true, filename };
       }
 
+      case "mrc": {
+        if (!isErgSupported(workout.sport)) {
+          return {
+            success: false,
+            filename: "",
+            error: `MRC export only supports bike workouts`,
+          };
+        }
+        const mrcContent = generateMrc(workout, settings);
+        const filename = `${safeName}.mrc`;
+        downloadFile(mrcContent, filename, "text/plain");
+        return { success: true, filename };
+      }
+
       default:
         return {
           success: false,
@@ -148,12 +168,12 @@ export function exportPlanToCalendar(plan: TrainingPlan): ExportResult {
 }
 
 /**
- * Export all workouts in the plan to ZWO/FIT files (as a batch download)
+ * Export all workouts in the plan to ZWO/FIT/MRC files (as a batch download)
  * For each workout, generates the appropriate file format
  */
 export async function exportAllWorkouts(
   plan: TrainingPlan,
-  format: "zwo" | "fit",
+  format: "zwo" | "fit" | "mrc",
   settings: Settings
 ): Promise<{ exported: number; skipped: number; errors: string[] }> {
   const errors: string[] = [];
@@ -178,6 +198,10 @@ export async function exportAllWorkouts(
           skipped++;
           continue;
         }
+        if (format === "mrc" && !isErgSupported(workout.sport)) {
+          skipped++;
+          continue;
+        }
 
         const result = await exportWorkout(workout, format, settings);
         if (result.success) {
@@ -198,3 +222,4 @@ export async function exportAllWorkouts(
 // Re-export format-specific helpers
 export { isZwoSupported } from "./zwo.js";
 export { isFitSupported, isFitSdkAvailable } from "./fit.js";
+export { isErgSupported } from "./erg.js";

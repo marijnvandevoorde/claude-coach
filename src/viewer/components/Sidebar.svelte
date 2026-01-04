@@ -179,6 +179,16 @@
     </div>
   </div>
 
+  <button class="settings-btn" onclick={onSettingsClick}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path
+        d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+      />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+    Settings
+  </button>
+
   <div class="sport-stats">
     <div class="sport-stats-header">
       <h3>Filter by Sport</h3>
@@ -265,21 +275,18 @@
                 <div class="export-desc">All workout types</div>
               </div>
             </button>
+            <button class="export-option" onclick={() => handleExportAllWorkouts("mrc")}>
+              <span class="export-icon">E</span>
+              <div>
+                <div class="export-name">ERG/MRC (.mrc)</div>
+                <div class="export-desc">Bike workouts only</div>
+              </div>
+            </button>
           </div>
         {/if}
       </div>
     </div>
   </div>
-
-  <button class="settings-btn" onclick={onSettingsClick}>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path
-        d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
-      />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-    Settings
-  </button>
 </aside>
 
 <style>
@@ -397,12 +404,6 @@
     padding: 1rem;
     text-align: center;
     border: 1px solid var(--border-subtle);
-    transition: all var(--transition-normal);
-  }
-
-  .stat-card:hover {
-    border-color: var(--border-medium);
-    transform: translateY(-2px);
   }
 
   .stat-value {
@@ -472,8 +473,8 @@
   }
 
   .sport-stat:hover {
+    background: var(--bg-elevated);
     border-color: var(--border-medium);
-    transform: translateX(4px);
   }
 
   .sport-stat.active {
@@ -584,7 +585,8 @@
   }
 
   .filter-chip:hover {
-    border-color: var(--text-muted);
+    background: var(--bg-elevated);
+    border-color: var(--border-medium);
     color: var(--text-primary);
   }
 
@@ -609,13 +611,12 @@
     font-size: 0.85rem;
     font-weight: 500;
     transition: all var(--transition-fast);
-    margin-top: auto;
   }
 
   .settings-btn:hover {
     background: var(--bg-elevated);
     color: var(--text-primary);
-    border-color: var(--text-muted);
+    border-color: var(--border-medium);
   }
 
   .settings-btn svg {
@@ -681,7 +682,7 @@
   .export-btn:hover {
     background: var(--bg-elevated);
     color: var(--text-primary);
-    border-color: var(--accent);
+    border-color: var(--border-medium);
   }
 
   .export-btn svg {

@@ -7,6 +7,7 @@
     getAvailableFormats,
     isZwoSupported,
     isFitSupported,
+    isErgSupported,
     type ExportFormat,
   } from "../lib/export/index.js";
 
@@ -351,6 +352,15 @@
                       </div>
                     </button>
                   {/if}
+                  {#if isErgSupported(displayWorkout.sport)}
+                    <button class="export-option" onclick={() => handleExport("mrc")}>
+                      <span class="export-icon">E</span>
+                      <div class="export-info">
+                        <div class="export-name">ERG/MRC (.mrc)</div>
+                        <div class="export-desc">For TrainerRoad, etc.</div>
+                      </div>
+                    </button>
+                  {/if}
                 </div>
               {/if}
             </div>
@@ -684,9 +694,9 @@
   }
 
   .icon-btn.edit:hover {
-    background: var(--accent-glow);
-    border-color: var(--accent);
-    color: var(--accent);
+    background: var(--bg-elevated);
+    border-color: var(--border-medium);
+    color: var(--text-primary);
   }
 
   .complete-btn {
@@ -816,9 +826,9 @@
   }
 
   .icon-btn.export:hover {
-    background: var(--accent-glow);
-    border-color: var(--accent);
-    color: var(--accent);
+    background: var(--bg-elevated);
+    border-color: var(--border-medium);
+    color: var(--text-primary);
   }
 
   .export-menu {
