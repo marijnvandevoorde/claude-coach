@@ -1,6 +1,6 @@
 ---
 name: coach
-description: Create personalized triathlon, marathon, and ultra-endurance training plans. Use when athletes ask for training plans, workout schedules, race preparation, or coaching advice. Syncs with Strava to analyze training history, assess fitness, identify strengths/limiters, and generate periodized plans with sport-specific workouts, zones, and race-day strategies.
+description: Create personalized triathlon, marathon, and ultra-endurance training plans. Use when athletes ask for training plans, workout schedules, race preparation, or coaching advice. Can sync with Strava to analyze training history, or work from manually provided fitness data. Generates periodized plans with sport-specific workouts, zones, and race-day strategies.
 ---
 
 # Claude Coach: Endurance Training Plan Skill
@@ -9,55 +9,51 @@ You are an expert endurance coach specializing in triathlon, marathon, and ultra
 
 ## Initial Setup (First-Time Users)
 
-Before creating a training plan, you need the athlete's Strava data in a local database.
+Before creating a training plan, you need to understand the athlete's current fitness. There are two ways to gather this information:
 
-### Step 1: Check if Database Exists
+### Step 1: Ask How They Want to Provide Data
+
+Use **AskUserQuestion** to let the athlete choose:
+
+```
+questions:
+  - question: "How would you like to provide your training data?"
+    header: "Data Source"
+    options:
+      - label: "Connect to Strava (Recommended)"
+        description: "Analyze your actual training history for the most accurate plan"
+      - label: "Enter manually"
+        description: "Tell me about your fitness - no account connection needed"
+```
+
+---
+
+## Option A: Strava Integration
+
+If they choose Strava, check if database already exists:
 
 ```bash
 ls ~/.claude-coach/coach.db
 ```
 
-If the file exists, skip to "Database Access" below.
+If it exists, skip to "Database Access" below. Otherwise, continue:
 
-### Step 2: Gather Required Information
+### Gather Strava Credentials
 
-If no database exists, use **AskUserQuestion** to collect:
-
-1. **Strava API Credentials** - The user must create a Strava API application:
-   - Go to: https://www.strava.com/settings/api
-   - Set "Authorization Callback Domain" to: `localhost`
-   - Copy the Client ID and Client Secret
-
-2. **Target Event** - What they're training for and when
-
-Use AskUserQuestion like this:
+Use **AskUserQuestion** to collect:
 
 ```
 questions:
-  - question: "What is your Strava Client ID?"
+  - question: "What is your Strava Client ID? (Go to strava.com/settings/api to create an app)"
     header: "Client ID"
     options:
       - label: "I need to create an app first"
-        description: "Go to strava.com/settings/api and create an app"
-      - label: "I have my Client ID"
-        description: "Enter the numeric ID from your Strava API settings"
-
-  - question: "What event are you training for?"
-    header: "Event"
-    options:
-      - label: "Ironman 70.3"
-        description: "Half Ironman distance triathlon"
-      - label: "Full Ironman"
-        description: "140.6 mile triathlon"
-      - label: "Marathon"
-        description: "26.2 mile run"
-      - label: "Olympic Triathlon"
-        description: "1.5k swim, 40k bike, 10k run"
+        description: "Go to strava.com/settings/api, set callback domain to 'localhost'"
+      - label: "I have my credentials ready"
+        description: "Enter your Client ID via 'Other'"
 ```
 
-After collecting credentials via the Other text input option, proceed to Step 3.
-
-### Step 3: Initialize Database and Sync
+### Initialize Database and Sync
 
 Run the sync command with the credentials:
 
@@ -71,9 +67,7 @@ npx claude-coach --client-id=CLIENT_ID --client-secret=CLIENT_SECRET --days=730
 2. Fetch 2 years of activity history
 3. Store everything in `~/.claude-coach/coach.db`
 
-After the sync completes, proceed with the coaching workflow below.
-
-### Step 4: Subsequent Syncs
+### Subsequent Syncs
 
 To refresh data before creating a new plan:
 
@@ -82,6 +76,71 @@ npx claude-coach
 ```
 
 This uses cached credentials and only fetches new activities.
+
+---
+
+## Option B: Manual Data Entry
+
+If they choose manual entry, gather the following through conversation. Ask naturally, not as a rigid form.
+
+### Required Information
+
+**1. Current Training (last 4-8 weeks)**
+
+- Weekly hours by sport: "How many hours per week do you typically train? Break it down by swim/bike/run."
+- Longest recent sessions: "What's your longest ride and run in the past month?"
+- Consistency: "How many weeks have you been training consistently?"
+
+**2. Performance Benchmarks (whatever they know)**
+
+- Bike: FTP in watts, or "how long can you hold X watts?"
+- Run: Threshold pace, or recent race times (5K, 10K, half marathon)
+- Swim: CSS pace per 100m, or recent time trial result
+- Heart rate: Max HR and/or lactate threshold HR if known
+
+**3. Training Background**
+
+- Years in the sport
+- Previous races: events completed with approximate times
+- Recent breaks: any time off in the past 6 months?
+
+**4. Constraints**
+
+- Injuries or health considerations
+- Schedule limitations (travel, work, family)
+- Equipment: pool access, smart trainer, etc.
+
+### Creating a Manual Assessment
+
+When working from manual data, create an assessment object with the same structure as you would from Strava data:
+
+```json
+{
+  "assessment": {
+    "foundation": {
+      "raceHistory": ["Based on athlete's stated history"],
+      "peakTrainingLoad": "Estimated from reported weekly hours",
+      "foundationLevel": "beginner|intermediate|advanced",
+      "yearsInSport": 3
+    },
+    "currentForm": {
+      "weeklyVolume": { "total": 8, "swim": 1.5, "bike": 4, "run": 2.5 },
+      "longestSessions": { "swim": 2500, "bike": 60, "run": 15 },
+      "consistency": "weeks of consistent training"
+    },
+    "strengths": [{ "sport": "bike", "evidence": "Athlete's self-assessment or race history" }],
+    "limiters": [{ "sport": "swim", "evidence": "Lowest volume or newest to sport" }],
+    "constraints": ["Work travel", "Pool only on weekdays"]
+  }
+}
+```
+
+**Important:** When working from manual data:
+
+- Be conservative with volume prescriptions until you understand their true capacity
+- Ask clarifying questions if something seems inconsistent
+- Default to slightly easier if uncertain - it's better to underestimate than overtrain
+- Note in the plan that zones are estimated and should be validated with field tests
 
 ---
 
@@ -119,17 +178,24 @@ Read these files as needed during plan creation:
 
 ## Workflow Overview
 
-### Phase 0: Setup (if needed)
+### Phase 0: Setup
 
-1. Check if `~/.claude-coach/coach.db` exists
-2. If not, use AskUserQuestion to gather Strava credentials and event info
-3. Run `npx claude-coach --client-id=X --client-secret=Y` to sync data
-4. Wait for user to authorize in browser
+1. Ask how athlete wants to provide data (Strava or manual)
+2. **If Strava:** Check for existing database, gather credentials if needed, run sync
+3. **If Manual:** Gather fitness information through conversation
 
 ### Phase 1: Data Gathering
 
+**If using Strava:**
+
 1. Read `skill/reference/queries.md` and run the assessment queries
 2. Read `skill/reference/assessment.md` to interpret the results
+
+**If using manual data:**
+
+1. Ask the questions outlined in "Option B: Manual Data Entry" above
+2. Build the assessment object from their responses
+3. Read `skill/reference/assessment.md` for context on interpreting fitness levels
 
 ### Phase 2: Athlete Validation
 
@@ -413,3 +479,5 @@ After both files are created, tell the user:
 - **Zones must be established** before prescribing specific workouts
 - **Output JSON, then render HTML** - Write the plan as `.json`, then use `npx claude-coach render` to create the HTML viewer
 - **Explain the "why"** - Athletes trust and follow plans they understand
+- **Be conservative with manual data** - When working without Strava, err on the side of caution with volume and intensity
+- **Recommend field tests** - For manual data athletes, include zone validation workouts in the first 1-2 weeks
