@@ -48,45 +48,74 @@ ls ~/.claude-coach/coach.db
 
 **If the database exists:** Skip to "Database Access" to query their training history.
 
-**If no database exists:** Get the user's Strava tokens and sync their data.
+**If no database exists:** Guide the user through Strava authorization.
 
-### Get Strava Tokens
+### Step 1: Get Strava API Credentials
 
-Use **AskUserQuestion** to get tokens from the user:
-
-```
-questions:
-  - question: "Go to strava.com/settings/api and copy your Access Token"
-    header: "Access Token"
-    options:
-      - label: "I have my access token"
-        description: "Enter your access token via 'Other'"
-      - label: "I don't have an API app yet"
-        description: "Click 'Create an app' first, then copy the tokens shown"
-```
-
-Then ask for the refresh token:
+Use **AskUserQuestion** to get credentials:
 
 ```
 questions:
-  - question: "Now copy your Refresh Token from the same page"
-    header: "Refresh Token"
+  - question: "Go to strava.com/settings/api - what is your Client ID?"
+    header: "Client ID"
     options:
-      - label: "I have my refresh token"
-        description: "Enter your refresh token via 'Other'"
+      - label: "I have my Client ID"
+        description: "Enter the numeric Client ID via 'Other'"
+      - label: "I need to create an app first"
+        description: "Click 'Create an app', set callback domain to 'localhost'"
 ```
 
-### Sync with Tokens
+Then ask for the secret:
 
-Run the sync command with the tokens (no browser needed):
+```
+questions:
+  - question: "Now enter your Client Secret from the same page"
+    header: "Client Secret"
+    options:
+      - label: "I have my Client Secret"
+        description: "Enter the secret via 'Other'"
+```
+
+### Step 2: Generate Authorization URL
+
+Run the auth command to generate the OAuth URL:
 
 ```bash
-npx claude-coach sync --access-token=ACCESS_TOKEN --refresh-token=REFRESH_TOKEN --days=730
+npx claude-coach auth --client-id=CLIENT_ID --client-secret=CLIENT_SECRET
+```
+
+This outputs an authorization URL. **Show this URL to the user** and tell them:
+
+1. Click or copy the URL and open it in a browser
+2. Click "Authorize" on Strava
+3. You'll be redirected to a page that won't load (that's expected!)
+4. Copy the `code` parameter from the URL bar (everything after `code=` and before `&`)
+
+### Step 3: Get the Authorization Code
+
+Use **AskUserQuestion** to get the code:
+
+```
+questions:
+  - question: "Paste the authorization code from the redirect URL"
+    header: "Auth Code"
+    options:
+      - label: "I have the code"
+        description: "Paste the code via 'Other'"
+```
+
+### Step 4: Exchange Code and Sync
+
+Run these commands to complete authentication and sync:
+
+```bash
+npx claude-coach auth --code=AUTHORIZATION_CODE
+npx claude-coach sync --days=730
 ```
 
 This will:
 
-1. Validate the tokens with Strava
+1. Exchange the code for access tokens
 2. Fetch 2 years of activity history
 3. Store everything in `~/.claude-coach/coach.db`
 

@@ -7,13 +7,14 @@ import {
   tokensExist,
   getDbPath,
   createConfig,
+  type Tokens,
 } from "./lib/config.js";
 import { log } from "./lib/logging.js";
 import { migrate } from "./db/migrate.js";
 import { execute, initDatabase, query, queryJson } from "./db/client.js";
 import { getValidTokens } from "./strava/oauth.js";
 import { getAllActivities, getAthlete } from "./strava/api.js";
-import type { StravaActivity } from "./strava/types.js";
+import type { StravaActivity, StravaTokenResponse } from "./strava/types.js";
 import { readFileSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
@@ -45,11 +46,18 @@ interface QueryArgs {
   json: boolean;
 }
 
+interface AuthArgs {
+  command: "auth";
+  clientId?: string;
+  clientSecret?: string;
+  code?: string;
+}
+
 interface HelpArgs {
   command: "help";
 }
 
-type CliArgs = SyncArgs | RenderArgs | QueryArgs | HelpArgs;
+type CliArgs = SyncArgs | RenderArgs | QueryArgs | AuthArgs | HelpArgs;
 
 function parseArgs(): CliArgs {
   const args = process.argv.slice(2);
@@ -113,6 +121,22 @@ function parseArgs(): CliArgs {
     return queryArgs;
   }
 
+  if (args[0] === "auth") {
+    const authArgs: AuthArgs = { command: "auth" };
+
+    for (const arg of args) {
+      if (arg.startsWith("--client-id=")) {
+        authArgs.clientId = arg.split("=")[1];
+      } else if (arg.startsWith("--client-secret=")) {
+        authArgs.clientSecret = arg.split("=")[1];
+      } else if (arg.startsWith("--code=")) {
+        authArgs.code = arg.split("=")[1];
+      }
+    }
+
+    return authArgs;
+  }
+
   if (args[0] === "--help" || args[0] === "-h" || args[0] === "help") {
     return { command: "help" };
   }
@@ -128,20 +152,26 @@ Claude Coach - Training Plan Tools
 Usage: npx claude-coach <command> [options]
 
 Commands:
-  sync              Sync activities from Strava (default)
+  sync              Sync activities from Strava
+  auth              Get Strava authorization URL or exchange code for tokens
   render <file>     Render a training plan JSON to HTML
   query <sql>       Run a SQL query against the database
   help              Show this help message
 
-Sync Options:
+Auth Options (for headless/Claude environments):
   --client-id=ID        Strava API client ID
   --client-secret=SEC   Strava API client secret
-  --access-token=TOK    Strava access token (from strava.com/settings/api)
-  --refresh-token=TOK   Strava refresh token (from strava.com/settings/api)
-  --days=N              Days of history to sync (default: 730)
+  --code=CODE           Authorization code from OAuth callback URL
 
-  Token-based auth (--access-token + --refresh-token) skips browser OAuth.
-  Get tokens from: https://www.strava.com/settings/api
+  Step 1: Run 'auth' with credentials to get authorization URL
+  Step 2: User clicks URL, authorizes, copies code from redirect URL
+  Step 3: Run 'auth --code=XXX' to exchange for tokens
+  Step 4: Run 'sync' to fetch activities
+
+Sync Options:
+  --client-id=ID        Strava API client ID (for OAuth flow)
+  --client-secret=SEC   Strava API client secret (for OAuth flow)
+  --days=N              Days of history to sync (default: 730)
 
 Render Options:
   --output, -o FILE     Output HTML file (default: <input>.html)
@@ -150,10 +180,13 @@ Query Options:
   --json                Output as JSON (default: plain text)
 
 Examples:
-  # Sync using tokens (no browser needed)
-  npx claude-coach sync --access-token=xxx --refresh-token=yyy
+  # Headless auth flow (for Claude/automated environments)
+  npx claude-coach auth --client-id=12345 --client-secret=abc123
+  # User clicks URL, copies code from failed redirect
+  npx claude-coach auth --code=AUTHORIZATION_CODE
+  npx claude-coach sync
 
-  # Sync with OAuth (opens browser)
+  # Interactive auth flow (opens browser)
   npx claude-coach sync --client-id=12345 --client-secret=abc123
 
   # Render a training plan to HTML
@@ -161,8 +194,88 @@ Examples:
 
   # Query the database
   npx claude-coach query "SELECT * FROM weekly_volume LIMIT 5"
-  npx claude-coach query "SELECT * FROM activities" --json
 `);
+}
+
+// ============================================================================
+// Auth Command (for headless/Claude environments)
+// ============================================================================
+
+const REDIRECT_PORT = 8765;
+const REDIRECT_URI = `http://localhost:${REDIRECT_PORT}/callback`;
+const AUTHORIZE_URL = "https://www.strava.com/oauth/authorize";
+const TOKEN_URL = "https://www.strava.com/oauth/token";
+
+async function runAuth(args: AuthArgs): Promise<void> {
+  // If code is provided, exchange it for tokens
+  if (args.code) {
+    if (!configExists()) {
+      log.error("No configuration found. Run 'auth' with --client-id and --client-secret first.");
+      process.exit(1);
+    }
+
+    const config = loadConfig();
+    log.start("Exchanging authorization code for tokens...");
+
+    const tokenResponse = await fetch(TOKEN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: config.strava.client_id,
+        client_secret: config.strava.client_secret,
+        code: args.code,
+        grant_type: "authorization_code",
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      const error = await tokenResponse.text();
+      log.error(`Token exchange failed: ${error}`);
+      process.exit(1);
+    }
+
+    const data: StravaTokenResponse = await tokenResponse.json();
+
+    const tokens: Tokens = {
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expires_at: data.expires_at,
+      athlete_id: data.athlete.id,
+    };
+
+    saveTokens(tokens);
+    log.success(`Authenticated as ${data.athlete.firstname} ${data.athlete.lastname}`);
+    log.ready("Now run: npx claude-coach sync");
+    return;
+  }
+
+  // Otherwise, generate and print the authorization URL
+  if (!args.clientId || !args.clientSecret) {
+    log.error("Required: --client-id and --client-secret");
+    log.info("Get these from: https://www.strava.com/settings/api");
+    process.exit(1);
+  }
+
+  // Save config for later use
+  const config = createConfig(args.clientId, args.clientSecret, 730);
+  saveConfig(config);
+
+  const authUrl = new URL(AUTHORIZE_URL);
+  authUrl.searchParams.set("client_id", args.clientId);
+  authUrl.searchParams.set("response_type", "code");
+  authUrl.searchParams.set("redirect_uri", REDIRECT_URI);
+  authUrl.searchParams.set("scope", "activity:read_all");
+  authUrl.searchParams.set("approval_prompt", "auto");
+
+  console.log("\n📋 AUTHORIZATION URL:\n");
+  console.log(authUrl.toString());
+  console.log("\n📝 INSTRUCTIONS:");
+  console.log("1. Click or copy the URL above and open it in a browser");
+  console.log("2. Click 'Authorize' on Strava");
+  console.log("3. You'll be redirected to a page that won't load (that's OK!)");
+  console.log("4. Copy the 'code' parameter from the URL bar");
+  console.log("   Example: http://localhost:8765/callback?code=THIS_IS_THE_CODE&scope=...");
+  console.log("\n5. Run: npx claude-coach auth --code=YOUR_CODE_HERE\n");
 }
 
 // ============================================================================
@@ -455,6 +568,9 @@ async function main() {
   switch (args.command) {
     case "help":
       printHelp();
+      break;
+    case "auth":
+      await runAuth(args);
       break;
     case "sync":
       await runSync(args);
