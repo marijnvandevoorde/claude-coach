@@ -11,12 +11,13 @@
     "bin",
     "dist/**/*.js",
     "dist/**/*.d.ts",
+    "dist/**/*.sql",
     "templates"
   ],
   "scripts": {
     "start": "tsx src/cli.ts",
     "build": "npm run build:ts && npm run build:viewer && npm run build:skill",
-    "build:ts": "tsc",
+    "build:ts": "tsc && cp src/db/schema.sql dist/db/",
     "build:viewer": "vite build --config vite.config.viewer.ts",
     "build:skill": "mkdir -p dist && cd skill && zip -r ../dist/coach-skill.zip . -x '*.DS_Store' && echo 'Skill packaged to dist/coach-skill.zip'",
     "dev": "tsx watch src/cli.ts",
