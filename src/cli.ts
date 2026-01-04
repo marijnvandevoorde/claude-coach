@@ -3,6 +3,8 @@ import {
   loadConfig,
   promptForConfig,
   saveConfig,
+  saveTokens,
+  tokensExist,
   getDbPath,
   createConfig,
 } from "./lib/config.js";
@@ -26,6 +28,8 @@ interface SyncArgs {
   command: "sync";
   clientId?: string;
   clientSecret?: string;
+  accessToken?: string;
+  refreshToken?: string;
   days?: number;
 }
 
@@ -59,6 +63,10 @@ function parseArgs(): CliArgs {
         syncArgs.clientId = arg.split("=")[1];
       } else if (arg.startsWith("--client-secret=")) {
         syncArgs.clientSecret = arg.split("=")[1];
+      } else if (arg.startsWith("--access-token=")) {
+        syncArgs.accessToken = arg.split("=")[1];
+      } else if (arg.startsWith("--refresh-token=")) {
+        syncArgs.refreshToken = arg.split("=")[1];
       } else if (arg.startsWith("--days=")) {
         syncArgs.days = parseInt(arg.split("=")[1]);
       }
@@ -128,7 +136,12 @@ Commands:
 Sync Options:
   --client-id=ID        Strava API client ID
   --client-secret=SEC   Strava API client secret
+  --access-token=TOK    Strava access token (from strava.com/settings/api)
+  --refresh-token=TOK   Strava refresh token (from strava.com/settings/api)
   --days=N              Days of history to sync (default: 730)
+
+  Token-based auth (--access-token + --refresh-token) skips browser OAuth.
+  Get tokens from: https://www.strava.com/settings/api
 
 Render Options:
   --output, -o FILE     Output HTML file (default: <input>.html)
@@ -137,10 +150,10 @@ Query Options:
   --json                Output as JSON (default: plain text)
 
 Examples:
-  # Sync from Strava (interactive)
-  npx claude-coach
+  # Sync using tokens (no browser needed)
+  npx claude-coach sync --access-token=xxx --refresh-token=yyy
 
-  # Sync with credentials
+  # Sync with OAuth (opens browser)
   npx claude-coach sync --client-id=12345 --client-secret=abc123
 
   # Render a training plan to HTML
@@ -228,11 +241,77 @@ async function runSync(args: SyncArgs): Promise<void> {
   // Step 0: Initialize SQLite backend
   await initDatabase();
 
-  // Step 1: Check/create config
+  const syncDays = args.days || 730;
+
+  // Step 1: Handle token-based auth (no browser needed)
+  if (args.accessToken && args.refreshToken) {
+    log.info("Using provided access tokens...");
+
+    // Save tokens - we'll get athlete_id after fetching profile
+    // Set expiry to 1 hour from now (we have refresh token for renewal)
+    const tempTokens = {
+      access_token: args.accessToken,
+      refresh_token: args.refreshToken,
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
+      athlete_id: 0, // Will be updated after fetching athlete
+    };
+    saveTokens(tempTokens);
+
+    // Create minimal config if needed
+    if (!configExists()) {
+      // Token-based auth doesn't need client credentials for initial sync
+      // but we need them for token refresh - use placeholders
+      const config = createConfig("token-auth", "token-auth", syncDays);
+      saveConfig(config);
+    }
+
+    // Initialize database
+    migrate();
+
+    // Fetch athlete to get ID and validate tokens
+    log.start("Validating tokens and fetching athlete profile...");
+    const athlete = await getAthlete(tempTokens);
+
+    // Update tokens with real athlete ID
+    const tokens = { ...tempTokens, athlete_id: athlete.id };
+    saveTokens(tokens);
+
+    insertAthlete(athlete);
+    log.success(`Authenticated as ${athlete.firstname} ${athlete.lastname}`);
+
+    // Fetch activities
+    const afterDate = new Date();
+    afterDate.setDate(afterDate.getDate() - syncDays);
+    const activities = await getAllActivities(tokens, afterDate);
+
+    // Store activities
+    log.start("Storing activities in database...");
+    let count = 0;
+    for (const activity of activities) {
+      insertActivity(activity);
+      count++;
+      if (count % 50 === 0) {
+        log.progress(`   Stored ${count}/${activities.length}...`);
+      }
+    }
+    log.progressEnd();
+    log.success(`Stored ${activities.length} activities`);
+
+    execute(`
+      INSERT INTO sync_log (started_at, completed_at, activities_synced, status)
+      VALUES (datetime('now'), datetime('now'), ${activities.length}, 'success');
+    `);
+
+    log.info(`Database: ${getDbPath()}`);
+    log.ready("Sync complete! You can now create training plans.");
+    return;
+  }
+
+  // Step 2: OAuth-based auth (requires browser)
   if (!configExists()) {
     if (args.clientId && args.clientSecret) {
       log.info("Creating configuration from command line arguments...");
-      const config = createConfig(args.clientId, args.clientSecret, args.days || 730);
+      const config = createConfig(args.clientId, args.clientSecret, syncDays);
       saveConfig(config);
       log.success("Configuration saved");
     } else {
@@ -244,12 +323,12 @@ async function runSync(args: SyncArgs): Promise<void> {
   }
 
   const config = loadConfig();
-  const syncDays = args.days || config.sync_days || 730;
+  const configSyncDays = args.days || config.sync_days || 730;
 
-  // Step 2: Initialize database
+  // Initialize database
   migrate();
 
-  // Step 3: Authenticate with Strava
+  // Authenticate with Strava (opens browser)
   const tokens = await getValidTokens();
 
   // Step 4: Fetch and store athlete profile
@@ -260,7 +339,7 @@ async function runSync(args: SyncArgs): Promise<void> {
 
   // Step 5: Fetch activities
   const afterDate = new Date();
-  afterDate.setDate(afterDate.getDate() - syncDays);
+  afterDate.setDate(afterDate.getDate() - configSyncDays);
 
   const activities = await getAllActivities(tokens, afterDate);
 

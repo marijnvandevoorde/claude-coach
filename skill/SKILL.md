@@ -30,13 +30,11 @@ questions:
   - question: "How would you like to provide your training data?"
     header: "Data Source"
     options:
-      - label: "Connect to Strava"
-        description: "You'll run a sync command in your terminal (requires browser for OAuth)"
-      - label: "Enter manually (Recommended)"
-        description: "Tell me about your fitness - no setup needed, we can start right away"
+      - label: "Connect to Strava (Recommended)"
+        description: "Copy tokens from strava.com/settings/api - I'll analyze your training history"
+      - label: "Enter manually"
+        description: "Tell me about your fitness - no Strava account needed"
 ```
-
-**Note:** Manual entry is often faster since Strava sync requires the user to complete OAuth in their browser.
 
 ---
 
@@ -48,29 +46,49 @@ If they choose Strava, first check if database already exists:
 ls ~/.claude-coach/coach.db
 ```
 
-**If the database exists:** Skip to "Database Access" below to query their training history.
+**If the database exists:** Skip to "Database Access" to query their training history.
 
-**If no database exists:** The user needs to run the sync command themselves (it requires browser-based OAuth that you cannot complete). Guide them through the setup:
+**If no database exists:** Get the user's Strava tokens and sync their data.
 
-### Guide User Through Strava Setup
+### Get Strava Tokens
 
-Tell the user to run these steps in their terminal:
+Use **AskUserQuestion** to get tokens from the user:
 
-1. **Create a Strava API app** at https://www.strava.com/settings/api
-   - Set "Authorization Callback Domain" to `localhost`
-   - Note the Client ID and Client Secret
+```
+questions:
+  - question: "Go to strava.com/settings/api and copy your Access Token"
+    header: "Access Token"
+    options:
+      - label: "I have my access token"
+        description: "Enter your access token via 'Other'"
+      - label: "I don't have an API app yet"
+        description: "Click 'Create an app' first, then copy the tokens shown"
+```
 
-2. **Run the sync command:**
+Then ask for the refresh token:
 
-   ```bash
-   npx claude-coach sync --client-id=YOUR_ID --client-secret=YOUR_SECRET --days=730
-   ```
+```
+questions:
+  - question: "Now copy your Refresh Token from the same page"
+    header: "Refresh Token"
+    options:
+      - label: "I have my refresh token"
+        description: "Enter your refresh token via 'Other'"
+```
 
-3. **Complete OAuth in browser** - A browser window will open; click "Authorize"
+### Sync with Tokens
 
-4. **Return to Claude** once sync completes
+Run the sync command with the tokens (no browser needed):
 
-**Important:** You cannot run the sync command yourself—it opens a browser for OAuth authorization that requires user interaction. If the user cannot complete this step, fall back to **Option B: Manual Data Entry**.
+```bash
+npx claude-coach sync --access-token=ACCESS_TOKEN --refresh-token=REFRESH_TOKEN --days=730
+```
+
+This will:
+
+1. Validate the tokens with Strava
+2. Fetch 2 years of activity history
+3. Store everything in `~/.claude-coach/coach.db`
 
 ### SQLite Requirements
 
@@ -81,13 +99,13 @@ The sync command stores data in a SQLite database. The tool automatically uses t
 
 ### Refreshing Data
 
-To get latest activities before creating a new plan, have the user run:
+To get latest activities before creating a new plan:
 
 ```bash
 npx claude-coach sync
 ```
 
-This uses cached credentials and only fetches new activities (no browser needed after initial auth).
+This uses cached tokens and only fetches new activities.
 
 ---
 
