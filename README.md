@@ -33,6 +33,8 @@ The easiest way to get a personalized plan is to let Claude analyze your Strava 
 
 Claude needs a `Client ID` and `Client Secret` to access your Strava activities. You're only giving Claude access to your data - nobody else gets to see it.
 
+**Claude.ai users:** Before starting, go to Settings → Capabilities → Skills and add `*.strava.com` to your allowed domains list. This lets Claude communicate with Strava's API.
+
 1. Go to [strava.com/settings/api](https://www.strava.com/settings/api) and log in with your Strava account
 2. You'll see a form titled "My API Application" - fill it out:
    - **Application Name**: Enter anything you like (e.g., "Claude Coach")
