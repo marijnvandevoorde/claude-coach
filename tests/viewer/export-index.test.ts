@@ -3,8 +3,8 @@ import {
   sanitizeFilename,
   getAvailableFormats,
   downloadFile,
-} from "../src/viewer/lib/export/index.js";
-import type { Sport } from "../src/schema/training-plan.js";
+} from "../../src/viewer/lib/export/index.js";
+import type { Sport } from "../../src/schema/training-plan.js";
 
 describe("sanitizeFilename", () => {
   it("should remove invalid characters", () => {

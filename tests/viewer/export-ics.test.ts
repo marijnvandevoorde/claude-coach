@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { generateIcs } from "../src/viewer/lib/export/ics.js";
-import type { TrainingPlan } from "../src/schema/training-plan.js";
+import { generateIcs } from "../../src/viewer/lib/export/ics.js";
+import type { TrainingPlan } from "../../src/schema/training-plan.js";
 
 /**
  * Create a minimal mock TrainingPlan for testing

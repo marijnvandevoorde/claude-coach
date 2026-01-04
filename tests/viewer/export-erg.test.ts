@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { isErgSupported, generateMrc } from "../src/viewer/lib/export/erg.js";
-import type { Workout, Sport } from "../src/schema/training-plan.js";
-import type { Settings } from "../src/viewer/stores/settings.js";
+import { isErgSupported, generateMrc } from "../../src/viewer/lib/export/erg.js";
+import type { Workout, Sport } from "../../src/schema/training-plan.js";
+import type { Settings } from "../../src/viewer/stores/settings.js";
 
 // Mock settings object
 const mockSettings: Settings = {
