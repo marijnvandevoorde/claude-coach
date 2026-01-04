@@ -1,0 +1,443 @@
+{
+  "version": "1.0",
+  "meta": {
+    "id": "demo-ultra-001",
+    "athlete": "Demo Ultra Runner",
+    "event": "North Face 50K",
+    "eventDate": "2025-05-17",
+    "planStartDate": "2025-01-13",
+    "planEndDate": "2025-05-16",
+    "createdAt": "2025-01-01T00:00:00Z",
+    "updatedAt": "2025-01-01T00:00:00Z",
+    "totalWeeks": 18,
+    "generatedBy": "Claude Coach"
+  },
+  "preferences": {
+    "swim": "meters",
+    "bike": "miles",
+    "run": "miles",
+    "firstDayOfWeek": "monday"
+  },
+  "assessment": {
+    "foundation": {
+      "raceHistory": ["Marathon 2024 - 4:05:00", "Half Marathon 2024 - 1:48:00", "Trail 25K 2024"],
+      "peakTrainingLoad": 45,
+      "foundationLevel": "intermediate",
+      "yearsInSport": 4
+    },
+    "currentForm": {
+      "weeklyVolume": { "total": 6, "swim": 0, "bike": 0, "run": 6 },
+      "longestSessions": { "swim": 0, "bike": 0, "run": 16 },
+      "consistency": 12
+    },
+    "strengths": [{ "sport": "run", "evidence": "Good endurance base, trail experience" }],
+    "limiters": [{ "sport": "run", "evidence": "Need more vertical gain training, speed work" }],
+    "constraints": [
+      "Work during week",
+      "Long runs Saturday or Sunday",
+      "Access to trails on weekends"
+    ]
+  },
+  "zones": {
+    "run": {
+      "hr": {
+        "lthr": 162,
+        "zones": [
+          {
+            "zone": 1,
+            "name": "Recovery",
+            "percentLow": 0,
+            "percentHigh": 81,
+            "hrLow": 0,
+            "hrHigh": 131
+          },
+          {
+            "zone": 2,
+            "name": "Aerobic",
+            "percentLow": 81,
+            "percentHigh": 89,
+            "hrLow": 131,
+            "hrHigh": 144
+          },
+          {
+            "zone": 3,
+            "name": "Tempo",
+            "percentLow": 89,
+            "percentHigh": 94,
+            "hrLow": 144,
+            "hrHigh": 152
+          },
+          {
+            "zone": 4,
+            "name": "Threshold",
+            "percentLow": 94,
+            "percentHigh": 100,
+            "hrLow": 152,
+            "hrHigh": 162
+          },
+          {
+            "zone": 5,
+            "name": "VO2max",
+            "percentLow": 100,
+            "percentHigh": 106,
+            "hrLow": 162,
+            "hrHigh": 172
+          }
+        ]
+      },
+      "pace": {
+        "thresholdPace": "8:15/mi",
+        "zones": [
+          { "zone": 1, "name": "Recovery", "pace": "11:00-12:00/mi" },
+          { "zone": 2, "name": "Easy Trail", "pace": "9:30-11:00/mi (effort-based)" },
+          { "zone": 3, "name": "Steady", "pace": "8:30-9:30/mi" },
+          { "zone": 4, "name": "Tempo", "pace": "8:00-8:30/mi" }
+        ]
+      }
+    }
+  },
+  "phases": [
+    {
+      "name": "Base",
+      "startWeek": 1,
+      "endWeek": 5,
+      "focus": "Build aerobic base and trail skills",
+      "weeklyHoursRange": { "low": 6, "high": 8 },
+      "keyWorkouts": ["Long trail run", "Hill repeats", "Back-to-back runs"],
+      "physiologicalGoals": ["Aerobic foundation", "Climbing efficiency", "Fatigue resistance"]
+    },
+    {
+      "name": "Build",
+      "startWeek": 6,
+      "endWeek": 12,
+      "focus": "Increase vertical and time on feet",
+      "weeklyHoursRange": { "low": 8, "high": 11 },
+      "keyWorkouts": [
+        "Long mountain runs",
+        "Vertical gain sessions",
+        "Ultra-specific nutrition practice"
+      ],
+      "physiologicalGoals": ["Climbing power", "Downhill technique", "Extended fueling"]
+    },
+    {
+      "name": "Peak",
+      "startWeek": 13,
+      "endWeek": 16,
+      "focus": "Race simulation and peak volume",
+      "weeklyHoursRange": { "low": 10, "high": 13 },
+      "keyWorkouts": ["Race simulation", "Course preview if possible", "Back-to-back long runs"],
+      "physiologicalGoals": ["Peak endurance", "Course familiarity", "Race confidence"]
+    },
+    {
+      "name": "Taper",
+      "startWeek": 17,
+      "endWeek": 18,
+      "focus": "Recovery and race preparation",
+      "weeklyHoursRange": { "low": 4, "high": 6 },
+      "keyWorkouts": ["Short trail runs", "Gear check", "Visualization"],
+      "physiologicalGoals": ["Full recovery", "Glycogen loading", "Mental readiness"]
+    }
+  ],
+  "weeks": [
+    {
+      "weekNumber": 1,
+      "startDate": "2025-01-13",
+      "endDate": "2025-01-19",
+      "phase": "Base",
+      "focus": "Establish ultra training routine",
+      "targetHours": 6,
+      "isRecoveryWeek": false,
+      "days": [
+        {
+          "date": "2025-01-13",
+          "dayOfWeek": "Monday",
+          "workouts": [
+            {
+              "id": "w1-mon-rest",
+              "sport": "rest",
+              "type": "rest",
+              "name": "Rest Day",
+              "description": "Recovery",
+              "completed": true
+            }
+          ]
+        },
+        {
+          "date": "2025-01-14",
+          "dayOfWeek": "Tuesday",
+          "workouts": [
+            {
+              "id": "w1-tue-run",
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy Run",
+              "description": "Aerobic base building",
+              "durationMinutes": 50,
+              "distanceMeters": 9000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "50 min easy\n- Conversational pace\n- Flat to rolling terrain OK\n- Focus on relaxed form",
+              "completed": true
+            }
+          ]
+        },
+        {
+          "date": "2025-01-15",
+          "dayOfWeek": "Wednesday",
+          "workouts": [
+            {
+              "id": "w1-wed-strength",
+              "sport": "strength",
+              "type": "strength",
+              "name": "Trail Strength",
+              "description": "Running-specific and core strength",
+              "durationMinutes": 40,
+              "humanReadable": "Warm-up: 5 min easy jog\n\n3 rounds:\n- 15 single-leg squats (each)\n- 20 step-ups (each leg)\n- 30 sec single-leg balance\n- 15 hip hikes\n- 45 sec side plank (each)\n- 20 calf raises (each)\n\nCool-down: 5 min stretch",
+              "completed": true
+            }
+          ]
+        },
+        {
+          "date": "2025-01-16",
+          "dayOfWeek": "Thursday",
+          "workouts": [
+            {
+              "id": "w1-thu-run",
+              "sport": "run",
+              "type": "hills",
+              "name": "Hill Repeats",
+              "description": "Build climbing strength",
+              "durationMinutes": 55,
+              "distanceMeters": 9500,
+              "primaryZone": "Zone 2-4",
+              "humanReadable": "Warm-up: 15 min easy\n\n6x2 min hill repeats\n- Moderate grade (6-8%)\n- Strong but sustainable effort\n- Jog down recovery\n\nCool-down: 15 min easy",
+              "completed": true
+            }
+          ]
+        },
+        {
+          "date": "2025-01-17",
+          "dayOfWeek": "Friday",
+          "workouts": [
+            {
+              "id": "w1-fri-rest",
+              "sport": "rest",
+              "type": "rest",
+              "name": "Rest Day",
+              "description": "Recovery before weekend",
+              "completed": true
+            }
+          ]
+        },
+        {
+          "date": "2025-01-18",
+          "dayOfWeek": "Saturday",
+          "workouts": [
+            {
+              "id": "w1-sat-trail",
+              "sport": "run",
+              "type": "trail",
+              "name": "Trail Run",
+              "description": "Technical trail practice",
+              "durationMinutes": 75,
+              "distanceMeters": 13000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "75 min on trails\n- Seek out technical terrain\n- Practice foot placement\n- Walk steep uphills if needed\n- Run the flats and downs",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-01-19",
+          "dayOfWeek": "Sunday",
+          "workouts": [
+            {
+              "id": "w1-sun-long",
+              "sport": "run",
+              "type": "long",
+              "name": "Long Run",
+              "description": "Build time on feet",
+              "durationMinutes": 105,
+              "distanceMeters": 19000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "1:45 long run\n- Mixed terrain\n- Practice taking calories\n- Aim for 12 miles\n- Effort over pace",
+              "completed": false
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "totalHours": 6,
+        "bySport": {
+          "run": { "sessions": 4, "hours": 4.8, "km": 50.5 },
+          "strength": { "sessions": 1, "hours": 0.7, "km": 0 }
+        }
+      }
+    },
+    {
+      "weekNumber": 2,
+      "startDate": "2025-01-20",
+      "endDate": "2025-01-26",
+      "phase": "Base",
+      "focus": "Introduce back-to-back running",
+      "targetHours": 6.5,
+      "isRecoveryWeek": false,
+      "days": [
+        {
+          "date": "2025-01-20",
+          "dayOfWeek": "Monday",
+          "workouts": [
+            {
+              "id": "w2-mon-rest",
+              "sport": "rest",
+              "type": "rest",
+              "name": "Rest Day",
+              "description": "Recovery",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-01-21",
+          "dayOfWeek": "Tuesday",
+          "workouts": [
+            {
+              "id": "w2-tue-run",
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy Run",
+              "description": "Recovery from weekend",
+              "durationMinutes": 45,
+              "distanceMeters": 8000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "45 min very easy\nLegs may be tired from weekend\nKeep it relaxed",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-01-22",
+          "dayOfWeek": "Wednesday",
+          "workouts": [
+            {
+              "id": "w2-wed-strength",
+              "sport": "strength",
+              "type": "strength",
+              "name": "Trail Strength",
+              "description": "Core and stability focus",
+              "durationMinutes": 40,
+              "humanReadable": "Same routine as last week\nAdd 2 reps per exercise\nFocus on control",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-01-23",
+          "dayOfWeek": "Thursday",
+          "workouts": [
+            {
+              "id": "w2-thu-run",
+              "sport": "run",
+              "type": "tempo",
+              "name": "Tempo Run",
+              "description": "Build threshold fitness",
+              "durationMinutes": 50,
+              "distanceMeters": 9000,
+              "primaryZone": "Zone 3",
+              "humanReadable": "Warm-up: 15 min easy\n\n20 min tempo\n- Comfortably hard\n- Zone 3 effort\n\nCool-down: 15 min easy",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-01-24",
+          "dayOfWeek": "Friday",
+          "workouts": [
+            {
+              "id": "w2-fri-run",
+              "sport": "run",
+              "type": "recovery",
+              "name": "Recovery Run",
+              "description": "Easy shakeout",
+              "durationMinutes": 30,
+              "distanceMeters": 5000,
+              "primaryZone": "Zone 1",
+              "humanReadable": "30 min very easy\nPrepare for back-to-back",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-01-25",
+          "dayOfWeek": "Saturday",
+          "workouts": [
+            {
+              "id": "w2-sat-long",
+              "sport": "run",
+              "type": "long",
+              "name": "Long Trail Run",
+              "description": "First day of back-to-back",
+              "durationMinutes": 120,
+              "distanceMeters": 21000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "2 hours on trails\n- Target 1500ft elevation gain\n- Practice race nutrition\n- Stay in Zone 2",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-01-26",
+          "dayOfWeek": "Sunday",
+          "workouts": [
+            {
+              "id": "w2-sun-btb",
+              "sport": "run",
+              "type": "long",
+              "name": "Back-to-Back Run",
+              "description": "Run on tired legs",
+              "durationMinutes": 75,
+              "distanceMeters": 13000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "75 min easy\n- Legs will be tired - that's the point\n- This simulates late-race fatigue\n- Easy effort, don't push",
+              "completed": false
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "totalHours": 6.5,
+        "bySport": {
+          "run": { "sessions": 5, "hours": 5.3, "km": 56 },
+          "strength": { "sessions": 1, "hours": 0.7, "km": 0 }
+        }
+      }
+    }
+  ],
+  "raceStrategy": {
+    "event": {
+      "name": "North Face 50K",
+      "date": "2025-05-17",
+      "type": "ultra",
+      "distances": { "run": 50000 }
+    },
+    "pacing": {
+      "run": {
+        "target": "Effort-based, not pace",
+        "notes": "Start conservative - first 10K should feel too easy. Walk all steep uphills from the start. Save your quads for the second half. Target finish: 6-7 hours."
+      }
+    },
+    "nutrition": {
+      "preRace": "3 hours before: 400 cal breakfast (oatmeal, banana, PB). 500ml water. Nothing heavy.",
+      "during": {
+        "carbsPerHour": 250,
+        "fluidPerHour": "500-750ml depending on heat",
+        "products": ["Tailwind", "Spring Energy gels", "Real food at aid stations (potatoes, PB&J)"]
+      },
+      "notes": "Eat early and often. Set timer for every 20 min. Stomach issues are common - practice nutrition in training. Have backup options."
+    },
+    "taper": {
+      "startDate": "2025-05-03",
+      "volumeReduction": 60,
+      "notes": "Ultra tapers are longer. Cut volume significantly but keep some vertical. Short hikes are OK. Stay off your feet when possible."
+    }
+  }
+}

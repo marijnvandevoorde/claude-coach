@@ -1,0 +1,1522 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Claude Coach - AI-Powered Training Plans for Endurance Athletes</title>
+    <meta
+      name="description"
+      content="Create personalized triathlon, marathon, and ultra training plans with AI. Free, open source, and powered by your Strava data."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg-primary: #0a0a0b;
+        --bg-secondary: #141416;
+        --bg-tertiary: #1c1c1f;
+        --bg-elevated: #232327;
+
+        --text-primary: #fafafa;
+        --text-secondary: #a1a1aa;
+        --text-muted: #71717a;
+
+        --border-subtle: rgba(255, 255, 255, 0.06);
+        --border-medium: rgba(255, 255, 255, 0.1);
+
+        --swim: #06b6d4;
+        --bike: #22c55e;
+        --run: #f97316;
+        --strength: #a855f7;
+        --accent: #eab308;
+
+        --swim-glow: rgba(6, 182, 212, 0.15);
+        --bike-glow: rgba(34, 197, 94, 0.15);
+        --run-glow: rgba(249, 115, 22, 0.15);
+        --accent-glow: rgba(234, 179, 8, 0.2);
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        font-family:
+          "Outfit",
+          -apple-system,
+          sans-serif;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        line-height: 1.6;
+        overflow-x: hidden;
+      }
+
+      /* Navigation */
+      nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        padding: 1rem 2rem;
+        background: rgba(10, 10, 11, 0.8);
+        backdrop-filter: blur(20px);
+        border-bottom: 1px solid var(--border-subtle);
+      }
+
+      .nav-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .logo {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .logo-mark {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, var(--swim), var(--bike), var(--run));
+        border-radius: 8px;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 2rem;
+        list-style: none;
+      }
+
+      .nav-links a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: color 0.2s;
+      }
+
+      .nav-links a:hover {
+        color: var(--text-primary);
+      }
+
+      .nav-cta {
+        background: var(--accent);
+        color: var(--bg-primary);
+        padding: 0.6rem 1.25rem;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+      }
+
+      .nav-cta:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px var(--accent-glow);
+      }
+
+      /* Hero Section */
+      .hero {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8rem 2rem 4rem;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .hero-bg {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(ellipse 80% 50% at 50% -20%, var(--swim-glow), transparent),
+          radial-gradient(ellipse 60% 40% at 20% 60%, var(--bike-glow), transparent),
+          radial-gradient(ellipse 60% 40% at 80% 80%, var(--run-glow), transparent);
+        opacity: 0.6;
+      }
+
+      .hero-grid {
+        position: absolute;
+        inset: 0;
+        background-image:
+          linear-gradient(var(--border-subtle) 1px, transparent 1px),
+          linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
+        background-size: 60px 60px;
+        mask-image: radial-gradient(ellipse 70% 50% at 50% 50%, black, transparent);
+      }
+
+      .hero-content {
+        max-width: 900px;
+        text-align: center;
+        position: relative;
+        z-index: 1;
+      }
+
+      .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-medium);
+        padding: 0.5rem 1rem;
+        border-radius: 100px;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        margin-bottom: 2rem;
+        animation: fadeInUp 0.6s ease-out;
+      }
+
+      .badge-dot {
+        width: 8px;
+        height: 8px;
+        background: var(--bike);
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      .hero h1 {
+        font-size: clamp(2.5rem, 8vw, 5rem);
+        font-weight: 800;
+        line-height: 1.1;
+        margin-bottom: 1.5rem;
+        animation: fadeInUp 0.6s ease-out 0.1s both;
+      }
+
+      .hero h1 span {
+        background: linear-gradient(135deg, var(--swim), var(--accent), var(--run));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .hero-subtitle {
+        font-size: 1.25rem;
+        color: var(--text-secondary);
+        max-width: 600px;
+        margin: 0 auto 2.5rem;
+        animation: fadeInUp 0.6s ease-out 0.2s both;
+      }
+
+      .hero-cta {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        animation: fadeInUp 0.6s ease-out 0.3s both;
+      }
+
+      .btn {
+        padding: 1rem 2rem;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 1rem;
+        text-decoration: none;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        color: var(--bg-primary);
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 32px var(--accent-glow);
+      }
+
+      .btn-secondary {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        border: 1px solid var(--border-medium);
+      }
+
+      .btn-secondary:hover {
+        background: var(--bg-tertiary);
+        border-color: var(--border-medium);
+      }
+
+      .hero-sports {
+        display: flex;
+        justify-content: center;
+        gap: 3rem;
+        margin-top: 4rem;
+        animation: fadeInUp 0.6s ease-out 0.4s both;
+      }
+
+      .sport-icon {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .sport-circle {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        transition:
+          transform 0.3s,
+          box-shadow 0.3s;
+      }
+
+      .sport-circle.swim {
+        background: var(--swim-glow);
+        border: 1px solid var(--swim);
+        color: var(--swim);
+      }
+
+      .sport-circle.bike {
+        background: var(--bike-glow);
+        border: 1px solid var(--bike);
+        color: var(--bike);
+      }
+
+      .sport-circle.run {
+        background: var(--run-glow);
+        border: 1px solid var(--run);
+        color: var(--run);
+      }
+
+      .sport-circle:hover {
+        transform: scale(1.1);
+      }
+
+      .sport-label {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Section Base */
+      section {
+        padding: 6rem 2rem;
+        position: relative;
+      }
+
+      .section-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .section-header {
+        text-align: center;
+        margin-bottom: 4rem;
+      }
+
+      .section-label {
+        display: inline-block;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        margin-bottom: 1rem;
+      }
+
+      .section-title {
+        font-size: clamp(2rem, 5vw, 3rem);
+        font-weight: 700;
+        margin-bottom: 1rem;
+      }
+
+      .section-subtitle {
+        font-size: 1.1rem;
+        color: var(--text-secondary);
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      /* Features Section */
+      #features {
+        background: var(--bg-secondary);
+      }
+
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+      }
+
+      .feature-card {
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-subtle);
+        border-radius: 16px;
+        padding: 2rem;
+        transition:
+          transform 0.3s,
+          border-color 0.3s;
+      }
+
+      .feature-card:hover {
+        transform: translateY(-4px);
+        border-color: var(--border-medium);
+      }
+
+      .feature-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1.25rem;
+        font-size: 1.25rem;
+      }
+
+      .feature-card:nth-child(1) .feature-icon {
+        background: var(--swim-glow);
+        color: var(--swim);
+      }
+
+      .feature-card:nth-child(2) .feature-icon {
+        background: var(--bike-glow);
+        color: var(--bike);
+      }
+
+      .feature-card:nth-child(3) .feature-icon {
+        background: var(--run-glow);
+        color: var(--run);
+      }
+
+      .feature-card:nth-child(4) .feature-icon {
+        background: var(--accent-glow);
+        color: var(--accent);
+      }
+
+      .feature-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+      }
+
+      .feature-desc {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+      }
+
+      /* How It Works */
+      #how-it-works {
+        background: var(--bg-primary);
+      }
+
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+        position: relative;
+      }
+
+      .steps::before {
+        content: "";
+        position: absolute;
+        top: 40px;
+        left: calc(16.67% + 24px);
+        right: calc(16.67% + 24px);
+        height: 2px;
+        background: linear-gradient(90deg, var(--swim), var(--bike), var(--run));
+        opacity: 0.3;
+      }
+
+      .step {
+        text-align: center;
+        position: relative;
+      }
+
+      .step-number {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 1.5rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+        font-weight: 700;
+        background: var(--bg-secondary);
+        border: 2px solid var(--border-medium);
+        position: relative;
+        z-index: 1;
+      }
+
+      .step:nth-child(1) .step-number {
+        border-color: var(--swim);
+        color: var(--swim);
+      }
+
+      .step:nth-child(2) .step-number {
+        border-color: var(--bike);
+        color: var(--bike);
+      }
+
+      .step:nth-child(3) .step-number {
+        border-color: var(--run);
+        color: var(--run);
+      }
+
+      .step-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+      }
+
+      .step-desc {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+      }
+
+      /* Pricing */
+      #pricing {
+        background: var(--bg-secondary);
+        text-align: center;
+      }
+
+      .pricing-card {
+        max-width: 500px;
+        margin: 0 auto;
+        background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-elevated));
+        border: 1px solid var(--border-medium);
+        border-radius: 24px;
+        padding: 3rem;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .pricing-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--swim), var(--bike), var(--run));
+      }
+
+      .price {
+        font-size: 4rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+      }
+
+      .price-label {
+        color: var(--text-secondary);
+        margin-bottom: 2rem;
+      }
+
+      .pricing-features {
+        list-style: none;
+        text-align: left;
+        margin-bottom: 2rem;
+      }
+
+      .pricing-features li {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid var(--border-subtle);
+      }
+
+      .pricing-features li:last-child {
+        border-bottom: none;
+      }
+
+      .check-icon {
+        width: 20px;
+        height: 20px;
+        background: var(--bike-glow);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--bike);
+        font-size: 0.75rem;
+        flex-shrink: 0;
+      }
+
+      /* Demos */
+      #demos {
+        background: var(--bg-primary);
+      }
+
+      .demos-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 1.5rem;
+      }
+
+      .demo-card {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-subtle);
+        border-radius: 16px;
+        overflow: hidden;
+        transition:
+          transform 0.3s,
+          border-color 0.3s;
+        text-decoration: none;
+        color: inherit;
+        display: block;
+      }
+
+      .demo-card:hover {
+        transform: translateY(-4px);
+        border-color: var(--border-medium);
+      }
+
+      .demo-preview {
+        height: 160px;
+        background: var(--bg-tertiary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 1rem;
+      }
+
+      .demo-week {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .demo-day {
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        opacity: 0.7;
+      }
+
+      .demo-day.swim {
+        background: var(--swim);
+      }
+      .demo-day.bike {
+        background: var(--bike);
+      }
+      .demo-day.run {
+        background: var(--run);
+      }
+      .demo-day.rest {
+        background: var(--bg-elevated);
+      }
+      .demo-day.strength {
+        background: var(--strength);
+      }
+      .demo-day.completed {
+        opacity: 0.4;
+        position: relative;
+      }
+      .demo-day.completed::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3E%3Cpath d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E")
+          center/60% no-repeat;
+      }
+
+      .demo-info {
+        padding: 1.5rem;
+      }
+
+      .demo-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+      }
+
+      .demo-meta {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        display: flex;
+        gap: 1rem;
+      }
+
+      /* Documentation */
+      #docs {
+        background: var(--bg-secondary);
+      }
+
+      .docs-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 3rem;
+        align-items: start;
+      }
+
+      .docs-text h3 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+      }
+
+      .docs-text p {
+        color: var(--text-secondary);
+        margin-bottom: 1.5rem;
+      }
+
+      .docs-steps {
+        list-style: none;
+        counter-reset: docs-step;
+      }
+
+      .docs-steps li {
+        counter-increment: docs-step;
+        padding: 1rem 0;
+        padding-left: 3rem;
+        position: relative;
+        border-bottom: 1px solid var(--border-subtle);
+      }
+
+      .docs-steps li:last-child {
+        border-bottom: none;
+      }
+
+      .docs-steps li::before {
+        content: counter(docs-step);
+        position: absolute;
+        left: 0;
+        top: 1rem;
+        width: 24px;
+        height: 24px;
+        background: var(--bg-elevated);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--accent);
+      }
+
+      .docs-steps strong {
+        color: var(--text-primary);
+      }
+
+      .docs-steps a {
+        color: var(--accent);
+      }
+
+      .code-block {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-subtle);
+        border-radius: 12px;
+        padding: 1.5rem;
+        font-family: "SF Mono", Monaco, "Courier New", monospace;
+        font-size: 0.85rem;
+        overflow-x: auto;
+      }
+
+      .code-block .comment {
+        color: var(--text-muted);
+      }
+
+      .code-block .string {
+        color: var(--bike);
+      }
+
+      .code-block .prompt {
+        color: var(--text-muted);
+        user-select: none;
+      }
+
+      /* Footer */
+      footer {
+        background: var(--bg-primary);
+        border-top: 1px solid var(--border-subtle);
+        padding: 3rem 2rem;
+      }
+
+      .footer-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+      }
+
+      .footer-left {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+      }
+
+      .footer-links {
+        display: flex;
+        gap: 1.5rem;
+        list-style: none;
+      }
+
+      .footer-links a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: color 0.2s;
+      }
+
+      .footer-links a:hover {
+        color: var(--text-primary);
+      }
+
+      .footer-right {
+        color: var(--text-muted);
+        font-size: 0.85rem;
+      }
+
+      .footer-right a {
+        color: var(--text-secondary);
+        text-decoration: none;
+      }
+
+      .footer-right a:hover {
+        color: var(--text-primary);
+      }
+
+      /* Mobile Nav Toggle */
+      .nav-toggle {
+        display: none;
+        background: none;
+        border: none;
+        color: var(--text-primary);
+        font-size: 1.5rem;
+        cursor: pointer;
+      }
+
+      /* Scroll Animations */
+      .fade-in {
+        opacity: 0;
+        transform: translateY(20px);
+        transition:
+          opacity 0.6s ease-out,
+          transform 0.6s ease-out;
+      }
+
+      .fade-in.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      /* Responsive */
+      @media (max-width: 900px) {
+        .steps {
+          grid-template-columns: 1fr;
+          gap: 3rem;
+        }
+
+        .steps::before {
+          display: none;
+        }
+
+        .docs-content {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 700px) {
+        nav {
+          padding: 1rem;
+        }
+
+        .nav-links {
+          display: none;
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          background: var(--bg-secondary);
+          flex-direction: column;
+          padding: 1rem;
+          gap: 0;
+          border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .nav-links.open {
+          display: flex;
+        }
+
+        .nav-links li {
+          padding: 0.75rem 0;
+          border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .nav-links li:last-child {
+          border-bottom: none;
+        }
+
+        .nav-toggle {
+          display: block;
+        }
+
+        .nav-cta {
+          display: none;
+        }
+
+        .hero {
+          padding: 6rem 1.5rem 3rem;
+        }
+
+        .hero-sports {
+          gap: 1.5rem;
+        }
+
+        section {
+          padding: 4rem 1.5rem;
+        }
+
+        .footer-inner {
+          flex-direction: column;
+          text-align: center;
+        }
+
+        .footer-left {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <div class="nav-inner">
+        <a href="#" class="logo">
+          <div class="logo-mark"></div>
+          Claude Coach
+        </a>
+        <button class="nav-toggle" aria-label="Toggle menu">
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+        <ul class="nav-links">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#how-it-works">How It Works</a></li>
+          <li><a href="#demos">Demos</a></li>
+          <li><a href="#docs">Documentation</a></li>
+        </ul>
+        <a href="https://github.com/felixrieseberg/claude-coach/releases/latest" class="nav-cta"
+          >Download</a
+        >
+      </div>
+    </nav>
+
+    <section class="hero">
+      <div class="hero-bg"></div>
+      <div class="hero-grid"></div>
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="badge-dot"></span>
+          Free and Open Source
+        </div>
+        <h1>Train Smarter<br />with <span>AI</span></h1>
+        <p class="hero-subtitle">
+          Create personalized triathlon, marathon, and ultra training plans powered by your fitness
+          data. Professional periodization, beautiful plan viewer, export to your favorite apps.
+        </p>
+        <div class="hero-cta">
+          <a
+            href="https://github.com/felixrieseberg/claude-coach/releases/latest"
+            class="btn btn-primary"
+          >
+            Get Started
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </a>
+          <a href="#demos" class="btn btn-secondary">View Demo Plans</a>
+        </div>
+        <div class="hero-sports">
+          <div class="sport-icon">
+            <div class="sport-circle swim">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M2 12c2-2 4-2 6 0s4 2 6 0 4-2 6 0" />
+                <path d="M2 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0" />
+                <circle cx="12" cy="6" r="3" />
+              </svg>
+            </div>
+            <span class="sport-label">Swim</span>
+          </div>
+          <div class="sport-icon">
+            <div class="sport-circle bike">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="6" cy="17" r="3" />
+                <circle cx="18" cy="17" r="3" />
+                <path d="M6 17l3-7h6l3 7" />
+                <path d="M9 10l3-4 3 4" />
+              </svg>
+            </div>
+            <span class="sport-label">Bike</span>
+          </div>
+          <div class="sport-icon">
+            <div class="sport-circle run">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="4" r="2" />
+                <path d="M7 22l3-8 4 2 3-8" />
+                <path d="M10 14l-3 2" />
+              </svg>
+            </div>
+            <span class="sport-label">Run</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features">
+      <div class="section-inner">
+        <div class="section-header fade-in">
+          <span class="section-label">Features</span>
+          <h2 class="section-title">Everything You Need to Train</h2>
+          <p class="section-subtitle">
+            From data analysis to race day strategy, Claude Coach handles the complexity so you can
+            focus on training.
+          </p>
+        </div>
+        <div class="features-grid">
+          <div class="feature-card fade-in">
+            <div class="feature-icon">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                <path d="M2 17l10 5 10-5" />
+                <path d="M2 12l10 5 10-5" />
+              </svg>
+            </div>
+            <h3 class="feature-title">Data-Driven Plans</h3>
+            <p class="feature-desc">
+              Connect your Strava account and let AI analyze your training history to create plans
+              that match your actual fitness level.
+            </p>
+          </div>
+          <div class="feature-card fade-in">
+            <div class="feature-icon">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M12 20V10" />
+                <path d="M18 20V4" />
+                <path d="M6 20v-6" />
+              </svg>
+            </div>
+            <h3 class="feature-title">Smart Periodization</h3>
+            <p class="feature-desc">
+              Base, build, peak, and taper phases with progressive overload and recovery weeks built
+              in. Real coaching principles applied by AI.
+            </p>
+          </div>
+          <div class="feature-card fade-in">
+            <div class="feature-icon">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <rect x="3" y="4" width="18" height="18" rx="2" />
+                <path d="M16 2v4" />
+                <path d="M8 2v4" />
+                <path d="M3 10h18" />
+              </svg>
+            </div>
+            <h3 class="feature-title">Interactive Plan Viewer</h3>
+            <p class="feature-desc">
+              A beautiful calendar view with drag-and-drop workouts, completion tracking, and
+              detailed workout breakdowns.
+            </p>
+          </div>
+          <div class="feature-card fade-in">
+            <div class="feature-icon">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </div>
+            <h3 class="feature-title">Export Everywhere</h3>
+            <p class="feature-desc">
+              Export workouts to Zwift, Garmin, TrainerRoad, or your calendar. Take your structured
+              training wherever you go.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="how-it-works">
+      <div class="section-inner">
+        <div class="section-header fade-in">
+          <span class="section-label">How It Works</span>
+          <h2 class="section-title">Your Plan in Three Steps</h2>
+          <p class="section-subtitle">From zero to fully personalized training plan in minutes.</p>
+        </div>
+        <div class="steps">
+          <div class="step fade-in">
+            <div class="step-number">1</div>
+            <h3 class="step-title">Install the Skill</h3>
+            <p class="step-desc">
+              Download the Claude Coach skill and add it to Claude.ai or Claude Code. Takes less
+              than a minute.
+            </p>
+          </div>
+          <div class="step fade-in">
+            <div class="step-number">2</div>
+            <h3 class="step-title">Share Your Fitness</h3>
+            <p class="step-desc">
+              Connect Strava for automatic analysis, or describe your training history manually.
+              Tell Claude about your target event.
+            </p>
+          </div>
+          <div class="step fade-in">
+            <div class="step-number">3</div>
+            <h3 class="step-title">Get Your Plan</h3>
+            <p class="step-desc">
+              Receive a complete periodized training plan with zones, workouts, race strategy, and
+              an interactive viewer.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="pricing">
+      <div class="section-inner">
+        <div class="section-header fade-in">
+          <span class="section-label">Pricing</span>
+          <h2 class="section-title">Free Forever</h2>
+          <p class="section-subtitle">
+            No subscriptions, no premium tiers. Just great training plans.
+          </p>
+        </div>
+        <div class="pricing-card fade-in">
+          <div class="price">$0</div>
+          <p class="price-label">Open source under MIT license</p>
+          <ul class="pricing-features">
+            <li>
+              <span class="check-icon">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="3"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </span>
+              Unlimited training plans
+            </li>
+            <li>
+              <span class="check-icon">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="3"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </span>
+              Strava integration
+            </li>
+            <li>
+              <span class="check-icon">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="3"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </span>
+              Export to Zwift, Garmin, TrainerRoad
+            </li>
+            <li>
+              <span class="check-icon">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="3"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </span>
+              Interactive plan viewer
+            </li>
+            <li>
+              <span class="check-icon">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="3"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </span>
+              Your data stays local
+            </li>
+          </ul>
+          <a
+            href="https://github.com/felixrieseberg/claude-coach/releases/latest"
+            class="btn btn-primary"
+            style="width: 100%; justify-content: center"
+          >
+            Download Now
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section id="demos">
+      <div class="section-inner">
+        <div class="section-header fade-in">
+          <span class="section-label">Examples</span>
+          <h2 class="section-title">See It In Action</h2>
+          <p class="section-subtitle">Explore real training plans generated by Claude Coach.</p>
+        </div>
+        <div class="demos-grid">
+          <a href="demos/marathon.html" class="demo-card fade-in">
+            <div class="demo-preview">
+              <div class="demo-week">
+                <div class="demo-day rest"></div>
+                <div class="demo-day run completed"></div>
+                <div class="demo-day strength completed"></div>
+                <div class="demo-day run completed"></div>
+                <div class="demo-day rest"></div>
+                <div class="demo-day run"></div>
+                <div class="demo-day run"></div>
+              </div>
+              <div class="demo-week">
+                <div class="demo-day rest"></div>
+                <div class="demo-day run"></div>
+                <div class="demo-day strength"></div>
+                <div class="demo-day run"></div>
+                <div class="demo-day rest"></div>
+                <div class="demo-day run"></div>
+                <div class="demo-day run"></div>
+              </div>
+              <div class="demo-week">
+                <div class="demo-day rest"></div>
+                <div class="demo-day run"></div>
+                <div class="demo-day strength"></div>
+                <div class="demo-day run"></div>
+                <div class="demo-day rest"></div>
+                <div class="demo-day run"></div>
+                <div class="demo-day run"></div>
+              </div>
+            </div>
+            <div class="demo-info">
+              <h3 class="demo-title">Marathon Training Plan</h3>
+              <div class="demo-meta">
+                <span>16 weeks</span>
+                <span>First marathon</span>
+              </div>
+            </div>
+          </a>
+          <a href="demos/half-ironman.html" class="demo-card fade-in">
+            <div class="demo-preview">
+              <div class="demo-week">
+                <div class="demo-day rest"></div>
+                <div class="demo-day swim completed"></div>
+                <div class="demo-day bike completed"></div>
+                <div class="demo-day run completed"></div>
+                <div class="demo-day swim completed"></div>
+                <div class="demo-day bike"></div>
+                <div class="demo-day run"></div>
+              </div>
+              <div class="demo-week">
+                <div class="demo-day rest"></div>
+                <div class="demo-day swim"></div>
+                <div class="demo-day bike"></div>
+                <div class="demo-day run"></div>
+                <div class="demo-day swim"></div>
+                <div class="demo-day bike"></div>
+                <div class="demo-day run"></div>
+              </div>
+              <div class="demo-week">
+                <div class="demo-day rest"></div>
+                <div class="demo-day swim"></div>
+                <div class="demo-day bike"></div>
+                <div class="demo-day run"></div>
+                <div class="demo-day swim"></div>
+                <div class="demo-day bike"></div>
+                <div class="demo-day run"></div>
+              </div>
+            </div>
+            <div class="demo-info">
+              <h3 class="demo-title">Half Ironman 70.3</h3>
+              <div class="demo-meta">
+                <span>20 weeks</span>
+                <span>Intermediate</span>
+              </div>
+            </div>
+          </a>
+          <a href="demos/ultra-50k.html" class="demo-card fade-in">
+            <div class="demo-preview">
+              <div class="demo-week">
+                <div class="demo-day rest"></div>
+                <div class="demo-day run completed"></div>
+                <div class="demo-day strength completed"></div>
+                <div class="demo-day run completed"></div>
+                <div class="demo-day rest"></div>
+                <div class="demo-day run completed"></div>
+                <div class="demo-day run completed"></div>
+              </div>
+              <div class="demo-week">
+                <div class="demo-day rest"></div>
+                <div class="demo-day run"></div>
+                <div class="demo-day strength"></div>
+                <div class="demo-day run"></div>
+                <div class="demo-day rest"></div>
+                <div class="demo-day run"></div>
+                <div class="demo-day run"></div>
+              </div>
+              <div class="demo-week">
+                <div class="demo-day rest"></div>
+                <div class="demo-day run"></div>
+                <div class="demo-day strength"></div>
+                <div class="demo-day run"></div>
+                <div class="demo-day rest"></div>
+                <div class="demo-day run"></div>
+                <div class="demo-day run"></div>
+              </div>
+            </div>
+            <div class="demo-info">
+              <h3 class="demo-title">50K Ultra Trail</h3>
+              <div class="demo-meta">
+                <span>18 weeks</span>
+                <span>Trail running focus</span>
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section id="docs">
+      <div class="section-inner">
+        <div class="section-header fade-in">
+          <span class="section-label">Documentation</span>
+          <h2 class="section-title">Quick Start Guide</h2>
+          <p class="section-subtitle">Get up and running in minutes.</p>
+        </div>
+        <div class="docs-content fade-in">
+          <div class="docs-text">
+            <h3>Getting Started</h3>
+            <p>
+              Claude Coach works with Claude.ai or Claude Code. Follow these steps to create your
+              first training plan.
+            </p>
+            <ol class="docs-steps">
+              <li>
+                <strong>Download the skill</strong> from the
+                <a href="https://github.com/felixrieseberg/claude-coach/releases/latest"
+                  >latest release</a
+                >
+              </li>
+              <li>
+                <strong>Add to Claude.ai:</strong> Settings &rarr; Capabilities &rarr; Add skill.
+                Also add <code>*.strava.com</code> to allowed domains
+              </li>
+              <li>
+                <strong>Start a conversation</strong> with Claude and ask for a training plan for
+                your target event
+              </li>
+              <li>
+                <strong>Connect Strava</strong> when prompted, or describe your fitness level
+                manually
+              </li>
+              <li>
+                <strong>Review your plan</strong> in the interactive viewer and export workouts to
+                your devices
+              </li>
+            </ol>
+          </div>
+          <div class="code-block">
+            <div><span class="comment"># Example prompt for Claude</span></div>
+            <br />
+            <div><span class="string">"Help me create a training plan for the</span></div>
+            <div><span class="string">Boston Marathon on April 21st 2025</span></div>
+            <div><span class="string">using the coach skill.</span></div>
+            <br />
+            <div><span class="string">I've been running for 3 years and my</span></div>
+            <div><span class="string">current weekly mileage is about 30 miles.</span></div>
+            <div><span class="string">My goal is to finish under 4 hours."</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="footer-inner">
+        <div class="footer-left">
+          <a href="#" class="logo">
+            <div class="logo-mark"></div>
+            Claude Coach
+          </a>
+          <ul class="footer-links">
+            <li><a href="https://github.com/felixrieseberg/claude-coach">GitHub</a></li>
+            <li><a href="https://github.com/felixrieseberg/claude-coach/releases">Releases</a></li>
+            <li><a href="https://github.com/felixrieseberg/claude-coach/issues">Issues</a></li>
+          </ul>
+        </div>
+        <div class="footer-right">
+          Built by <a href="https://felixrieseberg.com">Felix Rieseberg</a>. MIT License.
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      // Mobile nav toggle
+      document.querySelector(".nav-toggle").addEventListener("click", function () {
+        document.querySelector(".nav-links").classList.toggle("open");
+      });
+
+      // Scroll animations
+      const observerOptions = {
+        threshold: 0.1,
+        rootMargin: "0px 0px -50px 0px",
+      };
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("visible");
+          }
+        });
+      }, observerOptions);
+
+      document.querySelectorAll(".fade-in").forEach((el) => {
+        observer.observe(el);
+      });
+
+      // Smooth scroll for nav links
+      document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+        anchor.addEventListener("click", function (e) {
+          e.preventDefault();
+          const target = document.querySelector(this.getAttribute("href"));
+          if (target) {
+            target.scrollIntoView({ behavior: "smooth" });
+            document.querySelector(".nav-links").classList.remove("open");
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

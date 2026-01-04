@@ -1,0 +1,507 @@
+{
+  "version": "1.0",
+  "meta": {
+    "id": "demo-703-001",
+    "athlete": "Demo Triathlete",
+    "event": "Ironman 70.3 Oceanside",
+    "eventDate": "2025-04-05",
+    "planStartDate": "2024-11-18",
+    "planEndDate": "2025-04-04",
+    "createdAt": "2024-11-01T00:00:00Z",
+    "updatedAt": "2024-11-01T00:00:00Z",
+    "totalWeeks": 20,
+    "generatedBy": "Claude Coach"
+  },
+  "preferences": {
+    "swim": "meters",
+    "bike": "miles",
+    "run": "miles",
+    "firstDayOfWeek": "monday"
+  },
+  "assessment": {
+    "foundation": {
+      "raceHistory": ["Olympic Tri 2024 - 2:45:00", "Sprint Tri 2023 - 1:15:00"],
+      "peakTrainingLoad": 10,
+      "foundationLevel": "intermediate",
+      "yearsInSport": 2
+    },
+    "currentForm": {
+      "weeklyVolume": { "total": 8, "swim": 1.5, "bike": 4, "run": 2.5 },
+      "longestSessions": { "swim": 2500, "bike": 50, "run": 10 },
+      "consistency": 6
+    },
+    "strengths": [{ "sport": "bike", "evidence": "Strong cyclist, good power-to-weight ratio" }],
+    "limiters": [{ "sport": "swim", "evidence": "Weakest discipline, needs technique focus" }],
+    "constraints": ["Pool only available weekday mornings", "Long workouts on weekends only"]
+  },
+  "zones": {
+    "run": {
+      "hr": {
+        "lthr": 165,
+        "zones": [
+          {
+            "zone": 1,
+            "name": "Recovery",
+            "percentLow": 0,
+            "percentHigh": 81,
+            "hrLow": 0,
+            "hrHigh": 134
+          },
+          {
+            "zone": 2,
+            "name": "Aerobic",
+            "percentLow": 81,
+            "percentHigh": 89,
+            "hrLow": 134,
+            "hrHigh": 147
+          },
+          {
+            "zone": 3,
+            "name": "Tempo",
+            "percentLow": 89,
+            "percentHigh": 94,
+            "hrLow": 147,
+            "hrHigh": 155
+          },
+          {
+            "zone": 4,
+            "name": "Threshold",
+            "percentLow": 94,
+            "percentHigh": 100,
+            "hrLow": 155,
+            "hrHigh": 165
+          },
+          {
+            "zone": 5,
+            "name": "VO2max",
+            "percentLow": 100,
+            "percentHigh": 106,
+            "hrLow": 165,
+            "hrHigh": 175
+          }
+        ]
+      }
+    },
+    "bike": {
+      "power": {
+        "ftp": 230,
+        "zones": [
+          {
+            "zone": 1,
+            "name": "Active Recovery",
+            "percentLow": 0,
+            "percentHigh": 55,
+            "wattsLow": 0,
+            "wattsHigh": 127
+          },
+          {
+            "zone": 2,
+            "name": "Endurance",
+            "percentLow": 55,
+            "percentHigh": 75,
+            "wattsLow": 127,
+            "wattsHigh": 173
+          },
+          {
+            "zone": 3,
+            "name": "Tempo",
+            "percentLow": 75,
+            "percentHigh": 90,
+            "wattsLow": 173,
+            "wattsHigh": 207
+          },
+          {
+            "zone": 4,
+            "name": "Threshold",
+            "percentLow": 90,
+            "percentHigh": 105,
+            "wattsLow": 207,
+            "wattsHigh": 242
+          },
+          {
+            "zone": 5,
+            "name": "VO2max",
+            "percentLow": 105,
+            "percentHigh": 120,
+            "wattsLow": 242,
+            "wattsHigh": 276
+          }
+        ]
+      }
+    },
+    "swim": {
+      "css": "1:48/100m",
+      "cssSeconds": 108,
+      "zones": [
+        { "zone": 1, "name": "Recovery", "paceOffset": 20, "pace": "2:08/100m" },
+        { "zone": 2, "name": "Endurance", "paceOffset": 10, "pace": "1:58/100m" },
+        { "zone": 3, "name": "Threshold", "paceOffset": 0, "pace": "1:48/100m" },
+        { "zone": 4, "name": "VO2max", "paceOffset": -5, "pace": "1:43/100m" }
+      ]
+    }
+  },
+  "phases": [
+    {
+      "name": "Base",
+      "startWeek": 1,
+      "endWeek": 6,
+      "focus": "Build aerobic foundation across all three sports",
+      "weeklyHoursRange": { "low": 8, "high": 10 },
+      "keyWorkouts": ["Long ride", "Long run", "Swim technique"],
+      "physiologicalGoals": ["Aerobic base", "Swim efficiency", "Running economy"]
+    },
+    {
+      "name": "Build",
+      "startWeek": 7,
+      "endWeek": 14,
+      "focus": "Increase intensity and race-specific preparation",
+      "weeklyHoursRange": { "low": 10, "high": 13 },
+      "keyWorkouts": ["Brick workouts", "Tempo runs", "Threshold bike"],
+      "physiologicalGoals": ["Lactate threshold", "Brick adaptation", "Race pace work"]
+    },
+    {
+      "name": "Peak",
+      "startWeek": 15,
+      "endWeek": 18,
+      "focus": "Race simulation and peak fitness",
+      "weeklyHoursRange": { "low": 12, "high": 15 },
+      "keyWorkouts": [
+        "Race simulation bricks",
+        "Open water swims",
+        "Long rides with race nutrition"
+      ],
+      "physiologicalGoals": ["Peak fitness", "Race confidence", "Nutrition strategy"]
+    },
+    {
+      "name": "Taper",
+      "startWeek": 19,
+      "endWeek": 20,
+      "focus": "Recovery and race prep",
+      "weeklyHoursRange": { "low": 5, "high": 7 },
+      "keyWorkouts": ["Short sharp efforts", "Equipment check", "Course preview"],
+      "physiologicalGoals": ["Full recovery", "Race readiness", "Mental preparation"]
+    }
+  ],
+  "weeks": [
+    {
+      "weekNumber": 1,
+      "startDate": "2024-11-18",
+      "endDate": "2024-11-24",
+      "phase": "Base",
+      "focus": "Establish training rhythm",
+      "targetHours": 8,
+      "isRecoveryWeek": false,
+      "days": [
+        {
+          "date": "2024-11-18",
+          "dayOfWeek": "Monday",
+          "workouts": [
+            {
+              "id": "w1-mon-rest",
+              "sport": "rest",
+              "type": "rest",
+              "name": "Rest Day",
+              "description": "Recovery",
+              "completed": true
+            }
+          ]
+        },
+        {
+          "date": "2024-11-19",
+          "dayOfWeek": "Tuesday",
+          "workouts": [
+            {
+              "id": "w1-tue-swim",
+              "sport": "swim",
+              "type": "technique",
+              "name": "Swim Technique",
+              "description": "Focus on catch and pull mechanics",
+              "durationMinutes": 45,
+              "distanceMeters": 2000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "Warm-up: 200 easy\n\nDrill set:\n4x50 catch-up drill\n4x50 fingertip drag\n\nMain: 8x100 @ 1:55\nFocus on long strokes\n\nCool-down: 200 easy",
+              "completed": true
+            }
+          ]
+        },
+        {
+          "date": "2024-11-20",
+          "dayOfWeek": "Wednesday",
+          "workouts": [
+            {
+              "id": "w1-wed-bike",
+              "sport": "bike",
+              "type": "endurance",
+              "name": "Endurance Ride",
+              "description": "Steady aerobic effort",
+              "durationMinutes": 60,
+              "distanceMeters": 32000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "60 min steady\n140-155W target\nSmooth pedaling, 85-90 rpm",
+              "completed": true
+            }
+          ]
+        },
+        {
+          "date": "2024-11-21",
+          "dayOfWeek": "Thursday",
+          "workouts": [
+            {
+              "id": "w1-thu-run",
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy Run",
+              "description": "Aerobic development",
+              "durationMinutes": 40,
+              "distanceMeters": 7000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "40 min easy\nConversational pace\nHR under 147",
+              "completed": true
+            }
+          ]
+        },
+        {
+          "date": "2024-11-22",
+          "dayOfWeek": "Friday",
+          "workouts": [
+            {
+              "id": "w1-fri-swim",
+              "sport": "swim",
+              "type": "endurance",
+              "name": "Swim Endurance",
+              "description": "Build swim fitness",
+              "durationMinutes": 45,
+              "distanceMeters": 2200,
+              "primaryZone": "Zone 2",
+              "humanReadable": "Warm-up: 300 easy\n\nMain:\n6x200 @ 3:45\nNegative split each 200\n\nCool-down: 200 easy pull",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2024-11-23",
+          "dayOfWeek": "Saturday",
+          "workouts": [
+            {
+              "id": "w1-sat-bike",
+              "sport": "bike",
+              "type": "long",
+              "name": "Long Ride",
+              "description": "Build cycling endurance",
+              "durationMinutes": 120,
+              "distanceMeters": 65000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "2 hours steady\n- Stay in aero as able\n- Practice nutrition\n- Drink every 15 min",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2024-11-24",
+          "dayOfWeek": "Sunday",
+          "workouts": [
+            {
+              "id": "w1-sun-run",
+              "sport": "run",
+              "type": "long",
+              "name": "Long Run",
+              "description": "Build run endurance",
+              "durationMinutes": 70,
+              "distanceMeters": 13000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "8 miles easy\n- Even effort throughout\n- Take water at mile 4",
+              "completed": false
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "totalHours": 8,
+        "bySport": {
+          "swim": { "sessions": 2, "hours": 1.5, "km": 4.2 },
+          "bike": { "sessions": 2, "hours": 3, "km": 97 },
+          "run": { "sessions": 2, "hours": 1.8, "km": 20 }
+        }
+      }
+    },
+    {
+      "weekNumber": 2,
+      "startDate": "2024-11-25",
+      "endDate": "2024-12-01",
+      "phase": "Base",
+      "focus": "Building consistency",
+      "targetHours": 8.5,
+      "isRecoveryWeek": false,
+      "days": [
+        {
+          "date": "2024-11-25",
+          "dayOfWeek": "Monday",
+          "workouts": [
+            {
+              "id": "w2-mon-rest",
+              "sport": "rest",
+              "type": "rest",
+              "name": "Rest Day",
+              "description": "Recovery",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2024-11-26",
+          "dayOfWeek": "Tuesday",
+          "workouts": [
+            {
+              "id": "w2-tue-swim",
+              "sport": "swim",
+              "type": "technique",
+              "name": "Swim Drills + Speed",
+              "description": "Technique with some speed work",
+              "durationMinutes": 50,
+              "distanceMeters": 2400,
+              "primaryZone": "Zone 2-3",
+              "humanReadable": "Warm-up: 300 easy\n\n4x50 drill/swim by 25\n\nMain:\n8x100 @ 1:50\nDescend 1-4, 5-8\n\n4x50 fast @ :55\n\nCool-down: 200 easy",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2024-11-27",
+          "dayOfWeek": "Wednesday",
+          "workouts": [
+            {
+              "id": "w2-wed-bike",
+              "sport": "bike",
+              "type": "endurance",
+              "name": "Endurance Ride",
+              "description": "Aerobic base work",
+              "durationMinutes": 75,
+              "distanceMeters": 40000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "75 min steady\nInclude 4x30 sec spin-ups to 100+ rpm",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2024-11-28",
+          "dayOfWeek": "Thursday",
+          "workouts": [
+            {
+              "id": "w2-thu-run",
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy Run + Strides",
+              "description": "Easy with turnover work",
+              "durationMinutes": 45,
+              "distanceMeters": 8000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "40 min easy\nThen 5x20 sec strides\nFull recovery between",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2024-11-29",
+          "dayOfWeek": "Friday",
+          "workouts": [
+            {
+              "id": "w2-fri-swim",
+              "sport": "swim",
+              "type": "endurance",
+              "name": "Swim Endurance",
+              "description": "Continuous swimming focus",
+              "durationMinutes": 45,
+              "distanceMeters": 2500,
+              "primaryZone": "Zone 2",
+              "humanReadable": "Warm-up: 400 easy\n\nMain: 1500 continuous\n@ comfortable pace\nSight every 10 strokes\n\nCool-down: 200 easy",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2024-11-30",
+          "dayOfWeek": "Saturday",
+          "workouts": [
+            {
+              "id": "w2-sat-bike",
+              "sport": "bike",
+              "type": "long",
+              "name": "Long Ride",
+              "description": "Building base miles",
+              "durationMinutes": 135,
+              "distanceMeters": 75000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "2:15 ride\n- Steady effort\n- 60g carbs/hour\n- Stay hydrated",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2024-12-01",
+          "dayOfWeek": "Sunday",
+          "workouts": [
+            {
+              "id": "w2-sun-brick",
+              "sport": "brick",
+              "type": "brick",
+              "name": "Brick: Bike + Run",
+              "description": "First brick workout",
+              "durationMinutes": 90,
+              "primaryZone": "Zone 2",
+              "humanReadable": "Bike: 60 min easy\n\nTransition: Quick change\n\nRun: 25 min easy\nFocus on finding run legs",
+              "completed": false
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "totalHours": 8.5,
+        "bySport": {
+          "swim": { "sessions": 2, "hours": 1.6, "km": 4.9 },
+          "bike": { "sessions": 2, "hours": 3.5, "km": 115 },
+          "run": { "sessions": 1, "hours": 0.75, "km": 8 },
+          "brick": { "sessions": 1, "hours": 1.5, "km": 0 }
+        }
+      }
+    }
+  ],
+  "raceStrategy": {
+    "event": {
+      "name": "Ironman 70.3 Oceanside",
+      "date": "2025-04-05",
+      "type": "70.3",
+      "distances": { "swim": 1900, "bike": 90000, "run": 21100 }
+    },
+    "pacing": {
+      "swim": {
+        "target": "1:55/100m",
+        "notes": "Start wide to avoid contact. Settle into rhythm. Draft when possible."
+      },
+      "bike": {
+        "targetPower": "165-180W",
+        "targetHR": "<145",
+        "notes": "Steady power, save legs for run. Stay aero. Eat and drink consistently."
+      },
+      "run": {
+        "targetPace": "9:00-9:30/mi",
+        "targetHR": "<155",
+        "notes": "Start conservative. Walk aid stations first loop. Negative split if possible."
+      }
+    },
+    "nutrition": {
+      "preRace": "3 hours before: 80g carbs, 500ml water. 30 min before: gel + water",
+      "during": {
+        "carbsPerHour": 80,
+        "fluidPerHour": "750ml",
+        "products": ["Maurten 320 on bike", "Maurten Gel 100", "Race nutrition on course"]
+      },
+      "notes": "Practice this nutrition plan on long training days. Nothing new on race day."
+    },
+    "taper": {
+      "startDate": "2025-03-22",
+      "volumeReduction": 50,
+      "notes": "Maintain intensity, cut volume. Stay sharp with short speed work."
+    }
+  }
+}

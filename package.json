@@ -20,6 +20,7 @@
     "build:ts": "tsc && cp src/db/schema.sql dist/db/",
     "build:viewer": "vite build --config vite.config.viewer.ts",
     "build:skill": "mkdir -p dist && cd skill && zip -r ../dist/coach-skill.zip . -x '*.DS_Store' && echo 'Skill packaged to dist/coach-skill.zip'",
+    "build:website": "node scripts/build-website.js",
     "dev": "tsx watch src/cli.ts",
     "dev:viewer": "vite --config vite.config.viewer.ts",
     "test": "vitest",
