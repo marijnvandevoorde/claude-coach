@@ -9,7 +9,7 @@
     "planEndDate": "2025-04-20",
     "createdAt": "2025-01-01T00:00:00Z",
     "updatedAt": "2025-01-01T00:00:00Z",
-    "totalWeeks": 16,
+    "totalWeeks": 10,
     "generatedBy": "Claude Coach"
   },
   "preferences": {
@@ -101,38 +101,29 @@
     {
       "name": "Base",
       "startWeek": 1,
-      "endWeek": 5,
-      "focus": "Build aerobic foundation and running economy",
+      "endWeek": 4,
+      "focus": "Build aerobic foundation",
       "weeklyHoursRange": { "low": 5, "high": 7 },
-      "keyWorkouts": ["Long run", "Easy runs", "Strides"],
-      "physiologicalGoals": ["Aerobic base", "Running economy", "Injury prevention"]
+      "keyWorkouts": ["Long run", "Easy runs"],
+      "physiologicalGoals": ["Aerobic base"]
     },
     {
       "name": "Build",
-      "startWeek": 6,
-      "endWeek": 11,
-      "focus": "Increase volume and introduce marathon-specific work",
+      "startWeek": 5,
+      "endWeek": 8,
+      "focus": "Increase volume and intensity",
       "weeklyHoursRange": { "low": 7, "high": 9 },
-      "keyWorkouts": ["Long run with MP miles", "Tempo runs", "Progressive runs"],
-      "physiologicalGoals": ["Lactate threshold", "Marathon pace familiarity", "Mental toughness"]
+      "keyWorkouts": ["Tempo runs", "Long runs with MP"],
+      "physiologicalGoals": ["Lactate threshold"]
     },
     {
       "name": "Peak",
-      "startWeek": 12,
-      "endWeek": 14,
-      "focus": "Race-specific preparation and highest training load",
-      "weeklyHoursRange": { "low": 8, "high": 10 },
-      "keyWorkouts": ["20+ mile long runs", "Marathon pace workouts", "Dress rehearsal"],
-      "physiologicalGoals": ["Peak fitness", "Race confidence", "Fueling strategy"]
-    },
-    {
-      "name": "Taper",
-      "startWeek": 15,
-      "endWeek": 16,
-      "focus": "Recovery and freshness for race day",
-      "weeklyHoursRange": { "low": 3, "high": 5 },
-      "keyWorkouts": ["Short easy runs", "Light strides", "Rest"],
-      "physiologicalGoals": ["Full recovery", "Glycogen loading", "Mental preparation"]
+      "startWeek": 9,
+      "endWeek": 10,
+      "focus": "Race-specific preparation",
+      "weeklyHoursRange": { "low": 6, "high": 8 },
+      "keyWorkouts": ["Race simulation"],
+      "physiologicalGoals": ["Peak fitness"]
     }
   ],
   "weeks": [
@@ -141,7 +132,7 @@
       "startDate": "2025-01-06",
       "endDate": "2025-01-12",
       "phase": "Base",
-      "focus": "Establish routine, assess current fitness",
+      "focus": "Establish routine",
       "targetHours": 5,
       "isRecoveryWeek": false,
       "days": [
@@ -150,11 +141,11 @@
           "dayOfWeek": "Monday",
           "workouts": [
             {
-              "id": "w1-mon-rest",
+              "id": "w1-mon",
               "sport": "rest",
               "type": "rest",
               "name": "Rest Day",
-              "description": "Full recovery",
+              "description": "Recovery",
               "completed": true
             }
           ]
@@ -164,15 +155,15 @@
           "dayOfWeek": "Tuesday",
           "workouts": [
             {
-              "id": "w1-tue-run",
+              "id": "w1-tue",
               "sport": "run",
               "type": "easy",
               "name": "Easy Run",
-              "description": "Comfortable aerobic pace, focus on form",
+              "description": "Aerobic base",
               "durationMinutes": 45,
               "distanceMeters": 8000,
               "primaryZone": "Zone 2",
-              "humanReadable": "45 min easy\nKeep HR in Zone 2\nRelaxed breathing throughout",
+              "humanReadable": "45 min easy running\nZone 2 heart rate\nConversational pace",
               "completed": true
             }
           ]
@@ -182,13 +173,13 @@
           "dayOfWeek": "Wednesday",
           "workouts": [
             {
-              "id": "w1-wed-strength",
+              "id": "w1-wed",
               "sport": "strength",
               "type": "strength",
-              "name": "Strength + Core",
-              "description": "Running-specific strength work",
+              "name": "Strength",
+              "description": "Core and legs",
               "durationMinutes": 30,
-              "humanReadable": "Warm-up: 5 min light jog\n\n3 rounds:\n- 12 squats\n- 10 lunges each leg\n- 15 calf raises\n- 30 sec plank\n- 10 glute bridges\n\nCool-down: stretching",
+              "humanReadable": "3 rounds:\n12 squats\n10 lunges each\n30s plank\n15 calf raises",
               "completed": true
             }
           ]
@@ -198,15 +189,15 @@
           "dayOfWeek": "Thursday",
           "workouts": [
             {
-              "id": "w1-thu-run",
+              "id": "w1-thu",
               "sport": "run",
               "type": "easy",
               "name": "Easy Run + Strides",
-              "description": "Easy effort with strides to work on turnover",
+              "description": "Easy with strides",
               "durationMinutes": 40,
               "distanceMeters": 7000,
               "primaryZone": "Zone 2",
-              "humanReadable": "35 min easy run\n\nThen 4x20 sec strides\n- Build to fast but controlled\n- Full recovery between\n\n5 min cool-down jog",
+              "humanReadable": "35 min easy\n4x20s strides",
               "completed": true
             }
           ]
@@ -216,7 +207,7 @@
           "dayOfWeek": "Friday",
           "workouts": [
             {
-              "id": "w1-fri-rest",
+              "id": "w1-fri",
               "sport": "rest",
               "type": "rest",
               "name": "Rest Day",
@@ -230,15 +221,15 @@
           "dayOfWeek": "Saturday",
           "workouts": [
             {
-              "id": "w1-sat-run",
+              "id": "w1-sat",
               "sport": "run",
               "type": "easy",
               "name": "Easy Run",
-              "description": "Shake out run before long run",
+              "description": "Shakeout",
               "durationMinutes": 30,
               "distanceMeters": 5000,
               "primaryZone": "Zone 2",
-              "humanReadable": "30 min very easy\nPrepare legs for tomorrow's long run",
+              "humanReadable": "30 min easy",
               "completed": false
             }
           ]
@@ -248,15 +239,15 @@
           "dayOfWeek": "Sunday",
           "workouts": [
             {
-              "id": "w1-sun-long",
+              "id": "w1-sun",
               "sport": "run",
               "type": "long",
               "name": "Long Run",
-              "description": "Foundation long run at easy pace",
+              "description": "Building endurance",
               "durationMinutes": 75,
               "distanceMeters": 14500,
               "primaryZone": "Zone 2",
-              "humanReadable": "9 miles easy\n- Start conservative\n- Finish feeling strong\n- Practice taking fluids",
+              "humanReadable": "9 miles easy\nPractice hydration",
               "completed": false
             }
           ]
@@ -275,7 +266,7 @@
       "startDate": "2025-01-13",
       "endDate": "2025-01-19",
       "phase": "Base",
-      "focus": "Build consistency, slight volume increase",
+      "focus": "Build consistency",
       "targetHours": 5.5,
       "isRecoveryWeek": false,
       "days": [
@@ -284,11 +275,11 @@
           "dayOfWeek": "Monday",
           "workouts": [
             {
-              "id": "w2-mon-rest",
+              "id": "w2-mon",
               "sport": "rest",
               "type": "rest",
               "name": "Rest Day",
-              "description": "Full recovery",
+              "description": "Recovery",
               "completed": false
             }
           ]
@@ -298,15 +289,15 @@
           "dayOfWeek": "Tuesday",
           "workouts": [
             {
-              "id": "w2-tue-run",
+              "id": "w2-tue",
               "sport": "run",
               "type": "easy",
               "name": "Easy Run",
-              "description": "Comfortable aerobic pace",
+              "description": "Aerobic",
               "durationMinutes": 50,
               "distanceMeters": 9000,
               "primaryZone": "Zone 2",
-              "humanReadable": "50 min easy\n5.5 miles at conversational pace",
+              "humanReadable": "50 min easy\n5.5 miles",
               "completed": false
             }
           ]
@@ -316,13 +307,13 @@
           "dayOfWeek": "Wednesday",
           "workouts": [
             {
-              "id": "w2-wed-strength",
+              "id": "w2-wed",
               "sport": "strength",
               "type": "strength",
-              "name": "Strength + Core",
-              "description": "Running-specific strength work",
+              "name": "Strength",
+              "description": "Core and legs",
               "durationMinutes": 35,
-              "humanReadable": "Warm-up: 5 min light jog\n\n3 rounds:\n- 15 squats\n- 12 lunges each leg\n- 20 calf raises\n- 45 sec plank\n- 12 glute bridges\n- 10 single-leg deadlifts\n\nCool-down: stretching",
+              "humanReadable": "3 rounds:\n15 squats\n12 lunges each\n45s plank",
               "completed": false
             }
           ]
@@ -332,15 +323,15 @@
           "dayOfWeek": "Thursday",
           "workouts": [
             {
-              "id": "w2-thu-run",
+              "id": "w2-thu",
               "sport": "run",
               "type": "easy",
               "name": "Easy Run + Strides",
-              "description": "Easy effort with strides",
+              "description": "With strides",
               "durationMinutes": 45,
               "distanceMeters": 8000,
               "primaryZone": "Zone 2",
-              "humanReadable": "40 min easy run\n\n5x20 sec strides\n- Smooth and controlled\n- 40 sec recovery jog between",
+              "humanReadable": "40 min easy\n5x20s strides",
               "completed": false
             }
           ]
@@ -350,7 +341,7 @@
           "dayOfWeek": "Friday",
           "workouts": [
             {
-              "id": "w2-fri-rest",
+              "id": "w2-fri",
               "sport": "rest",
               "type": "rest",
               "name": "Rest Day",
@@ -364,15 +355,15 @@
           "dayOfWeek": "Saturday",
           "workouts": [
             {
-              "id": "w2-sat-run",
+              "id": "w2-sat",
               "sport": "run",
               "type": "easy",
               "name": "Easy Run",
-              "description": "Recovery run",
+              "description": "Recovery",
               "durationMinutes": 35,
               "distanceMeters": 6000,
               "primaryZone": "Zone 2",
-              "humanReadable": "35 min very easy",
+              "humanReadable": "35 min easy",
               "completed": false
             }
           ]
@@ -382,15 +373,15 @@
           "dayOfWeek": "Sunday",
           "workouts": [
             {
-              "id": "w2-sun-long",
+              "id": "w2-sun",
               "sport": "run",
               "type": "long",
               "name": "Long Run",
-              "description": "Building endurance",
+              "description": "Endurance building",
               "durationMinutes": 85,
               "distanceMeters": 16000,
               "primaryZone": "Zone 2",
-              "humanReadable": "10 miles easy\n- Comfortable pace throughout\n- Practice fueling: gel at mile 6",
+              "humanReadable": "10 miles easy\nGel at mile 6",
               "completed": false
             }
           ]
@@ -409,7 +400,7 @@
       "startDate": "2025-01-20",
       "endDate": "2025-01-26",
       "phase": "Base",
-      "focus": "Continue building volume",
+      "focus": "Introduce fartlek",
       "targetHours": 6,
       "isRecoveryWeek": false,
       "days": [
@@ -418,11 +409,11 @@
           "dayOfWeek": "Monday",
           "workouts": [
             {
-              "id": "w3-mon-rest",
+              "id": "w3-mon",
               "sport": "rest",
               "type": "rest",
               "name": "Rest Day",
-              "description": "Full recovery",
+              "description": "Recovery",
               "completed": false
             }
           ]
@@ -432,15 +423,15 @@
           "dayOfWeek": "Tuesday",
           "workouts": [
             {
-              "id": "w3-tue-run",
+              "id": "w3-tue",
               "sport": "run",
               "type": "easy",
               "name": "Easy Run",
-              "description": "Aerobic maintenance",
+              "description": "Aerobic",
               "durationMinutes": 50,
               "distanceMeters": 9000,
               "primaryZone": "Zone 2",
-              "humanReadable": "50 min easy\nFocus on relaxed form",
+              "humanReadable": "50 min easy",
               "completed": false
             }
           ]
@@ -450,15 +441,15 @@
           "dayOfWeek": "Wednesday",
           "workouts": [
             {
-              "id": "w3-wed-fartlek",
+              "id": "w3-wed",
               "sport": "run",
               "type": "fartlek",
-              "name": "Fartlek Run",
-              "description": "Introduction to faster running",
+              "name": "Fartlek",
+              "description": "Speed play",
               "durationMinutes": 45,
               "distanceMeters": 8500,
               "primaryZone": "Zone 2-3",
-              "humanReadable": "Warm-up: 10 min easy\n\nFartlek:\n6x1 min pickup (Zone 3)\nwith 2 min easy jog between\n\nCool-down: 10 min easy",
+              "humanReadable": "10 min warm-up\n6x1 min fast/2 min easy\n10 min cool-down",
               "completed": false
             }
           ]
@@ -468,13 +459,13 @@
           "dayOfWeek": "Thursday",
           "workouts": [
             {
-              "id": "w3-thu-strength",
+              "id": "w3-thu",
               "sport": "strength",
               "type": "strength",
-              "name": "Strength + Core",
-              "description": "Building running strength",
+              "name": "Strength",
+              "description": "Core focus",
               "durationMinutes": 35,
-              "humanReadable": "Same routine as last week\nAdd 2-3 reps per exercise",
+              "humanReadable": "Core and hip stability work",
               "completed": false
             }
           ]
@@ -484,15 +475,15 @@
           "dayOfWeek": "Friday",
           "workouts": [
             {
-              "id": "w3-fri-run",
+              "id": "w3-fri",
               "sport": "run",
               "type": "recovery",
               "name": "Recovery Run",
-              "description": "Very easy shakeout",
+              "description": "Easy shakeout",
               "durationMinutes": 30,
               "distanceMeters": 5000,
               "primaryZone": "Zone 1",
-              "humanReadable": "30 min very easy\nCould walk if needed",
+              "humanReadable": "30 min very easy",
               "completed": false
             }
           ]
@@ -502,15 +493,15 @@
           "dayOfWeek": "Saturday",
           "workouts": [
             {
-              "id": "w3-sat-run",
+              "id": "w3-sat",
               "sport": "run",
               "type": "easy",
-              "name": "Easy Run + Strides",
-              "description": "Prep for long run",
+              "name": "Easy Run",
+              "description": "Pre-long run",
               "durationMinutes": 35,
               "distanceMeters": 6000,
               "primaryZone": "Zone 2",
-              "humanReadable": "30 min easy\n4x20 sec strides",
+              "humanReadable": "35 min easy\n4x strides",
               "completed": false
             }
           ]
@@ -520,15 +511,15 @@
           "dayOfWeek": "Sunday",
           "workouts": [
             {
-              "id": "w3-sun-long",
+              "id": "w3-sun",
               "sport": "run",
               "type": "long",
               "name": "Long Run",
-              "description": "Longest run so far",
+              "description": "Longest yet",
               "durationMinutes": 100,
               "distanceMeters": 19000,
               "primaryZone": "Zone 2",
-              "humanReadable": "12 miles easy\n- Take fluids every 3 miles\n- Gel at mile 7\n- Finish strong, not fast",
+              "humanReadable": "12 miles easy\nPractice nutrition",
               "completed": false
             }
           ]
@@ -540,6 +531,954 @@
           "run": { "sessions": 5, "hours": 4.6, "km": 47.5 },
           "strength": { "sessions": 1, "hours": 0.6, "km": 0 }
         }
+      }
+    },
+    {
+      "weekNumber": 4,
+      "startDate": "2025-01-27",
+      "endDate": "2025-02-02",
+      "phase": "Base",
+      "focus": "Recovery week",
+      "targetHours": 4.5,
+      "isRecoveryWeek": true,
+      "days": [
+        {
+          "date": "2025-01-27",
+          "dayOfWeek": "Monday",
+          "workouts": [
+            {
+              "id": "w4-mon",
+              "sport": "rest",
+              "type": "rest",
+              "name": "Rest Day",
+              "description": "Recovery",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-01-28",
+          "dayOfWeek": "Tuesday",
+          "workouts": [
+            {
+              "id": "w4-tue",
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy Run",
+              "description": "Recovery week",
+              "durationMinutes": 40,
+              "distanceMeters": 7000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "40 min easy",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-01-29",
+          "dayOfWeek": "Wednesday",
+          "workouts": [
+            {
+              "id": "w4-wed",
+              "sport": "strength",
+              "type": "strength",
+              "name": "Light Strength",
+              "description": "Mobility focus",
+              "durationMinutes": 25,
+              "humanReadable": "Light mobility work\nStretching",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-01-30",
+          "dayOfWeek": "Thursday",
+          "workouts": [
+            {
+              "id": "w4-thu",
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy Run",
+              "description": "Short and easy",
+              "durationMinutes": 35,
+              "distanceMeters": 6000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "35 min easy",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-01-31",
+          "dayOfWeek": "Friday",
+          "workouts": [
+            {
+              "id": "w4-fri",
+              "sport": "rest",
+              "type": "rest",
+              "name": "Rest Day",
+              "description": "Recovery",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-01",
+          "dayOfWeek": "Saturday",
+          "workouts": [
+            {
+              "id": "w4-sat",
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy Run",
+              "description": "Shakeout",
+              "durationMinutes": 30,
+              "distanceMeters": 5000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "30 min easy",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-02",
+          "dayOfWeek": "Sunday",
+          "workouts": [
+            {
+              "id": "w4-sun",
+              "sport": "run",
+              "type": "long",
+              "name": "Long Run",
+              "description": "Reduced volume",
+              "durationMinutes": 70,
+              "distanceMeters": 13000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "8 miles easy\nRecovery week",
+              "completed": false
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "totalHours": 4.5,
+        "bySport": {
+          "run": { "sessions": 4, "hours": 3.5, "km": 31 },
+          "strength": { "sessions": 1, "hours": 0.4, "km": 0 }
+        }
+      }
+    },
+    {
+      "weekNumber": 5,
+      "startDate": "2025-02-03",
+      "endDate": "2025-02-09",
+      "phase": "Build",
+      "focus": "Introduce tempo",
+      "targetHours": 6.5,
+      "isRecoveryWeek": false,
+      "days": [
+        {
+          "date": "2025-02-03",
+          "dayOfWeek": "Monday",
+          "workouts": [
+            {
+              "id": "w5-mon",
+              "sport": "rest",
+              "type": "rest",
+              "name": "Rest Day",
+              "description": "Recovery",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-04",
+          "dayOfWeek": "Tuesday",
+          "workouts": [
+            {
+              "id": "w5-tue",
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy Run",
+              "description": "Aerobic",
+              "durationMinutes": 50,
+              "distanceMeters": 9000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "50 min easy",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-05",
+          "dayOfWeek": "Wednesday",
+          "workouts": [
+            {
+              "id": "w5-wed",
+              "sport": "run",
+              "type": "tempo",
+              "name": "Tempo Run",
+              "description": "Threshold work",
+              "durationMinutes": 50,
+              "distanceMeters": 10000,
+              "primaryZone": "Zone 3-4",
+              "humanReadable": "15 min warm-up\n20 min tempo @ 7:50-8:00/mi\n15 min cool-down",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-06",
+          "dayOfWeek": "Thursday",
+          "workouts": [
+            {
+              "id": "w5-thu",
+              "sport": "strength",
+              "type": "strength",
+              "name": "Strength",
+              "description": "Running strength",
+              "durationMinutes": 35,
+              "humanReadable": "Single leg work\nCore stability",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-07",
+          "dayOfWeek": "Friday",
+          "workouts": [
+            {
+              "id": "w5-fri",
+              "sport": "run",
+              "type": "recovery",
+              "name": "Recovery Run",
+              "description": "Easy",
+              "durationMinutes": 30,
+              "distanceMeters": 5000,
+              "primaryZone": "Zone 1",
+              "humanReadable": "30 min recovery",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-08",
+          "dayOfWeek": "Saturday",
+          "workouts": [
+            {
+              "id": "w5-sat",
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy Run",
+              "description": "Pre-long",
+              "durationMinutes": 40,
+              "distanceMeters": 7000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "40 min easy\nStrides",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-09",
+          "dayOfWeek": "Sunday",
+          "workouts": [
+            {
+              "id": "w5-sun",
+              "sport": "run",
+              "type": "long",
+              "name": "Long Run",
+              "description": "Building back up",
+              "durationMinutes": 105,
+              "distanceMeters": 21000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "13 miles\nLast 3 at MP feel",
+              "completed": false
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "totalHours": 6.5,
+        "bySport": {
+          "run": { "sessions": 5, "hours": 5, "km": 52 },
+          "strength": { "sessions": 1, "hours": 0.6, "km": 0 }
+        }
+      }
+    },
+    {
+      "weekNumber": 6,
+      "startDate": "2025-02-10",
+      "endDate": "2025-02-16",
+      "phase": "Build",
+      "focus": "Marathon pace work",
+      "targetHours": 7,
+      "isRecoveryWeek": false,
+      "days": [
+        {
+          "date": "2025-02-10",
+          "dayOfWeek": "Monday",
+          "workouts": [
+            {
+              "id": "w6-mon",
+              "sport": "rest",
+              "type": "rest",
+              "name": "Rest Day",
+              "description": "Recovery",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-11",
+          "dayOfWeek": "Tuesday",
+          "workouts": [
+            {
+              "id": "w6-tue",
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy Run",
+              "description": "Aerobic",
+              "durationMinutes": 55,
+              "distanceMeters": 10000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "55 min easy",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-12",
+          "dayOfWeek": "Wednesday",
+          "workouts": [
+            {
+              "id": "w6-wed",
+              "sport": "run",
+              "type": "intervals",
+              "name": "MP Intervals",
+              "description": "Marathon pace",
+              "durationMinutes": 55,
+              "distanceMeters": 11000,
+              "primaryZone": "Zone 3",
+              "humanReadable": "15 min warm-up\n4x8 min @ MP\n2 min jog between\n10 min cool-down",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-13",
+          "dayOfWeek": "Thursday",
+          "workouts": [
+            {
+              "id": "w6-thu",
+              "sport": "strength",
+              "type": "strength",
+              "name": "Strength",
+              "description": "Power work",
+              "durationMinutes": 35,
+              "humanReadable": "Explosive movements\nCore work",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-14",
+          "dayOfWeek": "Friday",
+          "workouts": [
+            {
+              "id": "w6-fri",
+              "sport": "run",
+              "type": "recovery",
+              "name": "Recovery Run",
+              "description": "Easy",
+              "durationMinutes": 35,
+              "distanceMeters": 6000,
+              "primaryZone": "Zone 1",
+              "humanReadable": "35 min recovery",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-15",
+          "dayOfWeek": "Saturday",
+          "workouts": [
+            {
+              "id": "w6-sat",
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy Run",
+              "description": "Pre-long",
+              "durationMinutes": 40,
+              "distanceMeters": 7000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "40 min easy",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-16",
+          "dayOfWeek": "Sunday",
+          "workouts": [
+            {
+              "id": "w6-sun",
+              "sport": "run",
+              "type": "long",
+              "name": "Long Run",
+              "description": "With MP miles",
+              "durationMinutes": 120,
+              "distanceMeters": 24000,
+              "primaryZone": "Zone 2-3",
+              "humanReadable": "15 miles\nMiles 10-13 at MP",
+              "completed": false
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "totalHours": 7,
+        "bySport": {
+          "run": { "sessions": 5, "hours": 5.5, "km": 58 },
+          "strength": { "sessions": 1, "hours": 0.6, "km": 0 }
+        }
+      }
+    },
+    {
+      "weekNumber": 7,
+      "startDate": "2025-02-17",
+      "endDate": "2025-02-23",
+      "phase": "Build",
+      "focus": "Peak mileage week",
+      "targetHours": 7.5,
+      "isRecoveryWeek": false,
+      "days": [
+        {
+          "date": "2025-02-17",
+          "dayOfWeek": "Monday",
+          "workouts": [
+            {
+              "id": "w7-mon",
+              "sport": "rest",
+              "type": "rest",
+              "name": "Rest Day",
+              "description": "Recovery",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-18",
+          "dayOfWeek": "Tuesday",
+          "workouts": [
+            {
+              "id": "w7-tue",
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy Run",
+              "description": "Aerobic",
+              "durationMinutes": 55,
+              "distanceMeters": 10000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "55 min easy",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-19",
+          "dayOfWeek": "Wednesday",
+          "workouts": [
+            {
+              "id": "w7-wed",
+              "sport": "run",
+              "type": "tempo",
+              "name": "Tempo Run",
+              "description": "Threshold",
+              "durationMinutes": 55,
+              "distanceMeters": 11000,
+              "primaryZone": "Zone 4",
+              "humanReadable": "15 min warm-up\n25 min tempo\n15 min cool-down",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-20",
+          "dayOfWeek": "Thursday",
+          "workouts": [
+            {
+              "id": "w7-thu",
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy Run",
+              "description": "Recovery",
+              "durationMinutes": 40,
+              "distanceMeters": 7000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "40 min easy",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-21",
+          "dayOfWeek": "Friday",
+          "workouts": [
+            {
+              "id": "w7-fri",
+              "sport": "strength",
+              "type": "strength",
+              "name": "Light Strength",
+              "description": "Maintenance",
+              "durationMinutes": 30,
+              "humanReadable": "Light session\nMobility focus",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-22",
+          "dayOfWeek": "Saturday",
+          "workouts": [
+            {
+              "id": "w7-sat",
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy Run",
+              "description": "Pre-long",
+              "durationMinutes": 40,
+              "distanceMeters": 7000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "40 min easy",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-23",
+          "dayOfWeek": "Sunday",
+          "workouts": [
+            {
+              "id": "w7-sun",
+              "sport": "run",
+              "type": "long",
+              "name": "Long Run",
+              "description": "Peak long run",
+              "durationMinutes": 140,
+              "distanceMeters": 27000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "17 miles\nPractice race nutrition",
+              "completed": false
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "totalHours": 7.5,
+        "bySport": {
+          "run": { "sessions": 5, "hours": 6, "km": 62 },
+          "strength": { "sessions": 1, "hours": 0.5, "km": 0 }
+        }
+      }
+    },
+    {
+      "weekNumber": 8,
+      "startDate": "2025-02-24",
+      "endDate": "2025-03-02",
+      "phase": "Build",
+      "focus": "Recovery week",
+      "targetHours": 5,
+      "isRecoveryWeek": true,
+      "days": [
+        {
+          "date": "2025-02-24",
+          "dayOfWeek": "Monday",
+          "workouts": [
+            {
+              "id": "w8-mon",
+              "sport": "rest",
+              "type": "rest",
+              "name": "Rest Day",
+              "description": "Recovery",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-25",
+          "dayOfWeek": "Tuesday",
+          "workouts": [
+            {
+              "id": "w8-tue",
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy Run",
+              "description": "Recovery",
+              "durationMinutes": 40,
+              "distanceMeters": 7000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "40 min easy",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-26",
+          "dayOfWeek": "Wednesday",
+          "workouts": [
+            {
+              "id": "w8-wed",
+              "sport": "run",
+              "type": "fartlek",
+              "name": "Light Fartlek",
+              "description": "Keep legs sharp",
+              "durationMinutes": 40,
+              "distanceMeters": 7500,
+              "primaryZone": "Zone 2-3",
+              "humanReadable": "10 min warm-up\n4x30s pickup\n10 min cool-down",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-27",
+          "dayOfWeek": "Thursday",
+          "workouts": [
+            {
+              "id": "w8-thu",
+              "sport": "rest",
+              "type": "rest",
+              "name": "Rest Day",
+              "description": "Recovery",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-02-28",
+          "dayOfWeek": "Friday",
+          "workouts": [
+            {
+              "id": "w8-fri",
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy Run",
+              "description": "Shakeout",
+              "durationMinutes": 30,
+              "distanceMeters": 5000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "30 min easy",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-03-01",
+          "dayOfWeek": "Saturday",
+          "workouts": [
+            {
+              "id": "w8-sat",
+              "sport": "strength",
+              "type": "strength",
+              "name": "Light Strength",
+              "description": "Mobility",
+              "durationMinutes": 25,
+              "humanReadable": "Stretching\nMobility work",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-03-02",
+          "dayOfWeek": "Sunday",
+          "workouts": [
+            {
+              "id": "w8-sun",
+              "sport": "run",
+              "type": "long",
+              "name": "Long Run",
+              "description": "Reduced",
+              "durationMinutes": 80,
+              "distanceMeters": 15000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "10 miles easy\nRecovery week",
+              "completed": false
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "totalHours": 5,
+        "bySport": {
+          "run": { "sessions": 4, "hours": 3.8, "km": 34.5 },
+          "strength": { "sessions": 1, "hours": 0.4, "km": 0 }
+        }
+      }
+    },
+    {
+      "weekNumber": 9,
+      "startDate": "2025-03-03",
+      "endDate": "2025-03-09",
+      "phase": "Peak",
+      "focus": "Dress rehearsal",
+      "targetHours": 7,
+      "isRecoveryWeek": false,
+      "days": [
+        {
+          "date": "2025-03-03",
+          "dayOfWeek": "Monday",
+          "workouts": [
+            {
+              "id": "w9-mon",
+              "sport": "rest",
+              "type": "rest",
+              "name": "Rest Day",
+              "description": "Recovery",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-03-04",
+          "dayOfWeek": "Tuesday",
+          "workouts": [
+            {
+              "id": "w9-tue",
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy Run",
+              "description": "Aerobic",
+              "durationMinutes": 50,
+              "distanceMeters": 9000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "50 min easy",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-03-05",
+          "dayOfWeek": "Wednesday",
+          "workouts": [
+            {
+              "id": "w9-wed",
+              "sport": "run",
+              "type": "intervals",
+              "name": "Race Simulation",
+              "description": "MP workout",
+              "durationMinutes": 60,
+              "distanceMeters": 12000,
+              "primaryZone": "Zone 3",
+              "humanReadable": "10 min warm-up\n30 min @ MP\n10 min easy\n10 min cool-down",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-03-06",
+          "dayOfWeek": "Thursday",
+          "workouts": [
+            {
+              "id": "w9-thu",
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy Run",
+              "description": "Recovery",
+              "durationMinutes": 40,
+              "distanceMeters": 7000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "40 min easy",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-03-07",
+          "dayOfWeek": "Friday",
+          "workouts": [
+            {
+              "id": "w9-fri",
+              "sport": "rest",
+              "type": "rest",
+              "name": "Rest Day",
+              "description": "Recovery",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-03-08",
+          "dayOfWeek": "Saturday",
+          "workouts": [
+            {
+              "id": "w9-sat",
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy Run + Strides",
+              "description": "Pre-long",
+              "durationMinutes": 35,
+              "distanceMeters": 6000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "30 min easy\n5x strides",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-03-09",
+          "dayOfWeek": "Sunday",
+          "workouts": [
+            {
+              "id": "w9-sun",
+              "sport": "run",
+              "type": "long",
+              "name": "Dress Rehearsal",
+              "description": "Race simulation",
+              "durationMinutes": 135,
+              "distanceMeters": 26000,
+              "primaryZone": "Zone 2-3",
+              "humanReadable": "16 miles\nMiles 8-14 at MP\nFull race nutrition",
+              "completed": false
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "totalHours": 7,
+        "bySport": { "run": { "sessions": 5, "hours": 5.5, "km": 60 } }
+      }
+    },
+    {
+      "weekNumber": 10,
+      "startDate": "2025-03-10",
+      "endDate": "2025-03-16",
+      "phase": "Peak",
+      "focus": "Final big week",
+      "targetHours": 6.5,
+      "isRecoveryWeek": false,
+      "days": [
+        {
+          "date": "2025-03-10",
+          "dayOfWeek": "Monday",
+          "workouts": [
+            {
+              "id": "w10-mon",
+              "sport": "rest",
+              "type": "rest",
+              "name": "Rest Day",
+              "description": "Recovery",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-03-11",
+          "dayOfWeek": "Tuesday",
+          "workouts": [
+            {
+              "id": "w10-tue",
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy Run",
+              "description": "Aerobic",
+              "durationMinutes": 45,
+              "distanceMeters": 8000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "45 min easy",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-03-12",
+          "dayOfWeek": "Wednesday",
+          "workouts": [
+            {
+              "id": "w10-wed",
+              "sport": "run",
+              "type": "tempo",
+              "name": "Tempo Run",
+              "description": "Final quality",
+              "durationMinutes": 50,
+              "distanceMeters": 10000,
+              "primaryZone": "Zone 4",
+              "humanReadable": "15 min warm-up\n20 min tempo\n15 min cool-down",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-03-13",
+          "dayOfWeek": "Thursday",
+          "workouts": [
+            {
+              "id": "w10-thu",
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy Run",
+              "description": "Recovery",
+              "durationMinutes": 40,
+              "distanceMeters": 7000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "40 min easy",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-03-14",
+          "dayOfWeek": "Friday",
+          "workouts": [
+            {
+              "id": "w10-fri",
+              "sport": "rest",
+              "type": "rest",
+              "name": "Rest Day",
+              "description": "Recovery",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-03-15",
+          "dayOfWeek": "Saturday",
+          "workouts": [
+            {
+              "id": "w10-sat",
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy Run",
+              "description": "Pre-long",
+              "durationMinutes": 35,
+              "distanceMeters": 6000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "35 min easy\nStrides",
+              "completed": false
+            }
+          ]
+        },
+        {
+          "date": "2025-03-16",
+          "dayOfWeek": "Sunday",
+          "workouts": [
+            {
+              "id": "w10-sun",
+              "sport": "run",
+              "type": "long",
+              "name": "Long Run",
+              "description": "Last long run",
+              "durationMinutes": 120,
+              "distanceMeters": 23000,
+              "primaryZone": "Zone 2",
+              "humanReadable": "14 miles easy\nConfidence builder",
+              "completed": false
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "totalHours": 6.5,
+        "bySport": { "run": { "sessions": 5, "hours": 5.2, "km": 54 } }
       }
     }
   ],
@@ -553,22 +1492,18 @@
     "pacing": {
       "run": {
         "target": "8:55-9:05/mi",
-        "notes": "Start conservative - Boston's hills demand respect. Bank time on the downhills wisely. The Newton Hills (miles 16-21) will feel hard; be ready mentally."
+        "notes": "Start conservative. Respect the Newton Hills (miles 16-21)."
       }
     },
     "nutrition": {
-      "preRace": "3 hours before: Bagel with peanut butter, banana. 500ml water. Avoid fiber.",
+      "preRace": "3 hours before: Bagel with PB, banana",
       "during": {
         "carbsPerHour": 60,
         "fluidPerHour": "500-700ml",
-        "products": ["Maurten Gel 100", "Gatorade Endurance"]
+        "products": ["Maurten Gel 100"]
       },
-      "notes": "Take gel every 45 min starting at mile 5. Don't skip aid stations early - you'll need it later."
+      "notes": "Gel every 45 min starting at mile 5"
     },
-    "taper": {
-      "startDate": "2025-04-07",
-      "volumeReduction": 50,
-      "notes": "Cut volume, keep some intensity. Short pickups keep legs sharp. Trust your training."
-    }
+    "taper": { "startDate": "2025-04-07", "volumeReduction": 50, "notes": "Trust your training" }
   }
 }
