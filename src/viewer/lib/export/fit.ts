@@ -147,8 +147,11 @@ function generateStepsFromStructure(structure: StructuredWorkout): {
 
   // Helper to add a step
   const addStep = (step: WorkoutStep, isPartOfRepeat = false) => {
-    const durationType = getDurationType(step.duration.unit);
-    const durationValue = getDurationValue(step.duration.value, step.duration.unit);
+    const durationType = getDurationType(step.duration?.unit ?? "minutes");
+    const durationValue = getDurationValue(
+      step.duration?.value ?? 0,
+      step.duration?.unit ?? "minutes"
+    );
 
     const fitStep: any = {
       messageIndex: stepIndex,
@@ -161,12 +164,13 @@ function generateStepsFromStructure(structure: StructuredWorkout): {
 
     // Add target based on intensity unit
     if (step.intensity) {
+      const intensityValue = step.intensity.value ?? 50;
       switch (step.intensity.unit) {
         case "percent_ftp":
           fitStep.targetType = "power";
           fitStep.targetValue = 0;
-          fitStep.customTargetValueLow = step.intensity.valueLow || step.intensity.value - 5;
-          fitStep.customTargetValueHigh = step.intensity.valueHigh || step.intensity.value + 5;
+          fitStep.customTargetValueLow = step.intensity.valueLow ?? intensityValue - 5;
+          fitStep.customTargetValueHigh = step.intensity.valueHigh ?? intensityValue + 5;
           break;
         case "percent_lthr":
         case "hr_zone":
@@ -178,7 +182,7 @@ function generateStepsFromStructure(structure: StructuredWorkout): {
             fitStep.customTargetValueHigh = step.intensity.valueHigh;
           } else {
             // Use zone as target value (1-5)
-            fitStep.targetValue = step.intensity.value;
+            fitStep.targetValue = intensityValue;
           }
           break;
         case "rpe":
@@ -194,8 +198,8 @@ function generateStepsFromStructure(structure: StructuredWorkout): {
 
     // Add cadence target if present
     if (step.cadence) {
-      fitStep.customTargetCadenceLow = step.cadence.low;
-      fitStep.customTargetCadenceHigh = step.cadence.high;
+      fitStep.customTargetCadenceLow = step.cadence.low ?? 80;
+      fitStep.customTargetCadenceHigh = step.cadence.high ?? 100;
     }
 
     steps.push(fitStep);

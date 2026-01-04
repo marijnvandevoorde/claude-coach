@@ -40,9 +40,9 @@
       race: 0,
     };
 
-    plan.weeks.forEach((week) => {
-      week.days.forEach((day) => {
-        day.workouts.forEach((w) => {
+    plan.weeks?.forEach((week) => {
+      week.days?.forEach((day) => {
+        day.workouts?.forEach((w) => {
           if (w.sport !== "rest") {
             totalWorkouts++;
             if (completed[w.id]) completedCount++;
@@ -67,7 +67,7 @@
   });
 
   const progressOffset = $derived(377 - (stats().progress / 100) * 377);
-  const daysToEvent = $derived(getDaysToEvent(plan.meta.eventDate));
+  const daysToEvent = $derived(getDaysToEvent(plan.meta?.eventDate ?? ""));
 
   const availableSports = $derived(
     Object.entries(stats().sportHours)
@@ -132,9 +132,9 @@
 
 <aside class="sidebar" class:open>
   <div class="event-header">
-    <h1 class="event-name">{plan.meta.event}</h1>
-    <div class="event-date">{formatEventDate(plan.meta.eventDate)}</div>
-    <div class="athlete-name">{plan.meta.athlete}</div>
+    <h1 class="event-name">{plan.meta?.event ?? "Training Plan"}</h1>
+    <div class="event-date">{formatEventDate(plan.meta?.eventDate ?? "")}</div>
+    <div class="athlete-name">{plan.meta?.athlete ?? "Athlete"}</div>
   </div>
 
   <div class="progress-section">
@@ -164,7 +164,7 @@
 
   <div class="stats-grid">
     <div class="stat-card">
-      <div class="stat-value">{plan.meta.totalWeeks}</div>
+      <div class="stat-value">{plan.meta?.totalWeeks ?? 0}</div>
       <div class="stat-label">Weeks</div>
     </div>
     <div class="stat-card">

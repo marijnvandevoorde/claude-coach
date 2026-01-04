@@ -32,7 +32,7 @@
 
   let dragOverDate = $state<string | null>(null);
 
-  const phaseName = $derived(week.phase.toLowerCase());
+  const phaseName = $derived((week.phase ?? "base").toLowerCase());
 
   function handleDragOver(e: DragEvent, date: string) {
     e.preventDefault();
@@ -57,16 +57,16 @@
   <div class="week-header">
     <div class="week-title">
       <span class="week-number">W{week.weekNumber}</span>
-      <span class="week-phase {phaseName}">{week.phase}</span>
-      <span class="week-focus">{week.focus}</span>
+      <span class="week-phase {phaseName}">{week.phase ?? "Base"}</span>
+      <span class="week-focus">{week.focus ?? ""}</span>
     </div>
-    <div class="week-hours"><span>{week.targetHours}</span> hrs</div>
+    <div class="week-hours"><span>{week.targetHours ?? 0}</span> hrs</div>
   </div>
 
   <div class="days-grid">
     {#each fullWeek as day (day.date)}
       {@const isToday = day.date === today}
-      {@const filteredWorkouts = day.workouts.filter(filterWorkout)}
+      {@const filteredWorkouts = (day.workouts ?? []).filter(filterWorkout)}
       {@const isDragOver = dragOverDate === day.date}
 
       <div

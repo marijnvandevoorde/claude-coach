@@ -218,9 +218,9 @@ export async function exportAllWorkouts(
 
   const zip = new JSZip();
 
-  for (const week of plan.weeks) {
-    for (const day of week.days) {
-      for (const workout of day.workouts) {
+  for (const week of plan.weeks ?? []) {
+    for (const day of week.days ?? []) {
+      for (const workout of day.workouts ?? []) {
         // Skip rest days
         if (workout.sport === "rest") {
           skipped++;

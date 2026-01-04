@@ -39,9 +39,9 @@
 
   // Apply completed state to plan workouts
   $effect(() => {
-    planData.weeks.forEach((week) => {
-      week.days.forEach((day) => {
-        day.workouts.forEach((w) => {
+    planData.weeks?.forEach((week) => {
+      week.days?.forEach((day) => {
+        day.workouts?.forEach((w) => {
           w.completed = !!completed[w.id];
         });
       });
@@ -167,7 +167,7 @@
   <main class="main-content">
     <div class="mobile-header">
       <button class="menu-toggle" onclick={() => (sidebarOpen = !sidebarOpen)}>☰</button>
-      <h2 class="mobile-title">{planData.meta.event}</h2>
+      <h2 class="mobile-title">{planData.meta?.event ?? "Training Plan"}</h2>
     </div>
 
     <WeeksContainer

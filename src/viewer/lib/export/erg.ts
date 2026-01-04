@@ -44,14 +44,14 @@ function generateDataPoints(structure: StructuredWorkout): [number, number][] {
   let currentMinute = 0;
 
   const addStep = (step: WorkoutStep) => {
-    const percent = intensityToPercent(step.intensity.value);
+    const percent = intensityToPercent(step.intensity?.value ?? 50);
     const durationMinutes = getDurationMinutes(step);
 
     // Add start point
     points.push([currentMinute, percent]);
 
     // For ramps, add intermediate points
-    if (step.intensity.valueLow !== undefined && step.intensity.valueHigh !== undefined) {
+    if (step.intensity?.valueLow !== undefined && step.intensity?.valueHigh !== undefined) {
       const startPercent = intensityToPercent(step.intensity.valueLow);
       const endPercent = intensityToPercent(step.intensity.valueHigh);
       points[points.length - 1] = [currentMinute, startPercent];
@@ -65,22 +65,24 @@ function generateDataPoints(structure: StructuredWorkout): [number, number][] {
   };
 
   const getDurationMinutes = (step: WorkoutStep): number => {
-    switch (step.duration.unit) {
+    const unit = step.duration?.unit ?? "minutes";
+    const value = step.duration?.value ?? 0;
+    switch (unit) {
       case "seconds":
-        return step.duration.value / 60;
+        return value / 60;
       case "minutes":
-        return step.duration.value;
+        return value;
       case "hours":
-        return step.duration.value * 60;
+        return value * 60;
       default:
         // For distance-based, estimate ~30km/h average
-        if (step.duration.unit === "meters") {
-          return (step.duration.value / 1000 / 30) * 60;
+        if (unit === "meters") {
+          return (value / 1000 / 30) * 60;
         }
-        if (step.duration.unit === "kilometers") {
-          return (step.duration.value / 30) * 60;
+        if (unit === "kilometers") {
+          return (value / 30) * 60;
         }
-        return step.duration.value;
+        return value;
     }
   };
 
@@ -92,11 +94,11 @@ function generateDataPoints(structure: StructuredWorkout): [number, number][] {
   }
 
   // Process main set
-  for (const item of structure.main) {
+  for (const item of structure.main ?? []) {
     if ("repeats" in item) {
       const intervalSet = item as IntervalSet;
-      for (let i = 0; i < intervalSet.repeats; i++) {
-        for (const step of intervalSet.steps) {
+      for (let i = 0; i < (intervalSet.repeats ?? 1); i++) {
+        for (const step of intervalSet.steps ?? []) {
           addStep(step);
         }
       }

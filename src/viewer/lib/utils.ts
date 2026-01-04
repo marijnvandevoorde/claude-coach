@@ -112,7 +112,11 @@ export function formatDateISO(date: Date): string {
 
 // Parse ISO date string to Date object (at midnight local time)
 export function parseDate(dateStr: string): Date {
-  const [year, month, day] = dateStr.split("-").map(Number);
+  if (!dateStr) return new Date();
+  const parts = dateStr.split("-").map(Number);
+  const year = parts[0] ?? new Date().getFullYear();
+  const month = parts[1] ?? 1;
+  const day = parts[2] ?? 1;
   return new Date(year, month - 1, day);
 }
 

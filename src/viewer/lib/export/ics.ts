@@ -116,6 +116,8 @@ function generateVevent(workout: Workout, day: TrainingDay, planName: string): s
  */
 export function generateIcs(plan: TrainingPlan): string {
   const now = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  const eventName = plan.meta?.event ?? "Training Plan";
+  const eventDate = plan.meta?.eventDate ?? "";
 
   const header = [
     "BEGIN:VCALENDAR",
@@ -123,39 +125,41 @@ export function generateIcs(plan: TrainingPlan): string {
     "PRODID:-//Claude Coach//Training Plan//EN",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
-    `X-WR-CALNAME:${escapeIcsText(plan.meta.event)} Training`,
-    `X-WR-CALDESC:${escapeIcsText(`Training plan for ${plan.meta.event} on ${plan.meta.eventDate}`)}`,
+    `X-WR-CALNAME:${escapeIcsText(eventName)} Training`,
+    `X-WR-CALDESC:${escapeIcsText(`Training plan for ${eventName} on ${eventDate}`)}`,
   ].join("\r\n");
 
   const events: string[] = [];
 
   // Generate events for all workouts
-  for (const week of plan.weeks) {
-    for (const day of week.days) {
-      for (const workout of day.workouts) {
+  for (const week of plan.weeks ?? []) {
+    for (const day of week.days ?? []) {
+      for (const workout of day.workouts ?? []) {
         // Skip rest days without actual workouts
         if (workout.sport === "rest" && !workout.name) {
           continue;
         }
-        events.push(generateVevent(workout, day, plan.meta.event));
+        events.push(generateVevent(workout, day, eventName));
       }
     }
   }
 
-  // Add a race day event
-  const raceDayEvent = [
-    "BEGIN:VEVENT",
-    `UID:race-day@claude-coach`,
-    `DTSTAMP:${now}`,
-    `DTSTART;VALUE=DATE:${formatIcsDate(plan.meta.eventDate)}`,
-    `DTEND;VALUE=DATE:${formatIcsDate(plan.meta.eventDate)}`,
-    foldLine(`SUMMARY:\u{1F3C6} RACE DAY: ${escapeIcsText(plan.meta.event)}`),
-    foldLine(`DESCRIPTION:${escapeIcsText(`Race day for ${plan.meta.event}!`)}`),
-    `CATEGORIES:race,${escapeIcsText(plan.meta.event)}`,
-    `TRANSP:OPAQUE`, // Block time for race day
-    "END:VEVENT",
-  ].join("\r\n");
-  events.push(raceDayEvent);
+  // Add a race day event if we have a date
+  if (eventDate) {
+    const raceDayEvent = [
+      "BEGIN:VEVENT",
+      `UID:race-day@claude-coach`,
+      `DTSTAMP:${now}`,
+      `DTSTART;VALUE=DATE:${formatIcsDate(eventDate)}`,
+      `DTEND;VALUE=DATE:${formatIcsDate(eventDate)}`,
+      foldLine(`SUMMARY:\u{1F3C6} RACE DAY: ${escapeIcsText(eventName)}`),
+      foldLine(`DESCRIPTION:${escapeIcsText(`Race day for ${eventName}!`)}`),
+      `CATEGORIES:race,${escapeIcsText(eventName)}`,
+      `TRANSP:OPAQUE`, // Block time for race day
+      "END:VEVENT",
+    ].join("\r\n");
+    events.push(raceDayEvent);
+  }
 
   const footer = "END:VCALENDAR";
 

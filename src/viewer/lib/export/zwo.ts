@@ -77,9 +77,10 @@ function getZwoSportType(sport: Sport): "bike" | "run" {
  * Generate a warmup segment
  */
 function generateWarmup(step: WorkoutStep): string {
-  const duration = durationToSeconds(step.duration.value, step.duration.unit);
-  const startPower = intensityToDecimal(step.intensity.valueLow || step.intensity.value * 0.6);
-  const endPower = intensityToDecimal(step.intensity.valueHigh || step.intensity.value);
+  const duration = durationToSeconds(step.duration?.value ?? 0, step.duration?.unit ?? "minutes");
+  const intensityValue = step.intensity?.value ?? 50;
+  const startPower = intensityToDecimal(step.intensity?.valueLow ?? intensityValue * 0.6);
+  const endPower = intensityToDecimal(step.intensity?.valueHigh ?? intensityValue);
 
   return `    <Warmup Duration="${duration}" PowerLow="${startPower.toFixed(2)}" PowerHigh="${endPower.toFixed(2)}"/>`;
 }
@@ -88,9 +89,10 @@ function generateWarmup(step: WorkoutStep): string {
  * Generate a cooldown segment
  */
 function generateCooldown(step: WorkoutStep): string {
-  const duration = durationToSeconds(step.duration.value, step.duration.unit);
-  const startPower = intensityToDecimal(step.intensity.valueHigh || step.intensity.value);
-  const endPower = intensityToDecimal(step.intensity.valueLow || step.intensity.value * 0.5);
+  const duration = durationToSeconds(step.duration?.value ?? 0, step.duration?.unit ?? "minutes");
+  const intensityValue = step.intensity?.value ?? 50;
+  const startPower = intensityToDecimal(step.intensity?.valueHigh ?? intensityValue);
+  const endPower = intensityToDecimal(step.intensity?.valueLow ?? intensityValue * 0.5);
 
   return `    <Cooldown Duration="${duration}" PowerLow="${endPower.toFixed(2)}" PowerHigh="${startPower.toFixed(2)}"/>`;
 }
@@ -99,18 +101,18 @@ function generateCooldown(step: WorkoutStep): string {
  * Generate a steady state segment
  */
 function generateSteadyState(step: WorkoutStep, isRamp = false): string {
-  const duration = durationToSeconds(step.duration.value, step.duration.unit);
-  const power = intensityToDecimal(step.intensity.value);
+  const duration = durationToSeconds(step.duration?.value ?? 0, step.duration?.unit ?? "minutes");
+  const power = intensityToDecimal(step.intensity?.value ?? 50);
 
   let cadenceAttr = "";
   if (step.cadence) {
-    cadenceAttr = ` Cadence="${step.cadence.low}"`;
+    cadenceAttr = ` Cadence="${step.cadence.low ?? 90}"`;
     if (step.cadence.high !== step.cadence.low) {
-      cadenceAttr = ` CadenceLow="${step.cadence.low}" CadenceHigh="${step.cadence.high}"`;
+      cadenceAttr = ` CadenceLow="${step.cadence.low ?? 90}" CadenceHigh="${step.cadence.high ?? 100}"`;
     }
   }
 
-  if (isRamp && step.intensity.valueLow !== undefined && step.intensity.valueHigh !== undefined) {
+  if (isRamp && step.intensity?.valueLow !== undefined && step.intensity?.valueHigh !== undefined) {
     const powerLow = intensityToDecimal(step.intensity.valueLow);
     const powerHigh = intensityToDecimal(step.intensity.valueHigh);
     return `    <Ramp Duration="${duration}" PowerLow="${powerLow.toFixed(2)}" PowerHigh="${powerHigh.toFixed(2)}"${cadenceAttr}/>`;
@@ -124,28 +126,32 @@ function generateSteadyState(step: WorkoutStep, isRamp = false): string {
  */
 function generateIntervalSet(intervalSet: IntervalSet): string {
   // Find work and recovery steps
-  const workStep = intervalSet.steps.find((s) => s.type === "work");
-  const recoveryStep = intervalSet.steps.find((s) => s.type === "recovery" || s.type === "rest");
+  const steps = intervalSet.steps ?? [];
+  const workStep = steps.find((s) => s.type === "work");
+  const recoveryStep = steps.find((s) => s.type === "recovery" || s.type === "rest");
 
   if (!workStep) {
     // Just generate steady states if no work step found
-    return intervalSet.steps.map((s) => generateSteadyState(s)).join("\n");
+    return steps.map((s) => generateSteadyState(s)).join("\n");
   }
 
-  const onDuration = durationToSeconds(workStep.duration.value, workStep.duration.unit);
-  const onPower = intensityToDecimal(workStep.intensity.value);
+  const onDuration = durationToSeconds(
+    workStep.duration?.value ?? 0,
+    workStep.duration?.unit ?? "minutes"
+  );
+  const onPower = intensityToDecimal(workStep.intensity?.value ?? 100);
 
   const offDuration = recoveryStep
-    ? durationToSeconds(recoveryStep.duration.value, recoveryStep.duration.unit)
+    ? durationToSeconds(recoveryStep.duration?.value ?? 0, recoveryStep.duration?.unit ?? "minutes")
     : 60; // Default 60s recovery
-  const offPower = recoveryStep ? intensityToDecimal(recoveryStep.intensity.value) : 0.5; // Default 50% recovery
+  const offPower = recoveryStep ? intensityToDecimal(recoveryStep.intensity?.value ?? 50) : 0.5; // Default 50% recovery
 
   let cadenceAttr = "";
   if (workStep.cadence) {
-    cadenceAttr = ` Cadence="${workStep.cadence.low}"`;
+    cadenceAttr = ` Cadence="${workStep.cadence.low ?? 90}"`;
   }
 
-  return `    <IntervalsT Repeat="${intervalSet.repeats}" OnDuration="${onDuration}" OffDuration="${offDuration}" OnPower="${onPower.toFixed(2)}" OffPower="${offPower.toFixed(2)}"${cadenceAttr}/>`;
+  return `    <IntervalsT Repeat="${intervalSet.repeats ?? 1}" OnDuration="${onDuration}" OffDuration="${offDuration}" OnPower="${onPower.toFixed(2)}" OffPower="${offPower.toFixed(2)}"${cadenceAttr}/>`;
 }
 
 /**

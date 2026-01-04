@@ -120,12 +120,14 @@ export function loadSettings(): Settings {
   const zones = planData.zones;
   if (zones?.run?.hr) {
     settings.run.lthr = zones.run.hr.lthr;
-    settings.run.hrZones = zones.run.hr.zones.map((z) => ({
-      zone: z.zone,
-      name: z.name,
-      low: z.hrLow,
-      high: z.hrHigh,
-    }));
+    if (zones.run.hr.zones) {
+      settings.run.hrZones = zones.run.hr.zones.map((z) => ({
+        zone: z.zone,
+        name: z.name,
+        low: z.hrLow,
+        high: z.hrHigh,
+      }));
+    }
   }
   if (zones?.run?.pace) {
     settings.run.thresholdPace = zones.run.pace.thresholdPace || settings.run.thresholdPace;
@@ -139,21 +141,25 @@ export function loadSettings(): Settings {
   }
   if (zones?.bike?.hr) {
     settings.bike.lthr = zones.bike.hr.lthr;
-    settings.bike.hrZones = zones.bike.hr.zones.map((z) => ({
-      zone: z.zone,
-      name: z.name,
-      low: z.hrLow,
-      high: z.hrHigh,
-    }));
+    if (zones.bike.hr.zones) {
+      settings.bike.hrZones = zones.bike.hr.zones.map((z) => ({
+        zone: z.zone,
+        name: z.name,
+        low: z.hrLow,
+        high: z.hrHigh,
+      }));
+    }
   }
   if (zones?.bike?.power) {
     settings.bike.ftp = zones.bike.power.ftp;
-    settings.bike.powerZones = zones.bike.power.zones.map((z) => ({
-      zone: z.zone,
-      name: z.name,
-      low: z.wattsLow,
-      high: z.wattsHigh,
-    }));
+    if (zones.bike.power.zones) {
+      settings.bike.powerZones = zones.bike.power.zones.map((z) => ({
+        zone: z.zone,
+        name: z.name,
+        low: z.wattsLow,
+        high: z.wattsHigh,
+      }));
+    }
   }
   if (zones?.swim) {
     settings.swim.css = zones.swim.css || settings.swim.css;
@@ -189,8 +195,9 @@ export function saveSettings(settings: Settings): void {
 
 // Utility functions
 export function paceToSeconds(pace: string): number {
+  if (!pace) return 0;
   const parts = pace.split(":");
-  return parseInt(parts[0]) * 60 + parseInt(parts[1] || "0");
+  return parseInt(parts[0] ?? "0") * 60 + parseInt(parts[1] ?? "0");
 }
 
 export function secondsToPace(seconds: number): string {

@@ -38,9 +38,9 @@
   // Build a map of all original workout dates
   function getOriginalDateMap(): Record<string, string> {
     const map: Record<string, string> = {};
-    plan.weeks.forEach((week) => {
-      week.days.forEach((day) => {
-        day.workouts.forEach((w) => {
+    plan.weeks?.forEach((week) => {
+      week.days?.forEach((day) => {
+        day.workouts?.forEach((w) => {
           map[w.id] = day.date;
         });
       });
@@ -68,12 +68,20 @@
 
     // Create a map from day name to the plan's day data
     const planDaysByName: Record<string, TrainingDay> = {};
-    weekData.days.forEach((day) => {
+    weekData.days?.forEach((day) => {
       planDaysByName[day.dayOfWeek] = day;
     });
 
     // Use the first plan day as reference to calculate missing dates
-    const refDay = weekData.days[0];
+    const refDay = weekData.days?.[0];
+    if (!refDay) {
+      // No days in this week, return empty week
+      return orderedDayNames.map((dayName) => ({
+        date: "",
+        dayOfWeek: dayName,
+        workouts: [],
+      }));
+    }
     const refDate = parseDate(refDay.date);
     const refDayIndex = dayNameOrder.indexOf(refDay.dayOfWeek);
 
@@ -99,9 +107,9 @@
     allWeekDates.forEach((d) => (workoutsByDate[d] = []));
 
     // Add original plan workouts (respecting moves)
-    plan.weeks.forEach((week) => {
-      week.days.forEach((day) => {
-        day.workouts.forEach((workout) => {
+    plan.weeks?.forEach((week) => {
+      week.days?.forEach((day) => {
+        day.workouts?.forEach((workout) => {
           if (isWorkoutDeleted(workout.id, changes)) return;
 
           const effectiveDate = getEffectiveDate(workout.id, day.date);
@@ -114,7 +122,7 @@
     });
 
     // Add user-created workouts
-    Object.entries(changes.added).forEach(([id, { date, workout }]) => {
+    Object.entries(changes.added ?? {}).forEach(([id, { date, workout }]) => {
       if (allWeekDates.includes(date) && !isWorkoutDeleted(id, changes)) {
         workoutsByDate[date].push(workout);
       }
@@ -147,13 +155,13 @@
   // Get the original date for a workout (needed for move tracking)
   function getOriginalDate(workoutId: string): string {
     // Check if it's a user-added workout
-    if (changes.added[workoutId]) {
+    if (changes.added?.[workoutId]) {
       return changes.added[workoutId].date;
     }
     // Find in original plan
-    for (const week of plan.weeks) {
-      for (const day of week.days) {
-        for (const workout of day.workouts) {
+    for (const week of plan.weeks ?? []) {
+      for (const day of week.days ?? []) {
+        for (const workout of day.workouts ?? []) {
           if (workout.id === workoutId) {
             return day.date;
           }
@@ -170,7 +178,7 @@
 </script>
 
 <div class="phase-timeline">
-  {#each plan.phases as phase, idx}
+  {#each plan.phases ?? [] as phase, idx}
     {@const weeks = phase.endWeek - phase.startWeek + 1}
     {@const phaseName = phase.name.toLowerCase()}
     <button
@@ -187,7 +195,7 @@
 </div>
 
 <div class="weeks-container">
-  {#each plan.weeks as week, index (week.weekNumber)}
+  {#each plan.weeks ?? [] as week, index (week.weekNumber)}
     <div data-week={week.weekNumber}>
       <WeekCard
         {week}
