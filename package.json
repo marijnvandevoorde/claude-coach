@@ -9,6 +9,7 @@
     "start": "tsx src/cli.ts",
     "build": "tsc",
     "build:viewer": "vite build --config vite.config.viewer.ts",
+    "build:skill": "mkdir -p dist && cd skill && zip -r ../dist/coach-skill.zip . -x '*.DS_Store' && echo 'Skill packaged to dist/coach-skill.zip'",
     "dev": "tsx watch src/cli.ts",
     "dev:viewer": "vite --config vite.config.viewer.ts",
     "test": "vitest",
@@ -25,6 +26,7 @@
   "dependencies": {
     "@garmin/fitsdk": "^21.178.0",
     "consola": "^3.2.3",
+    "jszip": "^3.10.1",
     "open": "^10.1.0"
   },
   "devDependencies": {
