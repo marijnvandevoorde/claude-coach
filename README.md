@@ -12,6 +12,8 @@ Workouts can be exported as simple calendar events (.ics), Zwift (.zwo), Garmin 
 
 I happen to work at Anthropic, so this tool is optimized for Claude. To use this tool, you need access to Claude.ai or Claude Code with network access for Skills. Depending on user/admin settings, Skills may have full, partial, or no network access.
 
+Syncing all your Strava activities and creating a tailored training plan takes ca. 15 minutes.
+
 ### Installing the Skill
 
 First, [download the latest skill from GitHub Releases](https://github.com/felixrieseberg/claude-coach/releases/latest/download/coach-skill.zip).
