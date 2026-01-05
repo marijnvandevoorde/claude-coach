@@ -141,11 +141,11 @@ function parseArgs(): CliArgs {
 
     for (const arg of args) {
       if (arg.startsWith("--client-id=")) {
-        authArgs.clientId = arg.split("=")[1];
+        authArgs.clientId = arg.slice("--client-id=".length);
       } else if (arg.startsWith("--client-secret=")) {
-        authArgs.clientSecret = arg.split("=")[1];
+        authArgs.clientSecret = arg.slice("--client-secret=".length);
       } else if (arg.startsWith("--code=")) {
-        authArgs.code = arg.split("=")[1];
+        authArgs.code = arg.slice("--code=".length);
       }
     }
 
