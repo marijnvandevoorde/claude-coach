@@ -6,7 +6,9 @@ The output is a beautiful training plan app that allows you to add, edit, or mov
 
 Workouts can be exported as simple calendar events (.ics), Zwift (.zwo), Garmin (.fit), or TrainerRoad/ERG (.mrc) workouts.
 
-## Example
+## Examples
+
+See example training plans at [felixrieseberg.github.io/claude-coach](https://felixrieseberg.github.io/claude-coach/#demos).
 
 ## Installation & Creating a training plan
 
@@ -18,8 +20,16 @@ Syncing all your Strava activities and creating a tailored training plan takes c
 
 First, [download the latest skill from GitHub Releases](https://github.com/felixrieseberg/claude-coach/releases/latest/download/coach-skill.zip).
 
-- If you're using Claude.ai, open the Settings, navigate to Capabilities, then click the `+ Add` button. Upload the `coach-skill.zip` file you just downloaded. There, also give Claude.ai access to Strava by adding `*.strava.com` to your allowed domains list.
-- If you're using Claude Code, run `/install-skill` and provide the path to the `coach-skill.zip` file you downloaded.
+**Claude.ai:**
+
+1. Open [Claude.ai Settings](https://claude.ai/settings/capabilities)
+2. Enable "Code execution and file creation"
+3. In the allowed domains list, add `*.strava.com`
+4. Scroll down to "Skills" and click "Add skill", then upload the `coach-skill.zip` file
+
+**Claude Code:**
+
+1. Run `/install-skill` and provide the path to the `coach-skill.zip` file you downloaded.
 
 ### Creating a plan
 
@@ -67,14 +77,9 @@ Don't use Strava, or prefer not to connect it? No problem. You can tell Claude a
 
 In the next step, Claude will ask you about yourself, the event you're training for, and any constraints it should keep in mind. Examples of information you'd tell any coach:
 
-**Training History:**
-
 - Years in the sport
 - Previous races completed (distances and approximate times)
 - Any recent breaks from training
-
-**Constraints & Considerations:**
-
 - Injuries or health issues
 - Schedule limitations (work travel, family, etc.)
 - Equipment access (pool availability, trainer, etc.)
@@ -83,4 +88,4 @@ Claude will use this information to create a plan tailored to your current fitne
 
 # About
 
-License: MIT.
+Claude Coach is an independent, open-source project and is not made by, endorsed by, or affiliated with Anthropic, PBC. "Claude" is a trademark of Anthropic. This tool is a skill/plugin that works with Claude products but is developed and maintained independently. License: MIT.
