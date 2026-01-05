@@ -43,7 +43,7 @@ export function formatDistance(
 }
 
 export function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
+  const date = parseDate(dateStr);
   return date.toLocaleDateString("en-US", {
     weekday: "long",
     month: "short",
@@ -52,7 +52,7 @@ export function formatDate(dateStr: string): string {
 }
 
 export function formatEventDate(dateStr: string): string {
-  const date = new Date(dateStr);
+  const date = parseDate(dateStr);
   return date.toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
