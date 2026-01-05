@@ -24,6 +24,21 @@
   let settingsOpen = $state(false);
   let importHelpOpen = $state(false);
 
+  // First-change banner state
+  const bannerKey = `plan-${planData.meta.id}-banner-dismissed`;
+  let showBanner = $state(false);
+
+  function triggerBanner() {
+    if (localStorage.getItem(bannerKey) !== "true") {
+      showBanner = true;
+    }
+  }
+
+  function dismissBanner() {
+    showBanner = false;
+    localStorage.setItem(bannerKey, "true");
+  }
+
   // Workout modal state
   type ModalState =
     | { mode: "view"; workout: Workout; day: TrainingDay }
@@ -61,6 +76,7 @@
       completed = { ...completed, [workoutId]: true };
     }
     saveCompleted(completed);
+    triggerBanner();
   }
 
   function handleWorkoutClick(workout: Workout, day: TrainingDay) {
@@ -85,6 +101,7 @@
     }
     changes = { ...changes };
     saveChanges(changes);
+    triggerBanner();
   }
 
   function handleWorkoutSave(updates: Partial<Workout>) {
@@ -108,6 +125,7 @@
       changes.added[id] = { date: modalState.day.date, workout: fullWorkout };
       changes = { ...changes };
       saveChanges(changes);
+      triggerBanner();
       modalState = null;
     } else {
       // Edit existing workout
@@ -126,6 +144,7 @@
       }
       changes = { ...changes };
       saveChanges(changes);
+      triggerBanner();
 
       // Update the modal state with the new workout data
       modalState = {
@@ -148,9 +167,40 @@
     }
     changes = { ...changes };
     saveChanges(changes);
+    triggerBanner();
     modalState = null;
   }
 </script>
+
+{#if showBanner}
+  <div class="local-storage-banner">
+    <div class="banner-content">
+      <span class="banner-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 16v-4M12 8h.01" />
+        </svg>
+      </span>
+      <p>
+        Your changes are saved locally in this browser only. To back up or transfer your data,
+        <button
+          class="banner-link"
+          onclick={() => {
+            dismissBanner();
+            settingsOpen = true;
+          }}
+        >
+          export it from Settings
+        </button>.
+      </p>
+      <button class="banner-close" onclick={dismissBanner} aria-label="Dismiss">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  </div>
+{/if}
 
 <div class="app">
   <Sidebar
@@ -212,6 +262,93 @@
 {/if}
 
 <style>
+  .local-storage-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-medium);
+    padding: 0.75rem 1rem;
+    animation: slideDown 0.3s ease-out;
+  }
+
+  @keyframes slideDown {
+    from {
+      transform: translateY(-100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+
+  .banner-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .banner-icon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    color: var(--accent);
+  }
+
+  .banner-icon svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .banner-content p {
+    flex: 1;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 0;
+  }
+
+  .banner-link {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font: inherit;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+  }
+
+  .banner-link:hover {
+    color: var(--text-primary);
+  }
+
+  .banner-close {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--border-medium);
+    background: transparent;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .banner-close:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+
+  .banner-close svg {
+    width: 14px;
+    height: 14px;
+  }
+
   .main-content {
     flex: 1;
     margin-left: var(--sidebar-width);
