@@ -38704,7 +38704,7 @@ ${a.join(`
           { zone: 5, name: "VO2max", offset: -5 },
         ].map((a) => ({ zone: a.zone, name: a.name, offset: a.offset, pace: En(s + a.offset) }));
       }
-      const er = "0.0.6";
+      const er = "0.0.7";
       var sr = oe("<button> </button>"),
         tr = oe(
           '<div class="settings-section svelte-1uhipit"><h4 class="settings-section-title svelte-1uhipit">Appearance</h4> <div class="theme-toggle svelte-1uhipit"><button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="svelte-1uhipit"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg> Light</button> <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="svelte-1uhipit"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg> Dark</button></div></div> <div class="settings-section svelte-1uhipit"><h4 class="settings-section-title svelte-1uhipit">Distance Units</h4> <div class="settings-row svelte-1uhipit"><span class="settings-label svelte-1uhipit">Swim</span> <select class="settings-select svelte-1uhipit"><option>Meters</option><option>Yards</option></select></div> <div class="settings-row svelte-1uhipit"><span class="settings-label svelte-1uhipit">Bike</span> <select class="settings-select svelte-1uhipit"><option>Kilometers</option><option>Miles</option></select></div> <div class="settings-row svelte-1uhipit"><span class="settings-label svelte-1uhipit">Run</span> <select class="settings-select svelte-1uhipit"><option>Kilometers</option><option>Miles</option></select></div></div> <div class="settings-section svelte-1uhipit"><h4 class="settings-section-title svelte-1uhipit">Calendar</h4> <div class="settings-row svelte-1uhipit"><span class="settings-label svelte-1uhipit">First day of week</span> <select class="settings-select svelte-1uhipit"><option>Monday</option><option>Sunday</option></select></div></div>',
@@ -41976,15 +41976,15 @@ ${a.join(`
       {
         "version": "1.0",
         "meta": {
-          "id": "demo-140.6-001",
-          "athlete": "Advanced Triathlete",
-          "event": "Ironman",
+          "id": "demo-olympic-tri-001",
+          "athlete": "Demo Triathlete",
+          "event": "Olympic Distance Triathlon",
           "eventDate": "2025-06-15",
-          "planStartDate": "2025-01-27",
+          "planStartDate": "2025-03-24",
           "planEndDate": "2025-06-15",
-          "createdAt": "2025-01-04T00:00:00Z",
-          "updatedAt": "2025-01-04T00:00:00Z",
-          "totalWeeks": 20,
+          "createdAt": "2025-03-01T00:00:00Z",
+          "updatedAt": "2025-03-01T00:00:00Z",
+          "totalWeeks": 12,
           "generatedBy": "Claude Coach"
         },
         "preferences": {
@@ -41995,1315 +41995,247 @@ ${a.join(`
         },
         "assessment": {
           "foundation": {
-            "raceHistory": ["70.3 x 4 (best 5:15)", "Olympic Tri x 6", "Marathon 3:45"],
-            "peakTrainingLoad": 16,
-            "foundationLevel": "advanced",
-            "yearsInSport": 5
+            "raceHistory": [
+              "Sprint Triathlon 2024 - 1:18:00",
+              "Sprint Triathlon 2024 - 1:15:30",
+              "Sprint Triathlon 2023 - 1:22:00"
+            ],
+            "peakTrainingLoad": 10,
+            "foundationLevel": "intermediate",
+            "yearsInSport": 2
           },
           "currentForm": {
-            "weeklyVolume": { "total": 12, "swim": 2.5, "bike": 6, "run": 3.5 },
-            "longestSessions": { "swim": 3500, "bike": 120, "run": 25 },
-            "consistency": 8
+            "weeklyVolume": { "total": 9, "swim": 2, "bike": 4, "run": 3 },
+            "longestSessions": { "swim": 2000, "bike": 50, "run": 12 },
+            "consistency": 7
           },
-          "strengths": [{ "sport": "bike", "evidence": "Strong FTP 260W, efficient at threshold" }],
-          "limiters": [{ "sport": "run", "evidence": "Run durability after long bike needs work" }],
-          "constraints": ["Can train doubles 2-3x/week", "Long sessions on weekends only"]
+          "strengths": [
+            { "sport": "run", "evidence": "Strong running background, solid threshold pace" }
+          ],
+          "limiters": [
+            {
+              "sport": "swim",
+              "evidence": "Needs technique refinement, limited open water experience"
+            }
+          ],
+          "constraints": [
+            "Available 6 days/week",
+            "Pool access weekday mornings and evenings",
+            "Long sessions on weekends"
+          ]
         },
         "zones": {
-          "swim": {
-            "css": "1:40/100m",
-            "cssSeconds": 100,
-            "zones": [
-              { "zone": 1, "name": "Recovery", "paceOffset": 15, "pace": "1:55/100m" },
-              { "zone": 2, "name": "Endurance", "paceOffset": 8, "pace": "1:48/100m" },
-              { "zone": 3, "name": "Threshold", "paceOffset": 0, "pace": "1:40/100m" },
-              { "zone": 4, "name": "VO2max", "paceOffset": -5, "pace": "1:35/100m" }
-            ]
-          },
-          "bike": {
-            "power": {
-              "ftp": 260,
+          "run": {
+            "hr": {
+              "lthr": 168,
               "zones": [
                 {
                   "zone": 1,
                   "name": "Recovery",
                   "percentLow": 0,
-                  "percentHigh": 55,
-                  "wattsLow": 0,
-                  "wattsHigh": 143
+                  "percentHigh": 81,
+                  "hrLow": 0,
+                  "hrHigh": 136
                 },
                 {
                   "zone": 2,
-                  "name": "Endurance",
-                  "percentLow": 56,
-                  "percentHigh": 75,
-                  "wattsLow": 146,
-                  "wattsHigh": 195
+                  "name": "Aerobic",
+                  "percentLow": 81,
+                  "percentHigh": 89,
+                  "hrLow": 136,
+                  "hrHigh": 150
                 },
                 {
                   "zone": 3,
                   "name": "Tempo",
-                  "percentLow": 76,
-                  "percentHigh": 90,
-                  "wattsLow": 198,
-                  "wattsHigh": 234
+                  "percentLow": 89,
+                  "percentHigh": 94,
+                  "hrLow": 150,
+                  "hrHigh": 158
                 },
                 {
                   "zone": 4,
                   "name": "Threshold",
-                  "percentLow": 91,
-                  "percentHigh": 105,
-                  "wattsLow": 237,
-                  "wattsHigh": 273
+                  "percentLow": 94,
+                  "percentHigh": 100,
+                  "hrLow": 158,
+                  "hrHigh": 168
                 },
                 {
                   "zone": 5,
                   "name": "VO2max",
-                  "percentLow": 106,
-                  "percentHigh": 120,
-                  "wattsLow": 276,
-                  "wattsHigh": 312
+                  "percentLow": 100,
+                  "percentHigh": 106,
+                  "hrLow": 168,
+                  "hrHigh": 178
                 }
               ]
+            },
+            "pace": {
+              "threshold": "4:39/km (7:30/mi)",
+              "easy": "5:30-6:00/km",
+              "tempo": "4:50-5:10/km",
+              "raceTarget": "4:55-5:10/km"
             }
           },
-          "run": {
-            "pace": {
-              "threshold": "4:10/km",
-              "thresholdSeconds": 250,
+          "bike": {
+            "power": {
+              "ftp": 200,
               "zones": [
-                { "zone": 1, "name": "Recovery", "paceOffset": 60, "pace": "5:10/km" },
-                { "zone": 2, "name": "Aerobic", "paceOffset": 40, "pace": "4:50/km" },
-                { "zone": 3, "name": "Tempo", "paceOffset": 20, "pace": "4:30/km" },
-                { "zone": 4, "name": "Threshold", "paceOffset": 0, "pace": "4:10/km" },
-                { "zone": 5, "name": "VO2max", "paceOffset": -15, "pace": "3:55/km" }
+                {
+                  "zone": 1,
+                  "name": "Active Recovery",
+                  "percentLow": 0,
+                  "percentHigh": 55,
+                  "wattsLow": 0,
+                  "wattsHigh": 110
+                },
+                {
+                  "zone": 2,
+                  "name": "Endurance",
+                  "percentLow": 55,
+                  "percentHigh": 75,
+                  "wattsLow": 110,
+                  "wattsHigh": 150
+                },
+                {
+                  "zone": 3,
+                  "name": "Tempo",
+                  "percentLow": 75,
+                  "percentHigh": 90,
+                  "wattsLow": 150,
+                  "wattsHigh": 180
+                },
+                {
+                  "zone": 4,
+                  "name": "Threshold",
+                  "percentLow": 90,
+                  "percentHigh": 105,
+                  "wattsLow": 180,
+                  "wattsHigh": 210
+                },
+                {
+                  "zone": 5,
+                  "name": "VO2max",
+                  "percentLow": 105,
+                  "percentHigh": 120,
+                  "wattsLow": 210,
+                  "wattsHigh": 240
+                }
               ]
+            },
+            "hr": {
+              "lthr": 165,
+              "zones": [
+                { "zone": 1, "name": "Recovery", "hrLow": 0, "hrHigh": 134 },
+                { "zone": 2, "name": "Aerobic", "hrLow": 134, "hrHigh": 147 },
+                { "zone": 3, "name": "Tempo", "hrLow": 147, "hrHigh": 155 },
+                { "zone": 4, "name": "Threshold", "hrLow": 155, "hrHigh": 165 },
+                { "zone": 5, "name": "VO2max", "hrLow": 165, "hrHigh": 175 }
+              ]
+            },
+            "sweetSpot": {
+              "percentFTP": "84-97%",
+              "wattsLow": 168,
+              "wattsHigh": 194,
+              "description": "High aerobic benefit with manageable fatigue"
             }
+          },
+          "swim": {
+            "css": "1:55/100m",
+            "cssSeconds": 115,
+            "zones": [
+              { "zone": 1, "name": "Recovery", "paceOffset": 20, "pace": "2:15/100m" },
+              { "zone": 2, "name": "Endurance", "paceOffset": 10, "pace": "2:05/100m" },
+              { "zone": 3, "name": "Tempo", "paceOffset": 5, "pace": "2:00/100m" },
+              { "zone": 4, "name": "Threshold (CSS)", "paceOffset": 0, "pace": "1:55/100m" },
+              { "zone": 5, "name": "VO2max", "paceOffset": -5, "pace": "1:50/100m" }
+            ]
           }
         },
         "phases": [
           {
-            "name": "Base 1",
+            "name": "Base",
             "startWeek": 1,
             "endWeek": 4,
-            "focus": "Rebuild volume, aerobic foundation",
-            "weeklyHoursRange": { "low": 10, "high": 12 },
-            "keyWorkouts": ["Long ride", "Long run", "Swim endurance"],
-            "physiologicalGoals": ["Aerobic base", "Movement efficiency", "Durability"]
-          },
-          {
-            "name": "Base 2",
-            "startWeek": 5,
-            "endWeek": 8,
-            "focus": "Peak volume, introduce intensity",
-            "weeklyHoursRange": { "low": 12, "high": 14 },
-            "keyWorkouts": ["Extended long ride", "Progressive runs", "Threshold swims"],
-            "physiologicalGoals": ["Volume tolerance", "Lactate threshold", "Fatigue resistance"]
-          },
-          {
-            "name": "Build 1",
-            "startWeek": 9,
-            "endWeek": 12,
-            "focus": "Race-specific work, long bricks",
-            "weeklyHoursRange": { "low": 13, "high": 15 },
-            "keyWorkouts": ["Race-pace bricks", "IM pace bike", "Marathon-pace runs"],
+            "focus": "Build aerobic foundation, technique refinement, establish training rhythm",
+            "weeklyHoursRange": { "low": 7, "high": 9 },
+            "keyWorkouts": ["Long ride", "Long run", "Swim technique drills", "CSS baseline work"],
             "physiologicalGoals": [
-              "Race-specific fitness",
-              "Brick adaptation",
-              "Nutrition practice"
+              "Aerobic base development",
+              "Swim efficiency",
+              "Running economy",
+              "Strength foundation"
             ]
           },
           {
-            "name": "Build 2",
-            "startWeek": 13,
-            "endWeek": 16,
-            "focus": "Peak fitness, race simulation",
-            "weeklyHoursRange": { "low": 14, "high": 16 },
-            "keyWorkouts": ["Full race simulations", "Peak long ride", "Peak long run"],
-            "physiologicalGoals": ["Peak aerobic capacity", "Race execution", "Mental toughness"]
+            "name": "Recovery",
+            "startWeek": 4,
+            "endWeek": 4,
+            "focus": "Active recovery, adaptation consolidation",
+            "weeklyHoursRange": { "low": 5, "high": 6 },
+            "keyWorkouts": ["Easy swims", "Recovery rides", "Short runs"],
+            "physiologicalGoals": ["Recovery", "Adaptation", "Mental freshness"]
+          },
+          {
+            "name": "Build",
+            "startWeek": 5,
+            "endWeek": 8,
+            "focus": "Increase intensity, race-pace work, sweet spot bike training",
+            "weeklyHoursRange": { "low": 8, "high": 10 },
+            "keyWorkouts": [
+              "Brick workouts 2x/week",
+              "Threshold run intervals",
+              "Sweet spot bike",
+              "CSS swim sets"
+            ],
+            "physiologicalGoals": [
+              "Raise lactate threshold",
+              "Brick adaptation",
+              "Race pace confidence",
+              "Power development"
+            ]
+          },
+          {
+            "name": "Recovery",
+            "startWeek": 8,
+            "endWeek": 8,
+            "focus": "Absorb build phase adaptations",
+            "weeklyHoursRange": { "low": 5, "high": 6 },
+            "keyWorkouts": ["Easy sessions", "Light speed touches"],
+            "physiologicalGoals": ["Recovery", "Preparation for peak phase"]
           },
           {
             "name": "Peak",
-            "startWeek": 17,
-            "endWeek": 19,
-            "focus": "Maintain intensity, reduce volume",
-            "weeklyHoursRange": { "low": 8, "high": 12 },
-            "keyWorkouts": ["Sharp intervals", "Race openers", "Confidence sessions"],
-            "physiologicalGoals": ["Freshness", "Speed retention", "Race readiness"]
+            "startWeek": 9,
+            "endWeek": 11,
+            "focus": "Race simulation, open water practice, peak fitness",
+            "weeklyHoursRange": { "low": 9, "high": 11 },
+            "keyWorkouts": ["Race simulation brick", "Open water swim", "Race-pace efforts"],
+            "physiologicalGoals": [
+              "Peak fitness",
+              "Race confidence",
+              "Nutrition strategy locked in"
+            ]
           },
           {
-            "name": "Race",
-            "startWeek": 20,
-            "endWeek": 20,
-            "focus": "Final taper and race execution",
-            "weeklyHoursRange": { "low": 4, "high": 6 },
-            "keyWorkouts": ["Openers", "Easy movement", "Race day"],
-            "physiologicalGoals": ["Full recovery", "Mental preparation", "Peak performance"]
+            "name": "Taper",
+            "startWeek": 12,
+            "endWeek": 12,
+            "focus": "Rest, sharpen, race execution",
+            "weeklyHoursRange": { "low": 4, "high": 5 },
+            "keyWorkouts": ["Short openers", "Race-pace touches", "Pre-race swim"],
+            "physiologicalGoals": ["Full recovery", "Neuromuscular sharpness", "Mental readiness"]
           }
         ],
         "weeks": [
           {
             "weekNumber": 1,
-            "startDate": "2025-01-27",
-            "endDate": "2025-02-02",
-            "phase": "Base 1",
-            "focus": "Establish rhythm",
-            "targetHours": 10,
-            "isRecoveryWeek": false,
-            "days": [
-              {
-                "date": "2025-01-27",
-                "dayOfWeek": "Monday",
-                "workouts": [
-                  {
-                    "id": "w1-mon-swim",
-                    "sport": "swim",
-                    "type": "technique",
-                    "name": "Swim Drills",
-                    "durationMinutes": 45,
-                    "distanceMeters": 2400,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "WU: 400 easy\n4x100 drill/swim\nMain: 8x200 @3:30\nCD: 200 easy",
-                    "completed": true
-                  }
-                ]
-              },
-              {
-                "date": "2025-01-28",
-                "dayOfWeek": "Tuesday",
-                "workouts": [
-                  {
-                    "id": "w1-tue-bike",
-                    "sport": "bike",
-                    "type": "endurance",
-                    "name": "Endurance Ride",
-                    "durationMinutes": 75,
-                    "distanceKm": 35,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "75 min steady\n155-185W\n90 rpm cadence",
-                    "completed": true
-                  },
-                  {
-                    "id": "w1-tue-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "durationMinutes": 35,
-                    "distanceKm": 7,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "35 min easy\n4:50-5:00/km",
-                    "completed": true
-                  }
-                ]
-              },
-              {
-                "date": "2025-01-29",
-                "dayOfWeek": "Wednesday",
-                "workouts": [
-                  {
-                    "id": "w1-wed-swim",
-                    "sport": "swim",
-                    "type": "endurance",
-                    "name": "Swim Endurance",
-                    "durationMinutes": 50,
-                    "distanceMeters": 2800,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "WU: 400 easy\nMain: 2000 continuous\nCD: 400 easy",
-                    "completed": true
-                  }
-                ]
-              },
-              {
-                "date": "2025-01-30",
-                "dayOfWeek": "Thursday",
-                "workouts": [
-                  {
-                    "id": "w1-thu-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run + Strides",
-                    "durationMinutes": 50,
-                    "distanceKm": 10,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "45 min easy\n6x20s strides",
-                    "completed": true
-                  }
-                ]
-              },
-              {
-                "date": "2025-01-31",
-                "dayOfWeek": "Friday",
-                "workouts": [
-                  {
-                    "id": "w1-fri-rest",
-                    "sport": "rest",
-                    "type": "rest",
-                    "name": "Rest Day",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-01",
-                "dayOfWeek": "Saturday",
-                "workouts": [
-                  {
-                    "id": "w1-sat-bike",
-                    "sport": "bike",
-                    "type": "long",
-                    "name": "Long Ride",
-                    "durationMinutes": 180,
-                    "distanceKm": 85,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "3 hr steady\nPractice nutrition\n60g carbs/hr",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-02",
-                "dayOfWeek": "Sunday",
-                "workouts": [
-                  {
-                    "id": "w1-sun-run",
-                    "sport": "run",
-                    "type": "long",
-                    "name": "Long Run",
-                    "durationMinutes": 90,
-                    "distanceKm": 17,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "90 min easy\nFlat terrain\nTest nutrition",
-                    "completed": false
-                  }
-                ]
-              }
-            ],
-            "summary": {
-              "totalHours": 10,
-              "bySport": {
-                "swim": { "sessions": 2, "hours": 1.6, "meters": 5200 },
-                "bike": { "sessions": 2, "hours": 4.25, "km": 120 },
-                "run": { "sessions": 3, "hours": 2.9, "km": 34 }
-              }
-            }
-          },
-          {
-            "weekNumber": 2,
-            "startDate": "2025-02-03",
-            "endDate": "2025-02-09",
-            "phase": "Base 1",
-            "focus": "Build consistency",
-            "targetHours": 10.5,
-            "isRecoveryWeek": false,
-            "days": [
-              {
-                "date": "2025-02-03",
-                "dayOfWeek": "Monday",
-                "workouts": [
-                  {
-                    "id": "w2-mon-swim",
-                    "sport": "swim",
-                    "type": "technique",
-                    "name": "Swim Technique",
-                    "durationMinutes": 50,
-                    "distanceMeters": 2600,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "WU: 400\n6x100 drill/swim\n6x200 @3:25\nCD: 200",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-04",
-                "dayOfWeek": "Tuesday",
-                "workouts": [
-                  {
-                    "id": "w2-tue-bike",
-                    "sport": "bike",
-                    "type": "endurance",
-                    "name": "Endurance Ride",
-                    "durationMinutes": 80,
-                    "distanceKm": 38,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "80 min Z2\nInclude 4x30s spinups",
-                    "completed": false
-                  },
-                  {
-                    "id": "w2-tue-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "durationMinutes": 40,
-                    "distanceKm": 8,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "40 min easy",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-05",
-                "dayOfWeek": "Wednesday",
-                "workouts": [
-                  {
-                    "id": "w2-wed-swim",
-                    "sport": "swim",
-                    "type": "endurance",
-                    "name": "Swim Pull",
-                    "durationMinutes": 55,
-                    "distanceMeters": 3000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "WU: 400\n8x150 w/paddles @2:30\n4x100 kick\nCD: 200",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-06",
-                "dayOfWeek": "Thursday",
-                "workouts": [
-                  {
-                    "id": "w2-thu-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Aerobic Run",
-                    "durationMinutes": 55,
-                    "distanceKm": 11,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "55 min easy\nRolling terrain",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-07",
-                "dayOfWeek": "Friday",
-                "workouts": [
-                  {
-                    "id": "w2-fri-strength",
-                    "sport": "strength",
-                    "type": "strength",
-                    "name": "Core & Stability",
-                    "durationMinutes": 35,
-                    "humanReadable": "3 rounds:\nPlank 60s, Side plank 30s ea\nGlute bridges 15\nBird dogs 10 ea",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-08",
-                "dayOfWeek": "Saturday",
-                "workouts": [
-                  {
-                    "id": "w2-sat-bike",
-                    "sport": "bike",
-                    "type": "long",
-                    "name": "Long Ride",
-                    "durationMinutes": 195,
-                    "distanceKm": 95,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "3:15 steady\n65g carbs/hr\nAero practice",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-09",
-                "dayOfWeek": "Sunday",
-                "workouts": [
-                  {
-                    "id": "w2-sun-brick",
-                    "sport": "brick",
-                    "type": "brick",
-                    "name": "Brick: Bike + Run",
-                    "durationMinutes": 105,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "Bike: 60 min easy\nT2: <3 min\nRun: 40 min easy",
-                    "completed": false
-                  }
-                ]
-              }
-            ],
-            "summary": {
-              "totalHours": 10.5,
-              "bySport": {
-                "swim": { "sessions": 2, "hours": 1.75, "meters": 5600 },
-                "bike": { "sessions": 2, "hours": 4.6, "km": 133 },
-                "run": { "sessions": 2, "hours": 1.6, "km": 19 },
-                "brick": { "sessions": 1, "hours": 1.75 },
-                "strength": { "sessions": 1, "hours": 0.6 }
-              }
-            }
-          },
-          {
-            "weekNumber": 3,
-            "startDate": "2025-02-10",
-            "endDate": "2025-02-16",
-            "phase": "Base 1",
-            "focus": "Volume increase",
-            "targetHours": 11,
-            "isRecoveryWeek": false,
-            "days": [
-              {
-                "date": "2025-02-10",
-                "dayOfWeek": "Monday",
-                "workouts": [
-                  {
-                    "id": "w3-mon-swim",
-                    "sport": "swim",
-                    "type": "technique",
-                    "name": "Swim Drills + Speed",
-                    "durationMinutes": 55,
-                    "distanceMeters": 3000,
-                    "primaryZone": "Zone 2-3",
-                    "humanReadable": "WU: 400\n4x50 drill\n6x200 descend @3:20\n6x50 fast @55\nCD: 200",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-11",
-                "dayOfWeek": "Tuesday",
-                "workouts": [
-                  {
-                    "id": "w3-tue-bike",
-                    "sport": "bike",
-                    "type": "endurance",
-                    "name": "Endurance + Tempo",
-                    "durationMinutes": 90,
-                    "distanceKm": 42,
-                    "primaryZone": "Zone 2-3",
-                    "humanReadable": "15 min WU\n3x10 min tempo @205W\n5 min easy between\n20 min CD",
-                    "completed": false
-                  },
-                  {
-                    "id": "w3-tue-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "durationMinutes": 35,
-                    "distanceKm": 7,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "35 min easy",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-12",
-                "dayOfWeek": "Wednesday",
-                "workouts": [
-                  {
-                    "id": "w3-wed-swim",
-                    "sport": "swim",
-                    "type": "endurance",
-                    "name": "Swim Endurance",
-                    "durationMinutes": 55,
-                    "distanceMeters": 3200,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "WU: 400\n4x400 @6:45\nCD: 400",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-13",
-                "dayOfWeek": "Thursday",
-                "workouts": [
-                  {
-                    "id": "w3-thu-run",
-                    "sport": "run",
-                    "type": "tempo",
-                    "name": "Tempo Run",
-                    "durationMinutes": 55,
-                    "distanceKm": 12,
-                    "primaryZone": "Zone 3",
-                    "humanReadable": "15 min WU\n25 min @4:30/km\n15 min CD",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-14",
-                "dayOfWeek": "Friday",
-                "workouts": [
-                  {
-                    "id": "w3-fri-swim",
-                    "sport": "swim",
-                    "type": "speed",
-                    "name": "Swim Speed",
-                    "durationMinutes": 45,
-                    "distanceMeters": 2400,
-                    "primaryZone": "Zone 3-4",
-                    "humanReadable": "WU: 400\n8x100 fast @1:45\n4x50 MAX @1:00\nCD: 200",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-15",
-                "dayOfWeek": "Saturday",
-                "workouts": [
-                  {
-                    "id": "w3-sat-bike",
-                    "sport": "bike",
-                    "type": "long",
-                    "name": "Long Ride",
-                    "durationMinutes": 210,
-                    "distanceKm": 100,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "3:30 steady\n70g carbs/hr\nStay in aero",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-16",
-                "dayOfWeek": "Sunday",
-                "workouts": [
-                  {
-                    "id": "w3-sun-run",
-                    "sport": "run",
-                    "type": "long",
-                    "name": "Long Run",
-                    "durationMinutes": 100,
-                    "distanceKm": 19,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "100 min easy\nNegative split last 5k",
-                    "completed": false
-                  }
-                ]
-              }
-            ],
-            "summary": {
-              "totalHours": 11,
-              "bySport": {
-                "swim": { "sessions": 3, "hours": 2.6, "meters": 8600 },
-                "bike": { "sessions": 2, "hours": 5, "km": 142 },
-                "run": { "sessions": 3, "hours": 3.2, "km": 38 }
-              }
-            }
-          },
-          {
-            "weekNumber": 4,
-            "startDate": "2025-02-17",
-            "endDate": "2025-02-23",
-            "phase": "Base 1",
-            "focus": "Recovery week",
-            "targetHours": 7,
-            "isRecoveryWeek": true,
-            "days": [
-              {
-                "date": "2025-02-17",
-                "dayOfWeek": "Monday",
-                "workouts": [
-                  {
-                    "id": "w4-mon-rest",
-                    "sport": "rest",
-                    "type": "rest",
-                    "name": "Rest Day",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-18",
-                "dayOfWeek": "Tuesday",
-                "workouts": [
-                  {
-                    "id": "w4-tue-swim",
-                    "sport": "swim",
-                    "type": "recovery",
-                    "name": "Easy Swim",
-                    "durationMinutes": 40,
-                    "distanceMeters": 2000,
-                    "primaryZone": "Zone 1",
-                    "humanReadable": "WU: 300\n10x100 @2:00 easy\nCD: 200",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-19",
-                "dayOfWeek": "Wednesday",
-                "workouts": [
-                  {
-                    "id": "w4-wed-bike",
-                    "sport": "bike",
-                    "type": "recovery",
-                    "name": "Easy Spin",
-                    "durationMinutes": 60,
-                    "distanceKm": 25,
-                    "primaryZone": "Zone 1",
-                    "humanReadable": "60 min very easy\nHigh cadence",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-20",
-                "dayOfWeek": "Thursday",
-                "workouts": [
-                  {
-                    "id": "w4-thu-run",
-                    "sport": "run",
-                    "type": "recovery",
-                    "name": "Recovery Run",
-                    "durationMinutes": 35,
-                    "distanceKm": 6,
-                    "primaryZone": "Zone 1",
-                    "humanReadable": "35 min very easy\n5:10+/km",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-21",
-                "dayOfWeek": "Friday",
-                "workouts": [
-                  {
-                    "id": "w4-fri-swim",
-                    "sport": "swim",
-                    "type": "technique",
-                    "name": "Drill Focus",
-                    "durationMinutes": 40,
-                    "distanceMeters": 2000,
-                    "primaryZone": "Zone 1-2",
-                    "humanReadable": "WU: 200\n8x50 drill choice\n6x150 @2:40 easy\nCD: 200",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-22",
-                "dayOfWeek": "Saturday",
-                "workouts": [
-                  {
-                    "id": "w4-sat-bike",
-                    "sport": "bike",
-                    "type": "endurance",
-                    "name": "Moderate Ride",
-                    "durationMinutes": 120,
-                    "distanceKm": 55,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "2 hr easy\nEnjoy the ride",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-23",
-                "dayOfWeek": "Sunday",
-                "workouts": [
-                  {
-                    "id": "w4-sun-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "durationMinutes": 50,
-                    "distanceKm": 10,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "50 min easy\nFlat route",
-                    "completed": false
-                  }
-                ]
-              }
-            ],
-            "summary": {
-              "totalHours": 7,
-              "bySport": {
-                "swim": { "sessions": 2, "hours": 1.3, "meters": 4000 },
-                "bike": { "sessions": 2, "hours": 3, "km": 80 },
-                "run": { "sessions": 2, "hours": 1.4, "km": 16 }
-              }
-            }
-          },
-          {
-            "weekNumber": 5,
-            "startDate": "2025-02-24",
-            "endDate": "2025-03-02",
-            "phase": "Base 2",
-            "focus": "Volume ramp",
-            "targetHours": 12,
-            "isRecoveryWeek": false,
-            "days": [
-              {
-                "date": "2025-02-24",
-                "dayOfWeek": "Monday",
-                "workouts": [
-                  {
-                    "id": "w5-mon-swim",
-                    "sport": "swim",
-                    "type": "threshold",
-                    "name": "Threshold Swim",
-                    "durationMinutes": 55,
-                    "distanceMeters": 3200,
-                    "primaryZone": "Zone 3",
-                    "humanReadable": "WU: 400\n5x300 @5:00 CSS\nCD: 300",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-25",
-                "dayOfWeek": "Tuesday",
-                "workouts": [
-                  {
-                    "id": "w5-tue-bike",
-                    "sport": "bike",
-                    "type": "intervals",
-                    "name": "Tempo Intervals",
-                    "durationMinutes": 90,
-                    "distanceKm": 45,
-                    "primaryZone": "Zone 3",
-                    "humanReadable": "WU: 15 min\n4x12 min @210W\n4 min easy between\nCD: 15 min",
-                    "completed": false
-                  },
-                  {
-                    "id": "w5-tue-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "durationMinutes": 40,
-                    "distanceKm": 8,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "40 min easy",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-26",
-                "dayOfWeek": "Wednesday",
-                "workouts": [
-                  {
-                    "id": "w5-wed-swim",
-                    "sport": "swim",
-                    "type": "endurance",
-                    "name": "Swim Volume",
-                    "durationMinutes": 60,
-                    "distanceMeters": 3500,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "WU: 400\n3x800 @13:30\nCD: 300",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-27",
-                "dayOfWeek": "Thursday",
-                "workouts": [
-                  {
-                    "id": "w5-thu-run",
-                    "sport": "run",
-                    "type": "tempo",
-                    "name": "Tempo Intervals",
-                    "durationMinutes": 60,
-                    "distanceKm": 13,
-                    "primaryZone": "Zone 3",
-                    "humanReadable": "WU: 15 min\n4x8 min @4:25/km\n2 min jog between\nCD: 10 min",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-02-28",
-                "dayOfWeek": "Friday",
-                "workouts": [
-                  {
-                    "id": "w5-fri-strength",
-                    "sport": "strength",
-                    "type": "strength",
-                    "name": "Tri Strength",
-                    "durationMinutes": 40,
-                    "humanReadable": "3 rounds:\nSquats 12, RDL 10\nStep-ups 10 ea\nPush-ups 15, Rows 12",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-01",
-                "dayOfWeek": "Saturday",
-                "workouts": [
-                  {
-                    "id": "w5-sat-bike",
-                    "sport": "bike",
-                    "type": "long",
-                    "name": "Long Ride",
-                    "durationMinutes": 240,
-                    "distanceKm": 115,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "4 hr steady\n75g carbs/hr\nPractice race nutrition",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-02",
-                "dayOfWeek": "Sunday",
-                "workouts": [
-                  {
-                    "id": "w5-sun-run",
-                    "sport": "run",
-                    "type": "long",
-                    "name": "Long Run",
-                    "durationMinutes": 105,
-                    "distanceKm": 20,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "105 min easy\nPractice fueling",
-                    "completed": false
-                  }
-                ]
-              }
-            ],
-            "summary": {
-              "totalHours": 12,
-              "bySport": {
-                "swim": { "sessions": 2, "hours": 1.9, "meters": 6700 },
-                "bike": { "sessions": 2, "hours": 5.5, "km": 160 },
-                "run": { "sessions": 3, "hours": 3.4, "km": 41 },
-                "strength": { "sessions": 1, "hours": 0.7 }
-              }
-            }
-          },
-          {
-            "weekNumber": 6,
-            "startDate": "2025-03-03",
-            "endDate": "2025-03-09",
-            "phase": "Base 2",
-            "focus": "Building volume",
-            "targetHours": 12.5,
-            "isRecoveryWeek": false,
-            "days": [
-              {
-                "date": "2025-03-03",
-                "dayOfWeek": "Monday",
-                "workouts": [
-                  {
-                    "id": "w6-mon-swim",
-                    "sport": "swim",
-                    "type": "threshold",
-                    "name": "CSS Swim",
-                    "durationMinutes": 60,
-                    "distanceMeters": 3400,
-                    "primaryZone": "Zone 3",
-                    "humanReadable": "WU: 400\n8x250 @4:10 CSS\n4x50 fast\nCD: 200",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-04",
-                "dayOfWeek": "Tuesday",
-                "workouts": [
-                  {
-                    "id": "w6-tue-bike",
-                    "sport": "bike",
-                    "type": "endurance",
-                    "name": "Endurance Ride",
-                    "durationMinutes": 90,
-                    "distanceKm": 42,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "90 min Z2\nCadence work",
-                    "completed": false
-                  },
-                  {
-                    "id": "w6-tue-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "durationMinutes": 45,
-                    "distanceKm": 9,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "45 min easy",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-05",
-                "dayOfWeek": "Wednesday",
-                "workouts": [
-                  {
-                    "id": "w6-wed-swim",
-                    "sport": "swim",
-                    "type": "endurance",
-                    "name": "Swim Distance",
-                    "durationMinutes": 65,
-                    "distanceMeters": 3800,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "WU: 400\nMain: 3000 continuous\nCD: 400",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-06",
-                "dayOfWeek": "Thursday",
-                "workouts": [
-                  {
-                    "id": "w6-thu-run",
-                    "sport": "run",
-                    "type": "tempo",
-                    "name": "Progressive Run",
-                    "durationMinutes": 65,
-                    "distanceKm": 14,
-                    "primaryZone": "Zone 2-3",
-                    "humanReadable": "20 min easy\n25 min tempo\n20 min threshold effort",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-07",
-                "dayOfWeek": "Friday",
-                "workouts": [
-                  {
-                    "id": "w6-fri-swim",
-                    "sport": "swim",
-                    "type": "speed",
-                    "name": "Swim Speed",
-                    "durationMinutes": 50,
-                    "distanceMeters": 2600,
-                    "primaryZone": "Zone 3-4",
-                    "humanReadable": "WU: 400\n12x100 @1:40 descend\n4x50 MAX\nCD: 200",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-08",
-                "dayOfWeek": "Saturday",
-                "workouts": [
-                  {
-                    "id": "w6-sat-bike",
-                    "sport": "bike",
-                    "type": "long",
-                    "name": "Long Ride",
-                    "durationMinutes": 255,
-                    "distanceKm": 120,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "4:15 steady\n80g carbs/hr\nStay aero",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-09",
-                "dayOfWeek": "Sunday",
-                "workouts": [
-                  {
-                    "id": "w6-sun-brick",
-                    "sport": "brick",
-                    "type": "brick",
-                    "name": "Long Brick",
-                    "durationMinutes": 135,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "Bike: 90 min steady\nRun: 45 min easy\nFind run legs",
-                    "completed": false
-                  }
-                ]
-              }
-            ],
-            "summary": {
-              "totalHours": 12.5,
-              "bySport": {
-                "swim": { "sessions": 3, "hours": 2.9, "meters": 9800 },
-                "bike": { "sessions": 2, "hours": 5.75, "km": 162 },
-                "run": { "sessions": 2, "hours": 1.8, "km": 23 },
-                "brick": { "sessions": 1, "hours": 2.25 }
-              }
-            }
-          },
-          {
-            "weekNumber": 7,
-            "startDate": "2025-03-10",
-            "endDate": "2025-03-16",
-            "phase": "Base 2",
-            "focus": "Peak base volume",
-            "targetHours": 13.5,
-            "isRecoveryWeek": false,
-            "days": [
-              {
-                "date": "2025-03-10",
-                "dayOfWeek": "Monday",
-                "workouts": [
-                  {
-                    "id": "w7-mon-swim",
-                    "sport": "swim",
-                    "type": "threshold",
-                    "name": "Threshold Swim",
-                    "durationMinutes": 60,
-                    "distanceMeters": 3600,
-                    "primaryZone": "Zone 3",
-                    "humanReadable": "WU: 400\n4x500 @8:20 CSS\nCD: 400",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-11",
-                "dayOfWeek": "Tuesday",
-                "workouts": [
-                  {
-                    "id": "w7-tue-bike",
-                    "sport": "bike",
-                    "type": "intervals",
-                    "name": "Sweet Spot",
-                    "durationMinutes": 100,
-                    "distanceKm": 50,
-                    "primaryZone": "Zone 3",
-                    "humanReadable": "WU: 20 min\n3x20 min @88% FTP\n5 min between\nCD: 15 min",
-                    "completed": false
-                  },
-                  {
-                    "id": "w7-tue-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "durationMinutes": 40,
-                    "distanceKm": 8,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "40 min easy",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-12",
-                "dayOfWeek": "Wednesday",
-                "workouts": [
-                  {
-                    "id": "w7-wed-swim",
-                    "sport": "swim",
-                    "type": "endurance",
-                    "name": "OW Simulation",
-                    "durationMinutes": 65,
-                    "distanceMeters": 3800,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "WU: 400\n3200 continuous\nSight every 10 strokes\nCD: 200",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-13",
-                "dayOfWeek": "Thursday",
-                "workouts": [
-                  {
-                    "id": "w7-thu-run",
-                    "sport": "run",
-                    "type": "tempo",
-                    "name": "Tempo Run",
-                    "durationMinutes": 70,
-                    "distanceKm": 15,
-                    "primaryZone": "Zone 3",
-                    "humanReadable": "15 min WU\n40 min @4:30/km\n15 min CD",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-14",
-                "dayOfWeek": "Friday",
-                "workouts": [
-                  {
-                    "id": "w7-fri-strength",
-                    "sport": "strength",
-                    "type": "strength",
-                    "name": "Tri Strength",
-                    "durationMinutes": 35,
-                    "humanReadable": "3 rounds:\nSquats, lunges, RDL\nCore work",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-15",
-                "dayOfWeek": "Saturday",
-                "workouts": [
-                  {
-                    "id": "w7-sat-bike",
-                    "sport": "bike",
-                    "type": "long",
-                    "name": "Long Ride",
-                    "durationMinutes": 270,
-                    "distanceKm": 130,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "4:30 steady\n80g carbs/hr\nRace nutrition practice",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-16",
-                "dayOfWeek": "Sunday",
-                "workouts": [
-                  {
-                    "id": "w7-sun-run",
-                    "sport": "run",
-                    "type": "long",
-                    "name": "Long Run",
-                    "durationMinutes": 120,
-                    "distanceKm": 23,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "2 hr easy\nTest race nutrition",
-                    "completed": false
-                  }
-                ]
-              }
-            ],
-            "summary": {
-              "totalHours": 13.5,
-              "bySport": {
-                "swim": { "sessions": 2, "hours": 2.1, "meters": 7400 },
-                "bike": { "sessions": 2, "hours": 6.2, "km": 180 },
-                "run": { "sessions": 3, "hours": 3.8, "km": 46 },
-                "strength": { "sessions": 1, "hours": 0.6 }
-              }
-            }
-          },
-          {
-            "weekNumber": 8,
-            "startDate": "2025-03-17",
-            "endDate": "2025-03-23",
-            "phase": "Base 2",
-            "focus": "Recovery week",
-            "targetHours": 8,
-            "isRecoveryWeek": true,
-            "days": [
-              {
-                "date": "2025-03-17",
-                "dayOfWeek": "Monday",
-                "workouts": [
-                  {
-                    "id": "w8-mon-rest",
-                    "sport": "rest",
-                    "type": "rest",
-                    "name": "Rest Day",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-18",
-                "dayOfWeek": "Tuesday",
-                "workouts": [
-                  {
-                    "id": "w8-tue-swim",
-                    "sport": "swim",
-                    "type": "recovery",
-                    "name": "Easy Swim",
-                    "durationMinutes": 45,
-                    "distanceMeters": 2200,
-                    "primaryZone": "Zone 1-2",
-                    "humanReadable": "WU: 300\n8x150 @2:45 easy\nCD: 200",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-19",
-                "dayOfWeek": "Wednesday",
-                "workouts": [
-                  {
-                    "id": "w8-wed-bike",
-                    "sport": "bike",
-                    "type": "recovery",
-                    "name": "Easy Spin",
-                    "durationMinutes": 75,
-                    "distanceKm": 30,
-                    "primaryZone": "Zone 1-2",
-                    "humanReadable": "75 min easy\nLegs should feel fresh",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-20",
-                "dayOfWeek": "Thursday",
-                "workouts": [
-                  {
-                    "id": "w8-thu-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run + Strides",
-                    "durationMinutes": 45,
-                    "distanceKm": 9,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "40 min easy\n5x20s strides",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-21",
-                "dayOfWeek": "Friday",
-                "workouts": [
-                  {
-                    "id": "w8-fri-swim",
-                    "sport": "swim",
-                    "type": "technique",
-                    "name": "Drill Swim",
-                    "durationMinutes": 45,
-                    "distanceMeters": 2200,
-                    "primaryZone": "Zone 1-2",
-                    "humanReadable": "WU: 200\n10x50 drill/swim\n8x100 @1:50 easy\nCD: 200",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-22",
-                "dayOfWeek": "Saturday",
-                "workouts": [
-                  {
-                    "id": "w8-sat-bike",
-                    "sport": "bike",
-                    "type": "endurance",
-                    "name": "Moderate Ride",
-                    "durationMinutes": 150,
-                    "distanceKm": 70,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "2:30 easy\nInclude 4x5 min tempo",
-                    "completed": false
-                  }
-                ]
-              },
-              {
-                "date": "2025-03-23",
-                "dayOfWeek": "Sunday",
-                "workouts": [
-                  {
-                    "id": "w8-sun-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Long Run",
-                    "durationMinutes": 75,
-                    "distanceKm": 14,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "75 min easy\nRelaxed effort",
-                    "completed": false
-                  }
-                ]
-              }
-            ],
-            "summary": {
-              "totalHours": 8,
-              "bySport": {
-                "swim": { "sessions": 2, "hours": 1.5, "meters": 4400 },
-                "bike": { "sessions": 2, "hours": 3.75, "km": 100 },
-                "run": { "sessions": 2, "hours": 2, "km": 23 }
-              }
-            }
-          },
-          {
-            "weekNumber": 9,
             "startDate": "2025-03-24",
             "endDate": "2025-03-30",
-            "phase": "Build 1",
-            "focus": "Race-specific intro",
-            "targetHours": 13,
+            "phase": "Base",
+            "focus": "Establish training rhythm, technique focus",
+            "targetHours": 7.5,
             "isRecoveryWeek": false,
             "days": [
               {
@@ -43311,15 +42243,12 @@ ${a.join(`
                 "dayOfWeek": "Monday",
                 "workouts": [
                   {
-                    "id": "w9-mon-swim",
-                    "sport": "swim",
-                    "type": "threshold",
-                    "name": "Race Pace Swim",
-                    "durationMinutes": 60,
-                    "distanceMeters": 3400,
-                    "primaryZone": "Zone 3",
-                    "humanReadable": "WU: 400\n3x700 @11:40 race pace\n6x50 fast\nCD: 200",
-                    "completed": false
+                    "id": "w1-mon-rest",
+                    "sport": "rest",
+                    "type": "rest",
+                    "name": "Rest Day",
+                    "description": "Full recovery day - light stretching optional",
+                    "completed": true
                   }
                 ]
               },
@@ -43328,26 +42257,16 @@ ${a.join(`
                 "dayOfWeek": "Tuesday",
                 "workouts": [
                   {
-                    "id": "w9-tue-bike",
-                    "sport": "bike",
-                    "type": "intervals",
-                    "name": "IM Power",
-                    "durationMinutes": 100,
-                    "distanceKm": 50,
-                    "primaryZone": "Zone 2-3",
-                    "humanReadable": "WU: 20 min\n60 min @185-195W (IM pace)\nCD: 20 min",
-                    "completed": false
-                  },
-                  {
-                    "id": "w9-tue-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "durationMinutes": 35,
-                    "distanceKm": 7,
+                    "id": "w1-tue-swim",
+                    "sport": "swim",
+                    "type": "technique",
+                    "name": "Technique Foundation",
+                    "description": "Focus on catch mechanics and body rotation",
+                    "durationMinutes": 45,
+                    "distanceMeters": 1800,
                     "primaryZone": "Zone 2",
-                    "humanReadable": "35 min easy",
-                    "completed": false
+                    "humanReadable": "WARM-UP (400m):\n200m easy freestyle\n4x50m drill: catch-up, fingertip drag, fist, swim\n\nMAIN SET (1000m):\n4x100m @ 2:10/100m pace with 15s rest\nFocus: High elbow catch, full extension\n4x50m @ 2:05/100m with 10s rest\nFocus: Hip rotation drives the stroke\n200m pull with buoy - steady rhythm\n\nCOOL-DOWN (400m):\n200m easy choice stroke\n200m easy freestyle with bilateral breathing",
+                    "completed": true
                   }
                 ]
               },
@@ -43356,15 +42275,17 @@ ${a.join(`
                 "dayOfWeek": "Wednesday",
                 "workouts": [
                   {
-                    "id": "w9-wed-swim",
-                    "sport": "swim",
+                    "id": "w1-wed-bike",
+                    "sport": "bike",
                     "type": "endurance",
-                    "name": "Swim Volume",
-                    "durationMinutes": 65,
-                    "distanceMeters": 3800,
+                    "name": "Aerobic Foundation Ride",
+                    "description": "Steady aerobic effort, build cycling base",
+                    "durationMinutes": 60,
+                    "distanceKm": 25,
                     "primaryZone": "Zone 2",
-                    "humanReadable": "WU: 400\n3000 continuous steady\nCD: 400",
-                    "completed": false
+                    "targetPower": "110-150W",
+                    "humanReadable": "WARM-UP (10 min):\n10 min easy spin, gradually increase cadence to 85-90 rpm\n\nMAIN SET (40 min):\n40 min steady Zone 2 riding\nPower: 110-150W (55-75% FTP)\nCadence: 85-95 rpm\nStay seated, smooth pedal stroke\n\nCOOL-DOWN (10 min):\n10 min easy spin, legs turning over\nStretch hip flexors post-ride",
+                    "completed": true
                   }
                 ]
               },
@@ -43373,15 +42294,16 @@ ${a.join(`
                 "dayOfWeek": "Thursday",
                 "workouts": [
                   {
-                    "id": "w9-thu-run",
+                    "id": "w1-thu-run",
                     "sport": "run",
-                    "type": "tempo",
-                    "name": "IM Pace Run",
-                    "durationMinutes": 70,
-                    "distanceKm": 14,
-                    "primaryZone": "Zone 2-3",
-                    "humanReadable": "15 min WU\n40 min @4:50-5:00/km\n(IM marathon pace)\n15 min CD",
-                    "completed": false
+                    "type": "easy",
+                    "name": "Easy Aerobic Run",
+                    "description": "Conversational pace, focus on form",
+                    "durationMinutes": 40,
+                    "distanceKm": 7,
+                    "primaryZone": "Zone 2",
+                    "humanReadable": "WARM-UP (5 min):\n5 min walk/very easy jog\n\nMAIN SET (30 min):\n30 min easy running at 5:40-6:00/km\nHR: 136-150 (Zone 2)\nFocus: Relaxed shoulders, quick cadence (175-180 spm)\nBreathing should be comfortable and conversational\n\nCOOL-DOWN (5 min):\n5 min easy walk\nDynamic stretches: leg swings, lunges",
+                    "completed": true
                   }
                 ]
               },
@@ -43390,15 +42312,16 @@ ${a.join(`
                 "dayOfWeek": "Friday",
                 "workouts": [
                   {
-                    "id": "w9-fri-swim",
+                    "id": "w1-fri-swim",
                     "sport": "swim",
-                    "type": "speed",
-                    "name": "Speed Swim",
+                    "type": "endurance",
+                    "name": "Aerobic Swim",
+                    "description": "Build aerobic capacity with continuous swimming",
                     "durationMinutes": 50,
-                    "distanceMeters": 2600,
-                    "primaryZone": "Zone 3-4",
-                    "humanReadable": "WU: 400\n10x100 descend @1:40\n8x50 fast\nCD: 200",
-                    "completed": false
+                    "distanceMeters": 2200,
+                    "primaryZone": "Zone 2",
+                    "humanReadable": "WARM-UP (400m):\n300m easy freestyle\n4x25m kick with fins\n\nMAIN SET (1400m):\n6x200m @ 2:05/100m with 20s rest\nNegative split each 200 (second 100 faster)\nFocus: Relaxed breathing pattern\n200m pull with paddles - smooth and powerful\n\nCOOL-DOWN (400m):\n200m easy backstroke\n200m easy freestyle",
+                    "completed": true
                   }
                 ]
               },
@@ -43407,13 +42330,16 @@ ${a.join(`
                 "dayOfWeek": "Saturday",
                 "workouts": [
                   {
-                    "id": "w9-sat-brick",
-                    "sport": "brick",
-                    "type": "brick",
-                    "name": "Long Brick",
-                    "durationMinutes": 270,
-                    "primaryZone": "Zone 2-3",
-                    "humanReadable": "Bike: 3:30 @185-195W\n80g carbs/hr\nRun: 60 min off bike\nFind IM marathon legs",
+                    "id": "w1-sat-bike",
+                    "sport": "bike",
+                    "type": "long",
+                    "name": "Long Endurance Ride",
+                    "description": "Build cycling endurance base",
+                    "durationMinutes": 90,
+                    "distanceKm": 40,
+                    "primaryZone": "Zone 2",
+                    "targetPower": "110-150W",
+                    "humanReadable": "WARM-UP (15 min):\n15 min easy spinning\n3x30s spin-ups to 100+ rpm\n\nMAIN SET (60 min):\n60 min steady Zone 2 riding\nPower: 110-150W\nStay aero for 5-10 min blocks when comfortable\nPractice drinking every 15 min\n\nCOOL-DOWN (15 min):\n15 min easy spin home\nPost-ride: Nutrition within 30 min",
                     "completed": false
                   }
                 ]
@@ -43423,36 +42349,37 @@ ${a.join(`
                 "dayOfWeek": "Sunday",
                 "workouts": [
                   {
-                    "id": "w9-sun-run",
+                    "id": "w1-sun-run",
                     "sport": "run",
                     "type": "long",
                     "name": "Long Run",
-                    "durationMinutes": 90,
-                    "distanceKm": 17,
+                    "description": "Build running endurance",
+                    "durationMinutes": 60,
+                    "distanceKm": 10,
                     "primaryZone": "Zone 2",
-                    "humanReadable": "90 min easy\nRecovery focus",
+                    "humanReadable": "WARM-UP (5 min):\n5 min easy walk/jog\n\nMAIN SET (50 min):\n50 min easy running at 5:45-6:10/km\nHR: 136-150 (Zone 2)\nFocus: Time on feet, relaxed form\nTake water at 25 min if needed\nEven effort throughout\n\nCOOL-DOWN (5 min):\n5 min walk\nGentle stretching",
                     "completed": false
                   }
                 ]
               }
             ],
             "summary": {
-              "totalHours": 13,
+              "totalHours": 7.5,
               "bySport": {
-                "swim": { "sessions": 3, "hours": 2.9, "meters": 9800 },
-                "bike": { "sessions": 1, "hours": 1.7, "km": 50 },
-                "run": { "sessions": 3, "hours": 3.25, "km": 38 },
-                "brick": { "sessions": 1, "hours": 4.5 }
+                "swim": { "sessions": 2, "hours": 1.6, "km": 4.0 },
+                "bike": { "sessions": 2, "hours": 2.5, "km": 65 },
+                "run": { "sessions": 2, "hours": 1.7, "km": 17 },
+                "strength": { "sessions": 0, "hours": 0 }
               }
             }
           },
           {
-            "weekNumber": 10,
+            "weekNumber": 2,
             "startDate": "2025-03-31",
             "endDate": "2025-04-06",
-            "phase": "Build 1",
-            "focus": "Race-specific volume",
-            "targetHours": 14,
+            "phase": "Base",
+            "focus": "Build consistency, introduce strength work",
+            "targetHours": 8,
             "isRecoveryWeek": false,
             "days": [
               {
@@ -43460,14 +42387,13 @@ ${a.join(`
                 "dayOfWeek": "Monday",
                 "workouts": [
                   {
-                    "id": "w10-mon-swim",
-                    "sport": "swim",
-                    "type": "threshold",
-                    "name": "Race Simulation",
-                    "durationMinutes": 65,
-                    "distanceMeters": 3800,
-                    "primaryZone": "Zone 3",
-                    "humanReadable": "WU: 400\n3.8k race sim @race pace\nFast start, settle, finish strong\nCD: 200",
+                    "id": "w2-mon-strength",
+                    "sport": "strength",
+                    "type": "strength",
+                    "name": "Core & Stability",
+                    "description": "Foundation strength for triathlon",
+                    "durationMinutes": 35,
+                    "humanReadable": "WARM-UP (5 min):\nDynamic stretches, arm circles, leg swings\n\nMAIN CIRCUIT (25 min):\n3 rounds with 30s rest between exercises:\n- Plank: 45 sec\n- Side plank: 30 sec each side\n- Bird dogs: 10 each side\n- Glute bridges: 15 reps\n- Single-leg Romanian deadlifts: 8 each side\n- Dead bugs: 10 each side\n- Clamshells: 15 each side\n\nCOOL-DOWN (5 min):\nPigeon pose, hip flexor stretch, quad stretch",
                     "completed": false
                   }
                 ]
@@ -43477,25 +42403,15 @@ ${a.join(`
                 "dayOfWeek": "Tuesday",
                 "workouts": [
                   {
-                    "id": "w10-tue-bike",
-                    "sport": "bike",
-                    "type": "intervals",
-                    "name": "IM Power Intervals",
-                    "durationMinutes": 105,
-                    "distanceKm": 52,
+                    "id": "w2-tue-swim",
+                    "sport": "swim",
+                    "type": "technique",
+                    "name": "Drill Work + CSS Intro",
+                    "description": "Technique refinement with first CSS-pace touches",
+                    "durationMinutes": 50,
+                    "distanceMeters": 2200,
                     "primaryZone": "Zone 2-3",
-                    "humanReadable": "WU: 15 min\n2x30 min @190W\n10 min easy between\nCD: 20 min",
-                    "completed": false
-                  },
-                  {
-                    "id": "w10-tue-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "durationMinutes": 40,
-                    "distanceKm": 8,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "40 min easy off bike",
+                    "humanReadable": "WARM-UP (400m):\n200m easy freestyle\n4x50m (25 drill/25 swim): catch-up, zipper, fist, full stroke\n\nDRILL SET (400m):\n8x50m drill work @ 1:15 interval\nAlternate: sculling, doggy paddle, single-arm\nFocus: Feel the water pressure on your hand\n\nMAIN SET (1000m):\n5x100m @ 1:55/100m (CSS pace) with 15s rest\nFocus: Maintain stroke count, breathe bilaterally\n5x100m descend 1-5 with 15s rest\n#1 easy, #5 fast\n\nCOOL-DOWN (400m):\n200m easy pull\n200m easy choice stroke",
                     "completed": false
                   }
                 ]
@@ -43505,14 +42421,16 @@ ${a.join(`
                 "dayOfWeek": "Wednesday",
                 "workouts": [
                   {
-                    "id": "w10-wed-swim",
-                    "sport": "swim",
+                    "id": "w2-wed-bike",
+                    "sport": "bike",
                     "type": "endurance",
-                    "name": "Swim Endurance",
-                    "durationMinutes": 60,
-                    "distanceMeters": 3400,
+                    "name": "Aerobic Ride with Cadence Work",
+                    "description": "Endurance with neuromuscular activation",
+                    "durationMinutes": 70,
+                    "distanceKm": 30,
                     "primaryZone": "Zone 2",
-                    "humanReadable": "WU: 400\n8x300 @5:00\nCD: 200",
+                    "targetPower": "110-150W",
+                    "humanReadable": "WARM-UP (10 min):\n10 min easy spin, building cadence\n\nMAIN SET (50 min):\n50 min Zone 2 with cadence drills:\nEvery 10 min: 1 min high cadence (100-110 rpm)\nPower: 110-150W base\nFocus: Smooth pedal stroke, eliminate dead spots\n\nCOOL-DOWN (10 min):\n10 min easy spin\nPost-ride stretching",
                     "completed": false
                   }
                 ]
@@ -43522,14 +42440,15 @@ ${a.join(`
                 "dayOfWeek": "Thursday",
                 "workouts": [
                   {
-                    "id": "w10-thu-run",
+                    "id": "w2-thu-run",
                     "sport": "run",
-                    "type": "tempo",
-                    "name": "Marathon Pace",
-                    "durationMinutes": 75,
-                    "distanceKm": 15,
-                    "primaryZone": "Zone 2-3",
-                    "humanReadable": "15 min WU\n45 min @IM marathon pace\n15 min CD",
+                    "type": "easy",
+                    "name": "Easy Run + Strides",
+                    "description": "Aerobic run with neuromuscular activation",
+                    "durationMinutes": 45,
+                    "distanceKm": 8,
+                    "primaryZone": "Zone 2",
+                    "humanReadable": "WARM-UP (5 min):\n5 min easy jog\n\nMAIN SET (30 min):\n30 min easy running at 5:40-6:00/km\nHR: 136-150 (Zone 2)\nRelaxed, conversational effort\n\nSTRIDES (5 min):\n6x20 sec strides at fast (not sprint) pace\n40 sec easy jog between\nFocus: Quick feet, tall posture, relaxed arms\n\nCOOL-DOWN (5 min):\n5 min easy jog/walk",
                     "completed": false
                   }
                 ]
@@ -43539,12 +42458,15 @@ ${a.join(`
                 "dayOfWeek": "Friday",
                 "workouts": [
                   {
-                    "id": "w10-fri-strength",
-                    "sport": "strength",
-                    "type": "strength",
-                    "name": "Maintenance",
-                    "durationMinutes": 30,
-                    "humanReadable": "2 rounds light:\nCore, mobility, activation",
+                    "id": "w2-fri-swim",
+                    "sport": "swim",
+                    "type": "endurance",
+                    "name": "Continuous Aerobic Swim",
+                    "description": "Build swim endurance with sighting practice",
+                    "durationMinutes": 50,
+                    "distanceMeters": 2400,
+                    "primaryZone": "Zone 2",
+                    "humanReadable": "WARM-UP (400m):\n300m easy freestyle\n4x25m sighting practice (look forward every 6 strokes)\n\nMAIN SET (1600m):\n1000m continuous @ 2:05/100m\nSight every 10 strokes (practice for open water)\n2x300m @ 2:00/100m with 30s rest\nNegative split each 300\n\nCOOL-DOWN (400m):\n200m easy backstroke\n200m easy freestyle",
                     "completed": false
                   }
                 ]
@@ -43554,14 +42476,14 @@ ${a.join(`
                 "dayOfWeek": "Saturday",
                 "workouts": [
                   {
-                    "id": "w10-sat-bike",
-                    "sport": "bike",
-                    "type": "long",
-                    "name": "Long Ride",
-                    "durationMinutes": 300,
-                    "distanceKm": 145,
+                    "id": "w2-sat-brick",
+                    "sport": "brick",
+                    "type": "brick",
+                    "name": "Intro Brick: Bike + Run",
+                    "description": "First brick workout of the plan",
+                    "durationMinutes": 100,
                     "primaryZone": "Zone 2",
-                    "humanReadable": "5 hr steady\n80-90g carbs/hr\nPractice race nutrition",
+                    "humanReadable": "BIKE LEG (70 min):\nWarm-up: 15 min easy\nMain: 45 min Zone 2 @ 110-150W\nCool-down: 10 min easy\n\nTRANSITION:\nQuick change - practice T2 routine\nTarget: Under 3 minutes\nHave shoes, hat, race belt ready\n\nRUN LEG (25 min):\n25 min easy running\nFirst 5 min will feel awkward - this is normal!\nSettle into rhythm by 10 min mark\nFocus: Quick cadence, forward lean",
                     "completed": false
                   }
                 ]
@@ -43571,36 +42493,38 @@ ${a.join(`
                 "dayOfWeek": "Sunday",
                 "workouts": [
                   {
-                    "id": "w10-sun-run",
+                    "id": "w2-sun-run",
                     "sport": "run",
                     "type": "long",
                     "name": "Long Run",
-                    "durationMinutes": 130,
-                    "distanceKm": 25,
+                    "description": "Build aerobic endurance",
+                    "durationMinutes": 70,
+                    "distanceKm": 12,
                     "primaryZone": "Zone 2",
-                    "humanReadable": "2:10 easy\nLast 5k @IM pace",
+                    "humanReadable": "WARM-UP (5 min):\n5 min easy walk/jog\n\nMAIN SET (60 min):\n60 min easy running at 5:40-6:00/km\nHR: 136-150 (Zone 2)\nNegative split: second half slightly faster\nWater at 30 min\n\nCOOL-DOWN (5 min):\n5 min walk\nGentle stretching",
                     "completed": false
                   }
                 ]
               }
             ],
             "summary": {
-              "totalHours": 14,
+              "totalHours": 8,
               "bySport": {
-                "swim": { "sessions": 2, "hours": 2.1, "meters": 7200 },
-                "bike": { "sessions": 2, "hours": 6.75, "km": 197 },
-                "run": { "sessions": 3, "hours": 4.1, "km": 48 },
-                "strength": { "sessions": 1, "hours": 0.5 }
+                "swim": { "sessions": 2, "hours": 1.7, "km": 4.6 },
+                "bike": { "sessions": 1, "hours": 1.2, "km": 30 },
+                "run": { "sessions": 2, "hours": 1.9, "km": 20 },
+                "brick": { "sessions": 1, "hours": 1.7 },
+                "strength": { "sessions": 1, "hours": 0.6 }
               }
             }
           },
           {
-            "weekNumber": 11,
+            "weekNumber": 3,
             "startDate": "2025-04-07",
             "endDate": "2025-04-13",
-            "phase": "Build 1",
-            "focus": "Race-specific peak",
-            "targetHours": 14.5,
+            "phase": "Base",
+            "focus": "Progressive overload, introduce tempo touches",
+            "targetHours": 8.5,
             "isRecoveryWeek": false,
             "days": [
               {
@@ -43608,14 +42532,13 @@ ${a.join(`
                 "dayOfWeek": "Monday",
                 "workouts": [
                   {
-                    "id": "w11-mon-swim",
-                    "sport": "swim",
-                    "type": "threshold",
-                    "name": "Threshold Swim",
-                    "durationMinutes": 60,
-                    "distanceMeters": 3600,
-                    "primaryZone": "Zone 3",
-                    "humanReadable": "WU: 400\n6x400 @6:40 CSS\n4x50 fast\nCD: 200",
+                    "id": "w3-mon-strength",
+                    "sport": "strength",
+                    "type": "strength",
+                    "name": "Triathlon-Specific Strength",
+                    "description": "Build functional strength for all three sports",
+                    "durationMinutes": 40,
+                    "humanReadable": "WARM-UP (5 min):\nDynamic stretches, bodyweight squats\n\nMAIN CIRCUIT (30 min):\n3 rounds:\n- Goblet squats: 12 reps\n- Romanian deadlifts: 10 reps\n- Step-ups: 10 each leg\n- Push-ups: 12-15 reps\n- Bent-over rows: 12 each arm\n- Pallof press: 10 each side\n- Copenhagen plank: 20 sec each side\n\nCOOL-DOWN (5 min):\nFoam rolling: quads, IT band, calves",
                     "completed": false
                   }
                 ]
@@ -43625,25 +42548,15 @@ ${a.join(`
                 "dayOfWeek": "Tuesday",
                 "workouts": [
                   {
-                    "id": "w11-tue-bike",
-                    "sport": "bike",
-                    "type": "intervals",
-                    "name": "Big Gear Work",
-                    "durationMinutes": 105,
-                    "distanceKm": 52,
-                    "primaryZone": "Zone 3",
-                    "humanReadable": "WU: 20 min\n4x15 min @200W big gear (60-70 rpm)\n5 min spin between\nCD: 15 min",
-                    "completed": false
-                  },
-                  {
-                    "id": "w11-tue-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "durationMinutes": 40,
-                    "distanceKm": 8,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "40 min easy",
+                    "id": "w3-tue-swim",
+                    "sport": "swim",
+                    "type": "threshold",
+                    "name": "CSS Development Set",
+                    "description": "Build threshold capacity with CSS-pace work",
+                    "durationMinutes": 55,
+                    "distanceMeters": 2600,
+                    "primaryZone": "Zone 3-4",
+                    "humanReadable": "WARM-UP (500m):\n300m easy freestyle\n4x50m build (easy to fast)\n\nPRE-MAIN (400m):\n8x50m @ 1:55/100m with 10s rest\nFocus on holding stroke rate\n\nMAIN SET (1200m):\n6x200m @ 1:55/100m (CSS) with 15s rest\nEven splits - aim for same time each 200\nBreathe every 3 strokes if possible\n\nCOOL-DOWN (500m):\n300m easy pull\n200m easy backstroke",
                     "completed": false
                   }
                 ]
@@ -43653,14 +42566,16 @@ ${a.join(`
                 "dayOfWeek": "Wednesday",
                 "workouts": [
                   {
-                    "id": "w11-wed-swim",
-                    "sport": "swim",
-                    "type": "endurance",
-                    "name": "Distance Swim",
-                    "durationMinutes": 70,
-                    "distanceMeters": 4000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "WU: 400\n3200 continuous\nCD: 400",
+                    "id": "w3-wed-bike",
+                    "sport": "bike",
+                    "type": "tempo",
+                    "name": "Tempo Introduction",
+                    "description": "First structured tempo work on the bike",
+                    "durationMinutes": 75,
+                    "distanceKm": 32,
+                    "primaryZone": "Zone 3",
+                    "targetPower": "150-180W",
+                    "humanReadable": "WARM-UP (15 min):\n15 min progressive warm-up\nEnd at moderate effort\n\nMAIN SET (45 min):\n3x10 min @ Tempo (150-180W, 75-90% FTP)\n5 min easy spin between intervals\nCadence: 85-95 rpm\nFocus: Steady power, no surging\n\nCOOL-DOWN (15 min):\n15 min easy spin\nStretch hip flexors",
                     "completed": false
                   }
                 ]
@@ -43670,14 +42585,15 @@ ${a.join(`
                 "dayOfWeek": "Thursday",
                 "workouts": [
                   {
-                    "id": "w11-thu-run",
+                    "id": "w3-thu-run",
                     "sport": "run",
                     "type": "tempo",
-                    "name": "Progression Run",
-                    "durationMinutes": 80,
-                    "distanceKm": 17,
-                    "primaryZone": "Zone 2-3",
-                    "humanReadable": "20 min easy\n30 min tempo\n30 min @IM marathon pace",
+                    "name": "Tempo Introduction",
+                    "description": "First structured tempo run",
+                    "durationMinutes": 50,
+                    "distanceKm": 9,
+                    "primaryZone": "Zone 3",
+                    "humanReadable": "WARM-UP (12 min):\n10 min easy jog\n4x30s accelerations with 30s easy\n\nMAIN SET (25 min):\n2x10 min @ Tempo pace (5:00-5:10/km)\nHR: 150-158 (Zone 3)\n5 min easy jog between\nFocus: Controlled effort, sustainable pace\n\nCOOL-DOWN (13 min):\n10 min easy jog\n3 min walk\nStretch quads, hip flexors, calves",
                     "completed": false
                   }
                 ]
@@ -43687,14 +42603,15 @@ ${a.join(`
                 "dayOfWeek": "Friday",
                 "workouts": [
                   {
-                    "id": "w11-fri-swim",
+                    "id": "w3-fri-swim",
                     "sport": "swim",
-                    "type": "speed",
-                    "name": "Speed Swim",
+                    "type": "endurance",
+                    "name": "Pull & Endurance",
+                    "description": "Build swim-specific strength with pull work",
                     "durationMinutes": 50,
-                    "distanceMeters": 2600,
-                    "primaryZone": "Zone 3-4",
-                    "humanReadable": "WU: 400\n12x100 @1:38 descend\n6x50 MAX\nCD: 200",
+                    "distanceMeters": 2400,
+                    "primaryZone": "Zone 2",
+                    "humanReadable": "WARM-UP (400m):\n200m easy freestyle\n200m easy backstroke\n\nPULL SET (800m):\n4x200m pull with buoy and paddles @ 2:00/100m\n15s rest between\nFocus: High elbow catch, powerful pull\n\nMAIN SET (800m):\n8x100m @ 2:00/100m with 15s rest\nDescend 1-4, repeat 5-8\nSmooth, efficient strokes\n\nCOOL-DOWN (400m):\n200m easy kick with fins\n200m easy freestyle",
                     "completed": false
                   }
                 ]
@@ -43704,13 +42621,16 @@ ${a.join(`
                 "dayOfWeek": "Saturday",
                 "workouts": [
                   {
-                    "id": "w11-sat-brick",
-                    "sport": "brick",
-                    "type": "brick",
-                    "name": "Race Sim Brick",
-                    "durationMinutes": 300,
-                    "primaryZone": "Zone 2-3",
-                    "humanReadable": "Bike: 4 hr @185-195W\n85g carbs/hr\nRun: 75 min\nFirst 45 easy, last 30 @IM pace",
+                    "id": "w3-sat-bike",
+                    "sport": "bike",
+                    "type": "long",
+                    "name": "Long Endurance Ride",
+                    "description": "Build cycling endurance with aero practice",
+                    "durationMinutes": 105,
+                    "distanceKm": 50,
+                    "primaryZone": "Zone 2",
+                    "targetPower": "110-150W",
+                    "humanReadable": "WARM-UP (15 min):\n15 min easy spinning\nBuild to Zone 2\n\nMAIN SET (75 min):\n75 min Zone 2 riding @ 110-150W\nEvery 15 min: 3 min in aero position\nPractice race position and comfort\nDrink every 15 min, aim for 60g carbs/hour\n\nCOOL-DOWN (15 min):\n15 min easy spin\nNote: Post-ride nutrition within 30 min",
                     "completed": false
                   }
                 ]
@@ -43720,36 +42640,37 @@ ${a.join(`
                 "dayOfWeek": "Sunday",
                 "workouts": [
                   {
-                    "id": "w11-sun-run",
+                    "id": "w3-sun-run",
                     "sport": "run",
-                    "type": "easy",
-                    "name": "Recovery Run",
-                    "durationMinutes": 50,
-                    "distanceKm": 10,
-                    "primaryZone": "Zone 1-2",
-                    "humanReadable": "50 min very easy\nRecovery focus",
+                    "type": "long",
+                    "name": "Progressive Long Run",
+                    "description": "Build endurance with progressive finish",
+                    "durationMinutes": 75,
+                    "distanceKm": 13,
+                    "primaryZone": "Zone 2",
+                    "humanReadable": "WARM-UP (5 min):\n5 min easy walk/jog\n\nMAIN SET (65 min):\n45 min easy @ 5:45-6:00/km (Zone 2)\nFinal 20 min: Pick up pace to 5:20-5:30/km\nNegative split the run\nWater/gel at 40 min\n\nCOOL-DOWN (5 min):\n5 min easy walk\nStretch and foam roll",
                     "completed": false
                   }
                 ]
               }
             ],
             "summary": {
-              "totalHours": 14.5,
+              "totalHours": 8.5,
               "bySport": {
-                "swim": { "sessions": 3, "hours": 3, "meters": 10200 },
-                "bike": { "sessions": 1, "hours": 1.75, "km": 52 },
-                "run": { "sessions": 3, "hours": 2.8, "km": 35 },
-                "brick": { "sessions": 1, "hours": 5 }
+                "swim": { "sessions": 2, "hours": 1.75, "km": 5.0 },
+                "bike": { "sessions": 2, "hours": 3.0, "km": 82 },
+                "run": { "sessions": 2, "hours": 2.1, "km": 22 },
+                "strength": { "sessions": 1, "hours": 0.67 }
               }
             }
           },
           {
-            "weekNumber": 12,
+            "weekNumber": 4,
             "startDate": "2025-04-14",
             "endDate": "2025-04-20",
-            "phase": "Build 1",
-            "focus": "Recovery week",
-            "targetHours": 9,
+            "phase": "Recovery",
+            "focus": "Active recovery week - absorb base phase adaptations",
+            "targetHours": 5.5,
             "isRecoveryWeek": true,
             "days": [
               {
@@ -43757,10 +42678,11 @@ ${a.join(`
                 "dayOfWeek": "Monday",
                 "workouts": [
                   {
-                    "id": "w12-mon-rest",
+                    "id": "w4-mon-rest",
                     "sport": "rest",
                     "type": "rest",
                     "name": "Rest Day",
+                    "description": "Complete rest - light walking okay",
                     "completed": false
                   }
                 ]
@@ -43770,14 +42692,15 @@ ${a.join(`
                 "dayOfWeek": "Tuesday",
                 "workouts": [
                   {
-                    "id": "w12-tue-swim",
+                    "id": "w4-tue-swim",
                     "sport": "swim",
                     "type": "recovery",
-                    "name": "Easy Swim",
-                    "durationMinutes": 50,
-                    "distanceMeters": 2400,
-                    "primaryZone": "Zone 1-2",
-                    "humanReadable": "WU: 300\n12x100 @1:55 easy\n6x50 drill\nCD: 200",
+                    "name": "Recovery Swim",
+                    "description": "Easy technique focus",
+                    "durationMinutes": 35,
+                    "distanceMeters": 1400,
+                    "primaryZone": "Zone 1",
+                    "humanReadable": "WARM-UP (200m):\n200m very easy freestyle\n\nMAIN SET (1000m):\n4x50m technique drills (catch-up, fingertip)\n6x100m easy @ 2:15/100m with 20s rest\nFocus on form, not speed\n200m easy pull with buoy\n\nCOOL-DOWN (200m):\n100m easy backstroke\n100m easy freestyle",
                     "completed": false
                   }
                 ]
@@ -43787,14 +42710,16 @@ ${a.join(`
                 "dayOfWeek": "Wednesday",
                 "workouts": [
                   {
-                    "id": "w12-wed-bike",
+                    "id": "w4-wed-bike",
                     "sport": "bike",
                     "type": "recovery",
-                    "name": "Easy Ride",
-                    "durationMinutes": 90,
-                    "distanceKm": 40,
-                    "primaryZone": "Zone 1-2",
-                    "humanReadable": "90 min easy spin\nInclude 3x3 min tempo",
+                    "name": "Recovery Spin",
+                    "description": "Easy spin to keep legs moving",
+                    "durationMinutes": 45,
+                    "distanceKm": 18,
+                    "primaryZone": "Zone 1",
+                    "targetPower": "Under 110W",
+                    "humanReadable": "RECOVERY RIDE:\n45 min very easy spinning\nPower: Under 110W (55% FTP)\nCadence: 90-100 rpm\nHigh cadence, low resistance\n\nThis is about blood flow, not fitness\nNo hard efforts allowed!",
                     "completed": false
                   }
                 ]
@@ -43804,14 +42729,15 @@ ${a.join(`
                 "dayOfWeek": "Thursday",
                 "workouts": [
                   {
-                    "id": "w12-thu-run",
+                    "id": "w4-thu-run",
                     "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run + Strides",
-                    "durationMinutes": 50,
-                    "distanceKm": 10,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "45 min easy\n5x20s strides",
+                    "type": "recovery",
+                    "name": "Recovery Jog",
+                    "description": "Easy jog to maintain running feel",
+                    "durationMinutes": 30,
+                    "distanceKm": 5,
+                    "primaryZone": "Zone 1",
+                    "humanReadable": "RECOVERY RUN:\n30 min very easy jogging\nPace: 6:00-6:30/km\nHR: Under 136 (Zone 1)\n\nThis should feel effortless\nWalk if HR gets too high\nFlat terrain preferred",
                     "completed": false
                   }
                 ]
@@ -43821,14 +42747,11 @@ ${a.join(`
                 "dayOfWeek": "Friday",
                 "workouts": [
                   {
-                    "id": "w12-fri-swim",
-                    "sport": "swim",
-                    "type": "technique",
-                    "name": "Drill Swim",
-                    "durationMinutes": 45,
-                    "distanceMeters": 2200,
-                    "primaryZone": "Zone 1-2",
-                    "humanReadable": "WU: 200\n10x50 drill\n8x100 @1:50 moderate\n4x50 fast\nCD: 200",
+                    "id": "w4-fri-rest",
+                    "sport": "rest",
+                    "type": "rest",
+                    "name": "Rest Day",
+                    "description": "Extra recovery day",
                     "completed": false
                   }
                 ]
@@ -43838,14 +42761,16 @@ ${a.join(`
                 "dayOfWeek": "Saturday",
                 "workouts": [
                   {
-                    "id": "w12-sat-bike",
+                    "id": "w4-sat-bike",
                     "sport": "bike",
                     "type": "endurance",
-                    "name": "Moderate Ride",
-                    "durationMinutes": 180,
-                    "distanceKm": 85,
+                    "name": "Easy Endurance Ride",
+                    "description": "Moderate ride to maintain fitness",
+                    "durationMinutes": 75,
+                    "distanceKm": 30,
                     "primaryZone": "Zone 2",
-                    "humanReadable": "3 hr easy\nInclude 20 min @IM power",
+                    "targetPower": "110-140W",
+                    "humanReadable": "EASY ENDURANCE RIDE:\n75 min Zone 2 riding\nPower: 110-140W (lower end of Zone 2)\nCadence: 85-95 rpm\n\nEnjoy the ride!\nStay relaxed\nNo pushing",
                     "completed": false
                   }
                 ]
@@ -43855,35 +42780,36 @@ ${a.join(`
                 "dayOfWeek": "Sunday",
                 "workouts": [
                   {
-                    "id": "w12-sun-run",
-                    "sport": "run",
-                    "type": "long",
-                    "name": "Easy Long Run",
-                    "durationMinutes": 90,
-                    "distanceKm": 17,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "90 min easy\nFeel fresh",
+                    "id": "w4-sun-swim",
+                    "sport": "swim",
+                    "type": "endurance",
+                    "name": "Easy Continuous Swim",
+                    "description": "Relaxed swimming to end recovery week",
+                    "durationMinutes": 40,
+                    "distanceMeters": 1600,
+                    "primaryZone": "Zone 1-2",
+                    "humanReadable": "WARM-UP (200m):\n200m easy freestyle\n\nMAIN SET (1200m):\n800m continuous @ comfortable pace\nMix of strokes okay\n4x100m easy with 20s rest\n\nCOOL-DOWN (200m):\n200m choice stroke",
                     "completed": false
                   }
                 ]
               }
             ],
             "summary": {
-              "totalHours": 9,
+              "totalHours": 5.5,
               "bySport": {
-                "swim": { "sessions": 2, "hours": 1.6, "meters": 4600 },
-                "bike": { "sessions": 2, "hours": 4.5, "km": 125 },
-                "run": { "sessions": 2, "hours": 2.3, "km": 27 }
+                "swim": { "sessions": 2, "hours": 1.25, "km": 3.0 },
+                "bike": { "sessions": 2, "hours": 2.0, "km": 48 },
+                "run": { "sessions": 1, "hours": 0.5, "km": 5 }
               }
             }
           },
           {
-            "weekNumber": 13,
+            "weekNumber": 5,
             "startDate": "2025-04-21",
             "endDate": "2025-04-27",
-            "phase": "Build 2",
-            "focus": "Peak fitness push",
-            "targetHours": 14.5,
+            "phase": "Build",
+            "focus": "Introduce intensity, sweet spot bike work begins",
+            "targetHours": 9,
             "isRecoveryWeek": false,
             "days": [
               {
@@ -43891,14 +42817,13 @@ ${a.join(`
                 "dayOfWeek": "Monday",
                 "workouts": [
                   {
-                    "id": "w13-mon-swim",
-                    "sport": "swim",
-                    "type": "threshold",
-                    "name": "Race Pace Swim",
-                    "durationMinutes": 65,
-                    "distanceMeters": 3800,
-                    "primaryZone": "Zone 3",
-                    "humanReadable": "WU: 400\n3.8k @race pace\nRace simulation\nCD: 200",
+                    "id": "w5-mon-strength",
+                    "sport": "strength",
+                    "type": "strength",
+                    "name": "Power Development",
+                    "description": "Build triathlon-specific power",
+                    "durationMinutes": 40,
+                    "humanReadable": "WARM-UP (5 min):\nDynamic stretches, jumping jacks\n\nMAIN CIRCUIT (30 min):\n3 rounds:\n- Jump squats: 8 reps (explosive)\n- Bulgarian split squats: 8 each leg\n- Box step-ups (quick): 10 each leg\n- Push-ups with rotation: 10 reps\n- Renegade rows: 8 each arm\n- Medicine ball slams: 10 reps\n- Plank with shoulder taps: 30 sec\n\nCOOL-DOWN (5 min):\nFoam rolling and stretching",
                     "completed": false
                   }
                 ]
@@ -43908,25 +42833,15 @@ ${a.join(`
                 "dayOfWeek": "Tuesday",
                 "workouts": [
                   {
-                    "id": "w13-tue-bike",
-                    "sport": "bike",
-                    "type": "intervals",
-                    "name": "IM Power",
-                    "durationMinutes": 110,
-                    "distanceKm": 55,
-                    "primaryZone": "Zone 2-3",
-                    "humanReadable": "WU: 15 min\n75 min @185-195W continuous\nCD: 20 min",
-                    "completed": false
-                  },
-                  {
-                    "id": "w13-tue-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "durationMinutes": 40,
-                    "distanceKm": 8,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "40 min easy off bike",
+                    "id": "w5-tue-swim",
+                    "sport": "swim",
+                    "type": "threshold",
+                    "name": "CSS Threshold Set",
+                    "description": "Sustained threshold work at CSS pace",
+                    "durationMinutes": 55,
+                    "distanceMeters": 2800,
+                    "primaryZone": "Zone 4",
+                    "humanReadable": "WARM-UP (500m):\n300m easy freestyle\n4x50m build @ 1:15\n\nPRE-MAIN (400m):\n4x100m @ 2:00/100m descending with 15s rest\n\nMAIN SET (1400m):\n7x200m @ 1:55/100m (CSS) with 15s rest\nHold stroke count and pace across all reps\nBreathe bilaterally if possible\n\nSPEED TOUCH (200m):\n4x50m FAST @ :55 with 15s rest\n\nCOOL-DOWN (300m):\n300m easy pull",
                     "completed": false
                   }
                 ]
@@ -43936,14 +42851,16 @@ ${a.join(`
                 "dayOfWeek": "Wednesday",
                 "workouts": [
                   {
-                    "id": "w13-wed-swim",
-                    "sport": "swim",
-                    "type": "endurance",
-                    "name": "Swim Volume",
-                    "durationMinutes": 65,
-                    "distanceMeters": 3800,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "WU: 400\n6x500 @8:20\nCD: 200",
+                    "id": "w5-wed-bike",
+                    "sport": "bike",
+                    "type": "sweetspot",
+                    "name": "Sweet Spot Intervals",
+                    "description": "Build muscular endurance with sweet spot work",
+                    "durationMinutes": 75,
+                    "distanceKm": 32,
+                    "primaryZone": "Zone 3-4",
+                    "targetPower": "168-194W",
+                    "humanReadable": "WARM-UP (15 min):\n15 min progressive build to moderate\nInclude 2x30s high cadence efforts\n\nMAIN SET (45 min):\n3x12 min @ Sweet Spot (168-194W, 84-97% FTP)\n5 min easy spin between intervals\nCadence: 85-95 rpm\nStay in aero position when possible\n\nCOOL-DOWN (15 min):\n15 min easy spin\nPost-ride: Protein and carbs within 30 min",
                     "completed": false
                   }
                 ]
@@ -43953,14 +42870,15 @@ ${a.join(`
                 "dayOfWeek": "Thursday",
                 "workouts": [
                   {
-                    "id": "w13-thu-run",
+                    "id": "w5-thu-run",
                     "sport": "run",
-                    "type": "tempo",
-                    "name": "IM Marathon Pace",
-                    "durationMinutes": 85,
-                    "distanceKm": 18,
-                    "primaryZone": "Zone 2-3",
-                    "humanReadable": "15 min WU\n55 min @IM marathon pace\n15 min CD",
+                    "type": "intervals",
+                    "name": "Threshold Intervals",
+                    "description": "Build running threshold with structured intervals",
+                    "durationMinutes": 55,
+                    "distanceKm": 10,
+                    "primaryZone": "Zone 4",
+                    "humanReadable": "WARM-UP (15 min):\n10 min easy jog\n4x30s strides with 30s easy\n1 min easy jog\n\nMAIN SET (28 min):\n5x4 min @ Threshold (4:45-4:55/km)\nHR: 158-168 (Zone 4)\n90 sec easy jog recovery between\nFocus: Controlled breathing, quick cadence\n\nCOOL-DOWN (12 min):\n10 min easy jog\n2 min walk\nStretch thoroughly",
                     "completed": false
                   }
                 ]
@@ -43970,14 +42888,15 @@ ${a.join(`
                 "dayOfWeek": "Friday",
                 "workouts": [
                   {
-                    "id": "w13-fri-swim",
+                    "id": "w5-fri-swim",
                     "sport": "swim",
-                    "type": "speed",
-                    "name": "Speed Swim",
+                    "type": "endurance",
+                    "name": "Aerobic Swim + Sighting",
+                    "description": "Build endurance with open water skills",
                     "durationMinutes": 50,
-                    "distanceMeters": 2600,
-                    "primaryZone": "Zone 3-4",
-                    "humanReadable": "WU: 400\n8x125 @2:05 fast\n6x50 MAX\nCD: 200",
+                    "distanceMeters": 2400,
+                    "primaryZone": "Zone 2",
+                    "humanReadable": "WARM-UP (400m):\n200m easy freestyle\n4x50m (25 sighting practice/25 swim)\n\nMAIN SET (1600m):\n1500m continuous @ 2:00/100m\nSight forward every 8-10 strokes\nPractice \"crocodile eyes\" technique\n\nKICK SET (200m):\n4x50m kick with fins @ 1:10\n\nCOOL-DOWN (200m):\n200m easy backstroke",
                     "completed": false
                   }
                 ]
@@ -43987,14 +42906,14 @@ ${a.join(`
                 "dayOfWeek": "Saturday",
                 "workouts": [
                   {
-                    "id": "w13-sat-bike",
-                    "sport": "bike",
-                    "type": "long",
-                    "name": "Long Ride",
-                    "durationMinutes": 330,
-                    "distanceKm": 160,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "5:30 steady\n85-90g carbs/hr\nPractice full race nutrition",
+                    "id": "w5-sat-brick",
+                    "sport": "brick",
+                    "type": "brick",
+                    "name": "Build Phase Brick",
+                    "description": "Tempo bike with progression run",
+                    "durationMinutes": 120,
+                    "primaryZone": "Zone 2-3",
+                    "humanReadable": "BIKE LEG (80 min):\nWarm-up: 15 min easy\nMain: 50 min with:\n- 40 min Zone 2 @ 110-150W\n- Final 10 min @ Tempo (150-175W)\nCool-down: 15 min easy\nPractice race nutrition: 60g carbs/hour\n\nTRANSITION (3 min):\nQuick T2 practice\nShoes on, race belt, go!\n\nRUN LEG (35 min):\nFirst 20 min @ easy effort (5:40-6:00/km)\nFinal 15 min @ Tempo (5:00-5:15/km)\nFocus: Transition to run legs quickly",
                     "completed": false
                   }
                 ]
@@ -44004,35 +42923,38 @@ ${a.join(`
                 "dayOfWeek": "Sunday",
                 "workouts": [
                   {
-                    "id": "w13-sun-run",
+                    "id": "w5-sun-run",
                     "sport": "run",
                     "type": "long",
                     "name": "Long Run",
-                    "durationMinutes": 140,
-                    "distanceKm": 27,
+                    "description": "Aerobic endurance builder",
+                    "durationMinutes": 80,
+                    "distanceKm": 14,
                     "primaryZone": "Zone 2",
-                    "humanReadable": "2:20 easy\nLast 7k @IM pace",
+                    "humanReadable": "WARM-UP (5 min):\n5 min easy walk/jog\n\nMAIN SET (70 min):\n70 min easy @ 5:40-5:55/km\nHR: 136-150 (Zone 2)\nEven effort throughout\nWater and gel at 35 min\nPractice race-day nutrition\n\nCOOL-DOWN (5 min):\n5 min walk\nStretch and roll",
                     "completed": false
                   }
                 ]
               }
             ],
             "summary": {
-              "totalHours": 14.5,
+              "totalHours": 9,
               "bySport": {
-                "swim": { "sessions": 3, "hours": 3, "meters": 10200 },
-                "bike": { "sessions": 2, "hours": 7.3, "km": 215 },
-                "run": { "sessions": 3, "hours": 4.4, "km": 53 }
+                "swim": { "sessions": 2, "hours": 1.75, "km": 5.2 },
+                "bike": { "sessions": 1, "hours": 1.25, "km": 32 },
+                "run": { "sessions": 2, "hours": 2.25, "km": 24 },
+                "brick": { "sessions": 1, "hours": 2.0 },
+                "strength": { "sessions": 1, "hours": 0.67 }
               }
             }
           },
           {
-            "weekNumber": 14,
+            "weekNumber": 6,
             "startDate": "2025-04-28",
             "endDate": "2025-05-04",
-            "phase": "Build 2",
-            "focus": "Peak volume",
-            "targetHours": 15.5,
+            "phase": "Build",
+            "focus": "Increase intensity, race-specific work",
+            "targetHours": 9.5,
             "isRecoveryWeek": false,
             "days": [
               {
@@ -44040,14 +42962,11 @@ ${a.join(`
                 "dayOfWeek": "Monday",
                 "workouts": [
                   {
-                    "id": "w14-mon-swim",
-                    "sport": "swim",
-                    "type": "threshold",
-                    "name": "Threshold Swim",
-                    "durationMinutes": 65,
-                    "distanceMeters": 4000,
-                    "primaryZone": "Zone 3",
-                    "humanReadable": "WU: 400\n8x350 @5:50 CSS\n4x50 fast\nCD: 200",
+                    "id": "w6-mon-rest",
+                    "sport": "rest",
+                    "type": "rest",
+                    "name": "Rest Day",
+                    "description": "Full recovery day",
                     "completed": false
                   }
                 ]
@@ -44057,25 +42976,15 @@ ${a.join(`
                 "dayOfWeek": "Tuesday",
                 "workouts": [
                   {
-                    "id": "w14-tue-bike",
-                    "sport": "bike",
-                    "type": "intervals",
-                    "name": "IM Simulation",
-                    "durationMinutes": 120,
-                    "distanceKm": 60,
-                    "primaryZone": "Zone 2-3",
-                    "humanReadable": "WU: 15 min\n90 min @IM power continuous\nCD: 15 min",
-                    "completed": false
-                  },
-                  {
-                    "id": "w14-tue-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "durationMinutes": 45,
-                    "distanceKm": 9,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "45 min easy",
+                    "id": "w6-tue-swim",
+                    "sport": "swim",
+                    "type": "threshold",
+                    "name": "Race Pace Set",
+                    "description": "Practice race pace with descending intervals",
+                    "durationMinutes": 55,
+                    "distanceMeters": 2800,
+                    "primaryZone": "Zone 3-4",
+                    "humanReadable": "WARM-UP (500m):\n300m easy freestyle\n4x50m drill/swim by 25\n\nRACE PACE SET (1400m):\n4x350m @ race pace (1:58-2:00/100m)\n30s rest between\nEven pace each 350\nSight every 10 strokes\n\nSPEED SET (400m):\n8x50m descend 1-4, repeat @ :55\n\nCOOL-DOWN (500m):\n300m easy pull\n200m easy backstroke",
                     "completed": false
                   }
                 ]
@@ -44085,14 +42994,16 @@ ${a.join(`
                 "dayOfWeek": "Wednesday",
                 "workouts": [
                   {
-                    "id": "w14-wed-swim",
-                    "sport": "swim",
-                    "type": "endurance",
-                    "name": "OW Simulation",
-                    "durationMinutes": 70,
-                    "distanceMeters": 4200,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "WU: 400\n3800 continuous\nSighting practice\nCD: 200",
+                    "id": "w6-wed-bike",
+                    "sport": "bike",
+                    "type": "sweetspot",
+                    "name": "Extended Sweet Spot",
+                    "description": "Longer sweet spot intervals for race preparation",
+                    "durationMinutes": 80,
+                    "distanceKm": 36,
+                    "primaryZone": "Zone 3-4",
+                    "targetPower": "168-194W",
+                    "humanReadable": "WARM-UP (15 min):\n15 min progressive build\nInclude 3x30s high cadence\n\nMAIN SET (50 min):\n2x20 min @ Sweet Spot (168-194W)\n10 min easy spin between\nCadence: 85-95 rpm\nPractice aero position\n\nCOOL-DOWN (15 min):\n15 min easy spin",
                     "completed": false
                   }
                 ]
@@ -44102,14 +43013,15 @@ ${a.join(`
                 "dayOfWeek": "Thursday",
                 "workouts": [
                   {
-                    "id": "w14-thu-run",
+                    "id": "w6-thu-run",
                     "sport": "run",
                     "type": "tempo",
-                    "name": "Progression Run",
-                    "durationMinutes": 90,
-                    "distanceKm": 19,
-                    "primaryZone": "Zone 2-3",
-                    "humanReadable": "25 min easy\n40 min tempo\n25 min @IM pace",
+                    "name": "Tempo Run",
+                    "description": "Sustained tempo effort",
+                    "durationMinutes": 55,
+                    "distanceKm": 10,
+                    "primaryZone": "Zone 3",
+                    "humanReadable": "WARM-UP (12 min):\n10 min easy jog\n4x30s strides with 30s easy\n\nMAIN SET (30 min):\n25 min continuous @ Tempo (5:00-5:10/km)\nHR: 150-158 (Zone 3)\nControlled, sustainable effort\n\nCOOL-DOWN (13 min):\n10 min easy jog\n3 min walk",
                     "completed": false
                   }
                 ]
@@ -44119,14 +43031,15 @@ ${a.join(`
                 "dayOfWeek": "Friday",
                 "workouts": [
                   {
-                    "id": "w14-fri-swim",
+                    "id": "w6-fri-swim",
                     "sport": "swim",
                     "type": "speed",
-                    "name": "Speed Work",
-                    "durationMinutes": 55,
-                    "distanceMeters": 2800,
-                    "primaryZone": "Zone 3-4",
-                    "humanReadable": "WU: 400\n10x150 @2:25 descend\n6x50 MAX\nCD: 200",
+                    "name": "Speed Development",
+                    "description": "Build top-end speed",
+                    "durationMinutes": 50,
+                    "distanceMeters": 2400,
+                    "primaryZone": "Zone 4-5",
+                    "humanReadable": "WARM-UP (500m):\n300m easy freestyle\n4x50m build @ 1:10\n\nSPEED SET (1000m):\n10x100m on ladder:\n#1-4: @ 1:55/100m\n#5-6: @ 1:50/100m (CSS)\n#7-8: @ 1:45/100m (fast!)\n#9-10: @ 1:50/100m\n15s rest all\n\nDESCEND SET (500m):\n5x100m descend 1-5\nStart easy, #5 all-out\n\nCOOL-DOWN (400m):\n400m easy choice",
                     "completed": false
                   }
                 ]
@@ -44136,13 +43049,16 @@ ${a.join(`
                 "dayOfWeek": "Saturday",
                 "workouts": [
                   {
-                    "id": "w14-sat-brick",
-                    "sport": "brick",
-                    "type": "brick",
-                    "name": "Peak Brick",
-                    "durationMinutes": 360,
+                    "id": "w6-sat-bike",
+                    "sport": "bike",
+                    "type": "long",
+                    "name": "Long Ride with Race Efforts",
+                    "description": "Endurance with race-specific blocks",
+                    "durationMinutes": 120,
+                    "distanceKm": 55,
                     "primaryZone": "Zone 2-3",
-                    "humanReadable": "Bike: 5 hr @IM power\n85-90g carbs/hr\nRun: 90 min\nFirst 60 easy, last 30 @IM pace",
+                    "targetPower": "110-175W",
+                    "humanReadable": "WARM-UP (15 min):\n15 min easy spin\n\nMAIN SET (90 min):\n90 min with race-specific blocks:\n- 30 min Zone 2 @ 110-150W\n- 15 min @ race effort (155-175W)\n- 20 min Zone 2\n- 15 min @ race effort\n- 10 min Zone 2 to finish\n\nPractice full race nutrition!\nTarget: 60g carbs/hour\n\nCOOL-DOWN (15 min):\n15 min easy spin home",
                     "completed": false
                   }
                 ]
@@ -44152,36 +43068,36 @@ ${a.join(`
                 "dayOfWeek": "Sunday",
                 "workouts": [
                   {
-                    "id": "w14-sun-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Recovery Run",
-                    "durationMinutes": 50,
-                    "distanceKm": 10,
-                    "primaryZone": "Zone 1-2",
-                    "humanReadable": "50 min very easy",
+                    "id": "w6-sun-brick",
+                    "sport": "brick",
+                    "type": "brick",
+                    "name": "Brick: Short Bike + Long Run",
+                    "description": "Emphasize run off the bike",
+                    "durationMinutes": 110,
+                    "primaryZone": "Zone 2-3",
+                    "humanReadable": "BIKE LEG (50 min):\nWarm-up: 10 min easy\nMain: 35 min Zone 2-3 @ 140-170W\nCool-down: 5 min easy\n\nTRANSITION (2 min):\nQuick change, race shoes, go!\n\nRUN LEG (55 min):\n45 min easy @ 5:35-5:50/km\nFinal 10 min @ race effort (5:00-5:10/km)\nPractice finishing strong off the bike",
                     "completed": false
                   }
                 ]
               }
             ],
             "summary": {
-              "totalHours": 15.5,
+              "totalHours": 9.5,
               "bySport": {
-                "swim": { "sessions": 3, "hours": 3.2, "meters": 11000 },
-                "bike": { "sessions": 1, "hours": 2, "km": 60 },
-                "run": { "sessions": 3, "hours": 3.1, "km": 38 },
-                "brick": { "sessions": 1, "hours": 6 }
+                "swim": { "sessions": 2, "hours": 1.75, "km": 5.2 },
+                "bike": { "sessions": 2, "hours": 3.3, "km": 91 },
+                "run": { "sessions": 1, "hours": 0.9, "km": 10 },
+                "brick": { "sessions": 1, "hours": 1.8 }
               }
             }
           },
           {
-            "weekNumber": 15,
+            "weekNumber": 7,
             "startDate": "2025-05-05",
             "endDate": "2025-05-11",
-            "phase": "Build 2",
-            "focus": "Peak training week",
-            "targetHours": 16,
+            "phase": "Build",
+            "focus": "Peak build week - highest intensity before recovery",
+            "targetHours": 10,
             "isRecoveryWeek": false,
             "days": [
               {
@@ -44189,14 +43105,13 @@ ${a.join(`
                 "dayOfWeek": "Monday",
                 "workouts": [
                   {
-                    "id": "w15-mon-swim",
-                    "sport": "swim",
-                    "type": "threshold",
-                    "name": "Race Pace Swim",
-                    "durationMinutes": 70,
-                    "distanceMeters": 4200,
-                    "primaryZone": "Zone 3",
-                    "humanReadable": "WU: 400\n3.8k race simulation\nCD: 400",
+                    "id": "w7-mon-strength",
+                    "sport": "strength",
+                    "type": "strength",
+                    "name": "Maintenance Strength",
+                    "description": "Maintain strength while building intensity",
+                    "durationMinutes": 35,
+                    "humanReadable": "WARM-UP (5 min):\nDynamic stretches\n\nMAIN CIRCUIT (25 min):\n2 rounds:\n- Squats: 15 reps\n- Romanian deadlifts: 12 reps\n- Lunges: 10 each leg\n- Push-ups: 15 reps\n- Plank: 45 sec\n- Side plank: 30 sec each\n- Hip bridges: 15 reps\n\nCOOL-DOWN (5 min):\nStretching",
                     "completed": false
                   }
                 ]
@@ -44206,25 +43121,15 @@ ${a.join(`
                 "dayOfWeek": "Tuesday",
                 "workouts": [
                   {
-                    "id": "w15-tue-bike",
-                    "sport": "bike",
-                    "type": "intervals",
-                    "name": "IM Power Blocks",
-                    "durationMinutes": 120,
-                    "distanceKm": 60,
-                    "primaryZone": "Zone 2-3",
-                    "humanReadable": "WU: 15 min\n3x25 min @190W\n5 min easy between\nCD: 15 min",
-                    "completed": false
-                  },
-                  {
-                    "id": "w15-tue-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "durationMinutes": 45,
-                    "distanceKm": 9,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "45 min easy",
+                    "id": "w7-tue-swim",
+                    "sport": "swim",
+                    "type": "threshold",
+                    "name": "Sustained CSS Set",
+                    "description": "Extended threshold work",
+                    "durationMinutes": 60,
+                    "distanceMeters": 3000,
+                    "primaryZone": "Zone 4",
+                    "humanReadable": "WARM-UP (500m):\n300m easy freestyle\n4x50m drill/swim\n\nPRE-MAIN (300m):\n6x50m build @ 1:00\n\nMAIN SET (1600m):\n2x800m @ CSS (1:55/100m)\n60s rest between\nEven pacing - this is your race swim!\nHold stroke count and rhythm\n\nSPEED FINISH (300m):\n6x50m fast @ :55\n\nCOOL-DOWN (300m):\n300m easy",
                     "completed": false
                   }
                 ]
@@ -44234,14 +43139,16 @@ ${a.join(`
                 "dayOfWeek": "Wednesday",
                 "workouts": [
                   {
-                    "id": "w15-wed-swim",
-                    "sport": "swim",
-                    "type": "endurance",
-                    "name": "Distance Swim",
-                    "durationMinutes": 70,
-                    "distanceMeters": 4200,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "WU: 400\n3x1000 @16:40\n4x100 fast\nCD: 200",
+                    "id": "w7-wed-bike",
+                    "sport": "bike",
+                    "type": "threshold",
+                    "name": "Threshold Intervals",
+                    "description": "Build FTP with threshold work",
+                    "durationMinutes": 85,
+                    "distanceKm": 38,
+                    "primaryZone": "Zone 4",
+                    "targetPower": "180-200W",
+                    "humanReadable": "WARM-UP (20 min):\n15 min progressive build\n3x30s high cadence bursts\n2 min easy\n\nMAIN SET (50 min):\n4x10 min @ Threshold (180-200W, 90-100% FTP)\n5 min easy spin between\nCadence: 85-95 rpm\nAero position for as long as comfortable\n\nCOOL-DOWN (15 min):\n15 min easy spin",
                     "completed": false
                   }
                 ]
@@ -44251,14 +43158,15 @@ ${a.join(`
                 "dayOfWeek": "Thursday",
                 "workouts": [
                   {
-                    "id": "w15-thu-run",
+                    "id": "w7-thu-run",
                     "sport": "run",
-                    "type": "tempo",
-                    "name": "Marathon Simulation",
-                    "durationMinutes": 100,
-                    "distanceKm": 21,
-                    "primaryZone": "Zone 2-3",
-                    "humanReadable": "15 min WU\n70 min @IM marathon pace\n15 min CD",
+                    "type": "intervals",
+                    "name": "Threshold Intervals",
+                    "description": "Build running threshold",
+                    "durationMinutes": 55,
+                    "distanceKm": 10,
+                    "primaryZone": "Zone 4",
+                    "humanReadable": "WARM-UP (15 min):\n10 min easy jog\n4x30s strides with 30s easy\n\nMAIN SET (30 min):\n6x3 min @ Threshold (4:35-4:50/km)\n90 sec easy jog between\nHR: 158-168 (Zone 4)\nFocus: Strong but controlled\n\nCOOL-DOWN (10 min):\n10 min easy jog\nStretch well",
                     "completed": false
                   }
                 ]
@@ -44268,14 +43176,15 @@ ${a.join(`
                 "dayOfWeek": "Friday",
                 "workouts": [
                   {
-                    "id": "w15-fri-swim",
+                    "id": "w7-fri-swim",
                     "sport": "swim",
-                    "type": "speed",
-                    "name": "Speed Swim",
-                    "durationMinutes": 55,
-                    "distanceMeters": 2800,
-                    "primaryZone": "Zone 3-4",
-                    "humanReadable": "WU: 400\n6x200 @3:15 descend\n8x50 MAX\nCD: 200",
+                    "type": "endurance",
+                    "name": "Race Simulation Swim",
+                    "description": "Simulate race swim with sighting",
+                    "durationMinutes": 50,
+                    "distanceMeters": 2600,
+                    "primaryZone": "Zone 3",
+                    "humanReadable": "WARM-UP (400m):\n300m easy freestyle\n4x25m sighting practice\n\nRACE SIMULATION (1500m):\n1500m continuous @ race pace (1:58-2:00/100m)\nStart hard (first 100m fast), settle into rhythm\nSight every 8-10 strokes\nPractice bilateral breathing\nThis is your RACE distance!\n\nMAIN SET (400m):\n4x100m descend @ 1:50 interval\n\nCOOL-DOWN (300m):\n300m very easy",
                     "completed": false
                   }
                 ]
@@ -44285,14 +43194,14 @@ ${a.join(`
                 "dayOfWeek": "Saturday",
                 "workouts": [
                   {
-                    "id": "w15-sat-bike",
-                    "sport": "bike",
-                    "type": "long",
-                    "name": "Peak Long Ride",
-                    "durationMinutes": 360,
-                    "distanceKm": 175,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "6 hr steady\n85-90g carbs/hr\nRace nutrition test\nMental rehearsal",
+                    "id": "w7-sat-brick",
+                    "sport": "brick",
+                    "type": "brick",
+                    "name": "Race Simulation Brick",
+                    "description": "Full race simulation at goal paces",
+                    "durationMinutes": 150,
+                    "primaryZone": "Zone 2-3",
+                    "humanReadable": "BIKE LEG (100 min):\nWarm-up: 15 min easy\nMain: 75 min at RACE EFFORT:\n- Power: 155-175W (78-88% FTP)\n- HR: Under 155\n- Aero position as much as possible\nCool-down: 10 min easy\n\nFull race nutrition practice!\n60g carbs/hour, drink every 15 min\n\nTRANSITION (2 min):\nFull T2 practice\n\nRUN LEG (45 min):\n40 min at RACE EFFORT (5:00-5:10/km)\nFirst 10 min may feel hard - settle in\nFinal 5 min: Easy cool-down\n\nThis is your confidence-builder!",
                     "completed": false
                   }
                 ]
@@ -44302,35 +43211,38 @@ ${a.join(`
                 "dayOfWeek": "Sunday",
                 "workouts": [
                   {
-                    "id": "w15-sun-run",
+                    "id": "w7-sun-run",
                     "sport": "run",
                     "type": "long",
-                    "name": "Peak Long Run",
-                    "durationMinutes": 160,
-                    "distanceKm": 30,
+                    "name": "Long Run with Race Finish",
+                    "description": "Build endurance with fast finish",
+                    "durationMinutes": 85,
+                    "distanceKm": 15,
                     "primaryZone": "Zone 2",
-                    "humanReadable": "2:40 easy\nLast 10k @IM pace\nPeak run volume",
+                    "humanReadable": "WARM-UP (5 min):\n5 min easy walk/jog\n\nMAIN SET (75 min):\n55 min easy @ 5:40-5:55/km (Zone 2)\nFinal 20 min @ race pace (5:00-5:10/km)\nPractice negative splitting\nNutrition: Gel at 40 min\n\nCOOL-DOWN (5 min):\n5 min easy walk\nStretch and foam roll",
                     "completed": false
                   }
                 ]
               }
             ],
             "summary": {
-              "totalHours": 16,
+              "totalHours": 10,
               "bySport": {
-                "swim": { "sessions": 3, "hours": 3.25, "meters": 11200 },
-                "bike": { "sessions": 2, "hours": 8, "km": 235 },
-                "run": { "sessions": 3, "hours": 5.1, "km": 60 }
+                "swim": { "sessions": 2, "hours": 1.8, "km": 5.6 },
+                "bike": { "sessions": 1, "hours": 1.4, "km": 38 },
+                "run": { "sessions": 2, "hours": 2.3, "km": 25 },
+                "brick": { "sessions": 1, "hours": 2.5 },
+                "strength": { "sessions": 1, "hours": 0.6 }
               }
             }
           },
           {
-            "weekNumber": 16,
+            "weekNumber": 8,
             "startDate": "2025-05-12",
             "endDate": "2025-05-18",
-            "phase": "Build 2",
-            "focus": "Recovery week",
-            "targetHours": 9.5,
+            "phase": "Recovery",
+            "focus": "Recovery week - absorb build phase adaptations",
+            "targetHours": 6,
             "isRecoveryWeek": true,
             "days": [
               {
@@ -44338,10 +43250,11 @@ ${a.join(`
                 "dayOfWeek": "Monday",
                 "workouts": [
                   {
-                    "id": "w16-mon-rest",
+                    "id": "w8-mon-rest",
                     "sport": "rest",
                     "type": "rest",
                     "name": "Rest Day",
+                    "description": "Complete rest",
                     "completed": false
                   }
                 ]
@@ -44351,14 +43264,15 @@ ${a.join(`
                 "dayOfWeek": "Tuesday",
                 "workouts": [
                   {
-                    "id": "w16-tue-swim",
+                    "id": "w8-tue-swim",
                     "sport": "swim",
                     "type": "recovery",
-                    "name": "Easy Swim",
-                    "durationMinutes": 50,
-                    "distanceMeters": 2600,
+                    "name": "Recovery Swim",
+                    "description": "Easy technique-focused swim",
+                    "durationMinutes": 40,
+                    "distanceMeters": 1600,
                     "primaryZone": "Zone 1-2",
-                    "humanReadable": "WU: 300\n1600 easy continuous\n4x100 moderate\nCD: 200",
+                    "humanReadable": "WARM-UP (300m):\n300m easy freestyle\n\nDRILL SET (400m):\n8x50m drill/swim by 25\nFocus on form, not speed\n\nMAIN SET (600m):\n6x100m easy @ 2:10/100m with 20s rest\nRelaxed, smooth strokes\n\nCOOL-DOWN (300m):\n200m easy pull\n100m easy backstroke",
                     "completed": false
                   }
                 ]
@@ -44368,14 +43282,16 @@ ${a.join(`
                 "dayOfWeek": "Wednesday",
                 "workouts": [
                   {
-                    "id": "w16-wed-bike",
+                    "id": "w8-wed-bike",
                     "sport": "bike",
                     "type": "recovery",
-                    "name": "Easy Ride",
-                    "durationMinutes": 90,
-                    "distanceKm": 40,
-                    "primaryZone": "Zone 1-2",
-                    "humanReadable": "90 min easy\n4x5 min @IM power",
+                    "name": "Recovery Spin",
+                    "description": "Easy spinning for recovery",
+                    "durationMinutes": 50,
+                    "distanceKm": 20,
+                    "primaryZone": "Zone 1",
+                    "targetPower": "Under 110W",
+                    "humanReadable": "RECOVERY RIDE:\n50 min very easy spinning\nPower: Under 110W\nCadence: 90-100 rpm\n\nThis is active recovery\nNo hard efforts!\nEnjoy the easy ride",
                     "completed": false
                   }
                 ]
@@ -44385,14 +43301,15 @@ ${a.join(`
                 "dayOfWeek": "Thursday",
                 "workouts": [
                   {
-                    "id": "w16-thu-run",
+                    "id": "w8-thu-run",
                     "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run + Strides",
-                    "durationMinutes": 50,
-                    "distanceKm": 10,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "45 min easy\n6x20s strides",
+                    "type": "recovery",
+                    "name": "Recovery Run",
+                    "description": "Easy jog with strides",
+                    "durationMinutes": 35,
+                    "distanceKm": 6,
+                    "primaryZone": "Zone 1-2",
+                    "humanReadable": "RECOVERY RUN:\n25 min very easy jogging @ 6:00-6:20/km\nHR: Under 140\n\nSTRIDES:\n4x20 sec strides at fast (not sprint) pace\n40 sec easy between\nKeep it light and bouncy\n\nCOOL-DOWN:\n5 min easy walk",
                     "completed": false
                   }
                 ]
@@ -44402,14 +43319,11 @@ ${a.join(`
                 "dayOfWeek": "Friday",
                 "workouts": [
                   {
-                    "id": "w16-fri-swim",
-                    "sport": "swim",
-                    "type": "technique",
-                    "name": "Skill Swim",
-                    "durationMinutes": 50,
-                    "distanceMeters": 2400,
-                    "primaryZone": "Zone 1-2",
-                    "humanReadable": "WU: 200\n8x50 drill\n10x100 @1:50 easy\n4x50 fast\nCD: 200",
+                    "id": "w8-fri-rest",
+                    "sport": "rest",
+                    "type": "rest",
+                    "name": "Rest Day",
+                    "description": "Extra recovery day",
                     "completed": false
                   }
                 ]
@@ -44419,14 +43333,16 @@ ${a.join(`
                 "dayOfWeek": "Saturday",
                 "workouts": [
                   {
-                    "id": "w16-sat-bike",
+                    "id": "w8-sat-bike",
                     "sport": "bike",
                     "type": "endurance",
-                    "name": "Moderate Ride",
-                    "durationMinutes": 180,
-                    "distanceKm": 85,
+                    "name": "Easy Endurance Ride",
+                    "description": "Moderate ride to maintain fitness",
+                    "durationMinutes": 75,
+                    "distanceKm": 32,
                     "primaryZone": "Zone 2",
-                    "humanReadable": "3 hr easy\n30 min @IM power",
+                    "targetPower": "110-145W",
+                    "humanReadable": "EASY RIDE:\n75 min Zone 2 riding\nPower: 110-145W (lower Zone 2)\nInclude a few 30-sec race effort touches\nto keep legs sharp\n\nStay relaxed, enjoy the ride",
                     "completed": false
                   }
                 ]
@@ -44436,35 +43352,36 @@ ${a.join(`
                 "dayOfWeek": "Sunday",
                 "workouts": [
                   {
-                    "id": "w16-sun-run",
-                    "sport": "run",
-                    "type": "long",
-                    "name": "Easy Long Run",
-                    "durationMinutes": 100,
-                    "distanceKm": 19,
+                    "id": "w8-sun-swim",
+                    "sport": "swim",
+                    "type": "endurance",
+                    "name": "Easy Continuous Swim",
+                    "description": "Maintain swim feel",
+                    "durationMinutes": 40,
+                    "distanceMeters": 1800,
                     "primaryZone": "Zone 2",
-                    "humanReadable": "100 min easy\n20 min @IM pace",
+                    "humanReadable": "WARM-UP (200m):\n200m easy freestyle\n\nMAIN SET (1400m):\n1000m continuous @ comfortable pace\n4x100m easy with 15s rest\n\nCOOL-DOWN (200m):\n200m easy choice stroke",
                     "completed": false
                   }
                 ]
               }
             ],
             "summary": {
-              "totalHours": 9.5,
+              "totalHours": 6,
               "bySport": {
-                "swim": { "sessions": 2, "hours": 1.7, "meters": 5000 },
-                "bike": { "sessions": 2, "hours": 4.5, "km": 125 },
-                "run": { "sessions": 2, "hours": 2.5, "km": 29 }
+                "swim": { "sessions": 2, "hours": 1.3, "km": 3.4 },
+                "bike": { "sessions": 2, "hours": 2.1, "km": 52 },
+                "run": { "sessions": 1, "hours": 0.6, "km": 6 }
               }
             }
           },
           {
-            "weekNumber": 17,
+            "weekNumber": 9,
             "startDate": "2025-05-19",
             "endDate": "2025-05-25",
             "phase": "Peak",
-            "focus": "Volume reduction, intensity maintained",
-            "targetHours": 11,
+            "focus": "Peak phase begins - race simulation, open water",
+            "targetHours": 9.5,
             "isRecoveryWeek": false,
             "days": [
               {
@@ -44472,14 +43389,13 @@ ${a.join(`
                 "dayOfWeek": "Monday",
                 "workouts": [
                   {
-                    "id": "w17-mon-swim",
-                    "sport": "swim",
-                    "type": "threshold",
-                    "name": "Sharp Swim",
-                    "durationMinutes": 55,
-                    "distanceMeters": 3200,
-                    "primaryZone": "Zone 3",
-                    "humanReadable": "WU: 400\n6x300 @5:00 race pace\n4x50 fast\nCD: 200",
+                    "id": "w9-mon-strength",
+                    "sport": "strength",
+                    "type": "strength",
+                    "name": "Light Maintenance",
+                    "description": "Maintain strength without fatigue",
+                    "durationMinutes": 30,
+                    "humanReadable": "WARM-UP (5 min):\nDynamic stretches\n\nMAIN CIRCUIT (20 min):\n2 rounds (light weights only):\n- Squats: 12 reps\n- Lunges: 8 each leg\n- Push-ups: 12 reps\n- Plank: 30 sec\n- Glute bridges: 12 reps\n- Bird dogs: 8 each side\n\nCOOL-DOWN (5 min):\nStretching and foam rolling",
                     "completed": false
                   }
                 ]
@@ -44489,25 +43405,15 @@ ${a.join(`
                 "dayOfWeek": "Tuesday",
                 "workouts": [
                   {
-                    "id": "w17-tue-bike",
-                    "sport": "bike",
-                    "type": "intervals",
-                    "name": "Race Sharpener",
-                    "durationMinutes": 90,
-                    "distanceKm": 45,
-                    "primaryZone": "Zone 2-3",
-                    "humanReadable": "WU: 15 min\n50 min @IM power\nCD: 25 min easy",
-                    "completed": false
-                  },
-                  {
-                    "id": "w17-tue-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "durationMinutes": 35,
-                    "distanceKm": 7,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "35 min easy",
+                    "id": "w9-tue-swim",
+                    "sport": "swim",
+                    "type": "race-simulation",
+                    "name": "Open Water Simulation",
+                    "description": "Race simulation with full distance",
+                    "durationMinutes": 55,
+                    "distanceMeters": 2800,
+                    "primaryZone": "Zone 3-4",
+                    "humanReadable": "WARM-UP (400m):\n200m easy freestyle\n4x50m build\n\nRACE SIMULATION (1500m):\n1500m continuous @ RACE PACE (1:58/100m)\nStart HARD (first 100m aggressive)\nSettle into sustainable rhythm\nSight every 8 strokes\nPractice \"crocodile eyes\" sighting\n\nThis is your race distance!\n\nDESCEND SET (500m):\n5x100m descend 1-5 @ 1:50 interval\n\nCOOL-DOWN (400m):\n400m easy pull",
                     "completed": false
                   }
                 ]
@@ -44517,14 +43423,16 @@ ${a.join(`
                 "dayOfWeek": "Wednesday",
                 "workouts": [
                   {
-                    "id": "w17-wed-swim",
-                    "sport": "swim",
-                    "type": "endurance",
-                    "name": "Steady Swim",
-                    "durationMinutes": 55,
-                    "distanceMeters": 3000,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "WU: 400\n2000 continuous\nCD: 400",
+                    "id": "w9-wed-bike",
+                    "sport": "bike",
+                    "type": "race-specific",
+                    "name": "Race Pace Ride",
+                    "description": "Extended race effort practice",
+                    "durationMinutes": 90,
+                    "distanceKm": 42,
+                    "primaryZone": "Zone 3",
+                    "targetPower": "155-175W",
+                    "humanReadable": "WARM-UP (15 min):\n15 min progressive build\n3x20s high cadence\n\nMAIN SET (60 min):\n60 min at RACE EFFORT:\n- Power: 155-175W (78-88% FTP)\n- HR: Under 155\n- Full aero position practice\n- Practice race nutrition: 60g carbs/hour\n\nThis simulates your 40km race bike!\n\nCOOL-DOWN (15 min):\n15 min easy spin",
                     "completed": false
                   }
                 ]
@@ -44534,14 +43442,15 @@ ${a.join(`
                 "dayOfWeek": "Thursday",
                 "workouts": [
                   {
-                    "id": "w17-thu-run",
+                    "id": "w9-thu-run",
                     "sport": "run",
-                    "type": "tempo",
-                    "name": "Race Pace Run",
-                    "durationMinutes": 65,
-                    "distanceKm": 13,
-                    "primaryZone": "Zone 2-3",
-                    "humanReadable": "15 min WU\n35 min @IM pace\n15 min CD",
+                    "type": "race-pace",
+                    "name": "Race Pace Intervals",
+                    "description": "Practice race pace with good form",
+                    "durationMinutes": 55,
+                    "distanceKm": 10,
+                    "primaryZone": "Zone 3",
+                    "humanReadable": "WARM-UP (15 min):\n10 min easy jog\n4x30s strides with 30s easy\n\nMAIN SET (30 min):\n3x8 min @ Race Pace (5:00-5:10/km)\n3 min easy jog between\nHR: 150-160\nThis is your 10K race pace!\n\nCOOL-DOWN (10 min):\n10 min easy jog",
                     "completed": false
                   }
                 ]
@@ -44551,10 +43460,15 @@ ${a.join(`
                 "dayOfWeek": "Friday",
                 "workouts": [
                   {
-                    "id": "w17-fri-rest",
-                    "sport": "rest",
-                    "type": "rest",
-                    "name": "Rest Day",
+                    "id": "w9-fri-swim",
+                    "sport": "swim",
+                    "type": "speed",
+                    "name": "Speed & Race Skills",
+                    "description": "Sharpen speed for race start",
+                    "durationMinutes": 50,
+                    "distanceMeters": 2400,
+                    "primaryZone": "Zone 4-5",
+                    "humanReadable": "WARM-UP (400m):\n300m easy freestyle\n4x25m sprint starts\n\nRACE START PRACTICE (400m):\n8x50m @ race start effort\nFirst 25m HARD, settle into rhythm\n10s rest between\n\nMAIN SET (1200m):\n6x200m @ CSS (1:55/100m) with 15s rest\nHold pace and stroke count\n\nCOOL-DOWN (400m):\n400m easy",
                     "completed": false
                   }
                 ]
@@ -44564,13 +43478,14 @@ ${a.join(`
                 "dayOfWeek": "Saturday",
                 "workouts": [
                   {
-                    "id": "w17-sat-brick",
+                    "id": "w9-sat-brick",
                     "sport": "brick",
-                    "type": "brick",
-                    "name": "Dress Rehearsal",
-                    "durationMinutes": 180,
+                    "type": "race-simulation",
+                    "name": "Full Race Simulation Brick",
+                    "description": "Complete race rehearsal",
+                    "durationMinutes": 155,
                     "primaryZone": "Zone 2-3",
-                    "humanReadable": "Bike: 2:30 @IM power\nRace nutrition\nRun: 45 min\nFirst 30 easy, 15 @IM pace",
+                    "humanReadable": "RACE SIMULATION DAY!\n\nSWIM (if open water available): 1500m @ race pace\nOR Pool: 1500m continuous @ 1:58/100m\n\nT1 PRACTICE:\nFull transition routine\nTarget: Under 2 minutes\n\nBIKE LEG (90 min):\n90 min at RACE EFFORT (155-175W)\nFull race nutrition!\n60g carbs/hour\nAero position throughout\n\nT2 PRACTICE:\nQuick change\nTarget: Under 90 seconds\n\nRUN LEG (40 min):\n35 min at RACE EFFORT (5:00-5:10/km)\n5 min easy cool-down\n\nThis is your dress rehearsal!",
                     "completed": false
                   }
                 ]
@@ -44580,35 +43495,37 @@ ${a.join(`
                 "dayOfWeek": "Sunday",
                 "workouts": [
                   {
-                    "id": "w17-sun-run",
+                    "id": "w9-sun-run",
                     "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "durationMinutes": 60,
+                    "type": "long",
+                    "name": "Easy Long Run",
+                    "description": "Recovery long run after race simulation",
+                    "durationMinutes": 70,
                     "distanceKm": 12,
                     "primaryZone": "Zone 2",
-                    "humanReadable": "60 min easy\nLegs should feel fresh",
+                    "humanReadable": "RECOVERY LONG RUN:\n70 min easy @ 5:50-6:10/km\nHR: 136-148 (Zone 2)\n\nThis is active recovery after yesterday\nKeep it easy!\nEnjoy the run\n\n5 min walk cool-down",
                     "completed": false
                   }
                 ]
               }
             ],
             "summary": {
-              "totalHours": 11,
+              "totalHours": 9.5,
               "bySport": {
-                "swim": { "sessions": 2, "hours": 1.8, "meters": 6200 },
-                "bike": { "sessions": 1, "hours": 1.5, "km": 45 },
-                "run": { "sessions": 3, "hours": 2.7, "km": 32 },
-                "brick": { "sessions": 1, "hours": 3 }
+                "swim": { "sessions": 2, "hours": 1.75, "km": 5.2 },
+                "bike": { "sessions": 1, "hours": 1.5, "km": 42 },
+                "run": { "sessions": 2, "hours": 2.1, "km": 22 },
+                "brick": { "sessions": 1, "hours": 2.6 },
+                "strength": { "sessions": 1, "hours": 0.5 }
               }
             }
           },
           {
-            "weekNumber": 18,
+            "weekNumber": 10,
             "startDate": "2025-05-26",
             "endDate": "2025-06-01",
             "phase": "Peak",
-            "focus": "Sharpening",
+            "focus": "Maintain peak fitness, sharpening",
             "targetHours": 9,
             "isRecoveryWeek": false,
             "days": [
@@ -44617,14 +43534,11 @@ ${a.join(`
                 "dayOfWeek": "Monday",
                 "workouts": [
                   {
-                    "id": "w18-mon-swim",
-                    "sport": "swim",
-                    "type": "threshold",
-                    "name": "Race Pace Swim",
-                    "durationMinutes": 50,
-                    "distanceMeters": 2800,
-                    "primaryZone": "Zone 3",
-                    "humanReadable": "WU: 400\n1900 @race pace\n4x50 fast\nCD: 200",
+                    "id": "w10-mon-rest",
+                    "sport": "rest",
+                    "type": "rest",
+                    "name": "Rest Day",
+                    "description": "Full recovery",
                     "completed": false
                   }
                 ]
@@ -44634,25 +43548,15 @@ ${a.join(`
                 "dayOfWeek": "Tuesday",
                 "workouts": [
                   {
-                    "id": "w18-tue-bike",
-                    "sport": "bike",
-                    "type": "intervals",
-                    "name": "Openers",
-                    "durationMinutes": 75,
-                    "distanceKm": 35,
-                    "primaryZone": "Zone 2-3",
-                    "humanReadable": "45 min easy\n4x5 min @IM power\n10 min CD",
-                    "completed": false
-                  },
-                  {
-                    "id": "w18-tue-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Easy Run",
-                    "durationMinutes": 30,
-                    "distanceKm": 6,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "30 min easy off bike",
+                    "id": "w10-tue-swim",
+                    "sport": "swim",
+                    "type": "threshold",
+                    "name": "Sharpening Swim",
+                    "description": "Maintain race fitness with quality work",
+                    "durationMinutes": 55,
+                    "distanceMeters": 2600,
+                    "primaryZone": "Zone 3-4",
+                    "humanReadable": "WARM-UP (500m):\n300m easy freestyle\n4x50m build @ 1:10\n\nSHARPENING SET (1400m):\n4x350m @ race pace (1:58/100m)\n30s rest between\nFocus on even pacing and rhythm\n\nSPEED (400m):\n8x50m alternating:\n- #1,3,5,7: Fast @ :50\n- #2,4,6,8: Easy @ 1:10\n\nCOOL-DOWN (300m):\n300m easy",
                     "completed": false
                   }
                 ]
@@ -44662,14 +43566,16 @@ ${a.join(`
                 "dayOfWeek": "Wednesday",
                 "workouts": [
                   {
-                    "id": "w18-wed-swim",
-                    "sport": "swim",
-                    "type": "technique",
-                    "name": "Technique Swim",
-                    "durationMinutes": 45,
-                    "distanceMeters": 2200,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "WU: 400\n6x50 drill\n8x100 @1:50 easy\n4x50 fast\nCD: 200",
+                    "id": "w10-wed-bike",
+                    "sport": "bike",
+                    "type": "sweetspot",
+                    "name": "Sweet Spot Maintenance",
+                    "description": "Maintain cycling fitness",
+                    "durationMinutes": 75,
+                    "distanceKm": 34,
+                    "primaryZone": "Zone 3-4",
+                    "targetPower": "168-194W",
+                    "humanReadable": "WARM-UP (15 min):\n15 min progressive build\n\nMAIN SET (45 min):\n3x12 min @ Sweet Spot (168-194W)\n5 min easy spin between\nMaintain good aero form\n\nCOOL-DOWN (15 min):\n15 min easy spin",
                     "completed": false
                   }
                 ]
@@ -44679,14 +43585,15 @@ ${a.join(`
                 "dayOfWeek": "Thursday",
                 "workouts": [
                   {
-                    "id": "w18-thu-run",
+                    "id": "w10-thu-run",
                     "sport": "run",
                     "type": "tempo",
-                    "name": "Sharpening Run",
+                    "name": "Tempo Maintenance",
+                    "description": "Maintain running threshold",
                     "durationMinutes": 50,
-                    "distanceKm": 10,
-                    "primaryZone": "Zone 2-3",
-                    "humanReadable": "15 min WU\n20 min @IM pace\n15 min CD",
+                    "distanceKm": 9,
+                    "primaryZone": "Zone 3",
+                    "humanReadable": "WARM-UP (12 min):\n10 min easy jog\n4x30s strides with 30s easy\n\nMAIN SET (25 min):\n20 min @ Tempo (5:00-5:10/km)\nHR: 150-158 (Zone 3)\nControlled, strong effort\n\nCOOL-DOWN (13 min):\n10 min easy jog\n3 min walk",
                     "completed": false
                   }
                 ]
@@ -44696,10 +43603,15 @@ ${a.join(`
                 "dayOfWeek": "Friday",
                 "workouts": [
                   {
-                    "id": "w18-fri-rest",
-                    "sport": "rest",
-                    "type": "rest",
-                    "name": "Rest Day",
+                    "id": "w10-fri-swim",
+                    "sport": "swim",
+                    "type": "endurance",
+                    "name": "Easy Aerobic Swim",
+                    "description": "Maintain swim feel with easy work",
+                    "durationMinutes": 45,
+                    "distanceMeters": 2000,
+                    "primaryZone": "Zone 2",
+                    "humanReadable": "WARM-UP (300m):\n300m easy freestyle\n\nMAIN SET (1400m):\n4x200m @ 2:00/100m with 20s rest\n6x100m @ 2:00/100m with 15s rest\nSmooth, relaxed swimming\n\nCOOL-DOWN (300m):\n200m easy pull\n100m easy backstroke",
                     "completed": false
                   }
                 ]
@@ -44709,14 +43621,14 @@ ${a.join(`
                 "dayOfWeek": "Saturday",
                 "workouts": [
                   {
-                    "id": "w18-sat-bike",
-                    "sport": "bike",
-                    "type": "endurance",
-                    "name": "Easy Ride",
+                    "id": "w10-sat-brick",
+                    "sport": "brick",
+                    "type": "brick",
+                    "name": "Race Tune-Up Brick",
+                    "description": "Final hard brick before taper begins",
                     "durationMinutes": 120,
-                    "distanceKm": 55,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "2 hr easy\n20 min @IM power\nTest race setup",
+                    "primaryZone": "Zone 2-3",
+                    "humanReadable": "BIKE LEG (80 min):\nWarm-up: 15 min easy\nMain: 55 min with race-effort blocks:\n- 20 min Zone 2\n- 15 min @ race effort (155-175W)\n- 10 min Zone 2\n- 10 min @ race effort\nCool-down: 10 min easy\n\nTRANSITION (2 min):\nPractice T2\n\nRUN LEG (35 min):\n10 min easy to settle\n20 min @ race pace (5:00-5:10/km)\n5 min easy cool-down",
                     "completed": false
                   }
                 ]
@@ -44726,14 +43638,15 @@ ${a.join(`
                 "dayOfWeek": "Sunday",
                 "workouts": [
                   {
-                    "id": "w18-sun-run",
+                    "id": "w10-sun-run",
                     "sport": "run",
                     "type": "long",
-                    "name": "Easy Long Run",
+                    "name": "Final Long Run",
+                    "description": "Last long run before taper",
                     "durationMinutes": 75,
-                    "distanceKm": 14,
+                    "distanceKm": 13,
                     "primaryZone": "Zone 2",
-                    "humanReadable": "75 min easy\n10 min @IM pace",
+                    "humanReadable": "FINAL LONG RUN:\n75 min @ 5:45-6:00/km (Zone 2)\nEven effort throughout\n\nLast 10 min: Pick up to race pace if feeling good\n\nPractice race-day nutrition\nGel at 40 min\n\nThis is your last long run!\n5 min walk cool-down",
                     "completed": false
                   }
                 ]
@@ -44742,19 +43655,20 @@ ${a.join(`
             "summary": {
               "totalHours": 9,
               "bySport": {
-                "swim": { "sessions": 2, "hours": 1.6, "meters": 5000 },
-                "bike": { "sessions": 2, "hours": 3.25, "km": 90 },
-                "run": { "sessions": 3, "hours": 2.6, "km": 30 }
+                "swim": { "sessions": 2, "hours": 1.67, "km": 4.6 },
+                "bike": { "sessions": 1, "hours": 1.25, "km": 34 },
+                "run": { "sessions": 2, "hours": 2.1, "km": 22 },
+                "brick": { "sessions": 1, "hours": 2.0 }
               }
             }
           },
           {
-            "weekNumber": 19,
+            "weekNumber": 11,
             "startDate": "2025-06-02",
             "endDate": "2025-06-08",
             "phase": "Peak",
-            "focus": "Race week prep",
-            "targetHours": 6,
+            "focus": "Begin taper - reduce volume, maintain sharpness",
+            "targetHours": 7,
             "isRecoveryWeek": false,
             "days": [
               {
@@ -44762,14 +43676,11 @@ ${a.join(`
                 "dayOfWeek": "Monday",
                 "workouts": [
                   {
-                    "id": "w19-mon-swim",
-                    "sport": "swim",
-                    "type": "technique",
-                    "name": "Easy Swim",
-                    "durationMinutes": 40,
-                    "distanceMeters": 2000,
-                    "primaryZone": "Zone 1-2",
-                    "humanReadable": "WU: 300\n1000 easy\n4x100 race pace\nCD: 200",
+                    "id": "w11-mon-rest",
+                    "sport": "rest",
+                    "type": "rest",
+                    "name": "Rest Day",
+                    "description": "Full recovery",
                     "completed": false
                   }
                 ]
@@ -44779,14 +43690,15 @@ ${a.join(`
                 "dayOfWeek": "Tuesday",
                 "workouts": [
                   {
-                    "id": "w19-tue-bike",
-                    "sport": "bike",
-                    "type": "endurance",
-                    "name": "Activation Ride",
-                    "durationMinutes": 60,
-                    "distanceKm": 28,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "45 min easy\n3x3 min @IM power\n10 min CD",
+                    "id": "w11-tue-swim",
+                    "sport": "swim",
+                    "type": "threshold",
+                    "name": "Sharpening Swim",
+                    "description": "Maintain race readiness",
+                    "durationMinutes": 50,
+                    "distanceMeters": 2200,
+                    "primaryZone": "Zone 3-4",
+                    "humanReadable": "WARM-UP (400m):\n300m easy freestyle\n4x25m fast starts\n\nRACE PACE SET (1200m):\n6x200m @ race pace (1:58/100m)\n20s rest between\nHold stroke count and rhythm\n\nSPEED FINISH (300m):\n6x50m fast @ :55\nKeep legs fresh\n\nCOOL-DOWN (300m):\n300m easy",
                     "completed": false
                   }
                 ]
@@ -44796,14 +43708,16 @@ ${a.join(`
                 "dayOfWeek": "Wednesday",
                 "workouts": [
                   {
-                    "id": "w19-wed-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Shake Out Run",
-                    "durationMinutes": 35,
-                    "distanceKm": 7,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "30 min easy\n4x20s strides",
+                    "id": "w11-wed-bike",
+                    "sport": "bike",
+                    "type": "race-specific",
+                    "name": "Race Openers Ride",
+                    "description": "Short race-effort touches",
+                    "durationMinutes": 60,
+                    "distanceKm": 26,
+                    "primaryZone": "Zone 2-3",
+                    "targetPower": "110-175W",
+                    "humanReadable": "WARM-UP (15 min):\n15 min easy spin\n\nOPENER SET (30 min):\n30 min with openers:\n- 10 min Zone 2\n- 5 min @ race effort (155-175W)\n- 5 min Zone 2\n- 5 min @ race effort\n- 5 min Zone 2\n\nCOOL-DOWN (15 min):\n15 min easy spin\n\nVolume is down, intensity stays!",
                     "completed": false
                   }
                 ]
@@ -44813,14 +43727,15 @@ ${a.join(`
                 "dayOfWeek": "Thursday",
                 "workouts": [
                   {
-                    "id": "w19-thu-swim",
-                    "sport": "swim",
-                    "type": "technique",
-                    "name": "Race Preview",
-                    "durationMinutes": 35,
-                    "distanceMeters": 1600,
-                    "primaryZone": "Zone 2",
-                    "humanReadable": "WU: 300\n800 @ race pace\n4x50 fast\nCD: 200",
+                    "id": "w11-thu-run",
+                    "sport": "run",
+                    "type": "race-pace",
+                    "name": "Race Pace Openers",
+                    "description": "Short race-pace efforts",
+                    "durationMinutes": 40,
+                    "distanceKm": 7,
+                    "primaryZone": "Zone 2-3",
+                    "humanReadable": "WARM-UP (10 min):\n10 min easy jog\n\nOPENER SET (20 min):\n4x3 min @ race pace (5:00-5:10/km)\n2 min easy jog between\nFeel sharp and strong\n\nCOOL-DOWN (10 min):\n10 min easy jog",
                     "completed": false
                   }
                 ]
@@ -44830,14 +43745,15 @@ ${a.join(`
                 "dayOfWeek": "Friday",
                 "workouts": [
                   {
-                    "id": "w19-fri-bike",
-                    "sport": "bike",
-                    "type": "recovery",
-                    "name": "Bike Check",
-                    "durationMinutes": 30,
-                    "distanceKm": 12,
-                    "primaryZone": "Zone 1",
-                    "humanReadable": "20 min easy spin\n2x2 min @race power\nTest bike is ready",
+                    "id": "w11-fri-swim",
+                    "sport": "swim",
+                    "type": "endurance",
+                    "name": "Easy Swim",
+                    "description": "Maintain feel for water",
+                    "durationMinutes": 40,
+                    "distanceMeters": 1600,
+                    "primaryZone": "Zone 2",
+                    "humanReadable": "WARM-UP (300m):\n300m easy freestyle\n\nMAIN SET (1000m):\n5x200m @ 2:00/100m with 20s rest\nSmooth and relaxed\nPractice sighting\n\nCOOL-DOWN (300m):\n200m easy pull\n100m easy backstroke",
                     "completed": false
                   }
                 ]
@@ -44847,14 +43763,14 @@ ${a.join(`
                 "dayOfWeek": "Saturday",
                 "workouts": [
                   {
-                    "id": "w19-sat-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Pre-Race Jog",
-                    "durationMinutes": 20,
-                    "distanceKm": 4,
-                    "primaryZone": "Zone 1",
-                    "humanReadable": "20 min very easy\n4x10s strides\nRack bike, check gear",
+                    "id": "w11-sat-brick",
+                    "sport": "brick",
+                    "type": "brick",
+                    "name": "Final Tune-Up Brick",
+                    "description": "Last brick before race week",
+                    "durationMinutes": 85,
+                    "primaryZone": "Zone 2-3",
+                    "humanReadable": "BIKE LEG (55 min):\nWarm-up: 10 min easy\nMain: 35 min with:\n- 15 min Zone 2\n- 10 min @ race effort\n- 10 min Zone 2\nCool-down: 10 min easy\n\nTRANSITION (2 min):\nPractice T2 one more time!\n\nRUN LEG (25 min):\n15 min easy\n8 min @ race pace\n2 min easy cool-down\n\nLast brick! Stay fresh but sharp.",
                     "completed": false
                   }
                 ]
@@ -44864,31 +43780,37 @@ ${a.join(`
                 "dayOfWeek": "Sunday",
                 "workouts": [
                   {
-                    "id": "w19-sun-rest",
-                    "sport": "rest",
-                    "type": "rest",
-                    "name": "Rest Day",
+                    "id": "w11-sun-run",
+                    "sport": "run",
+                    "type": "easy",
+                    "name": "Easy Run",
+                    "description": "Light run to stay loose",
+                    "durationMinutes": 45,
+                    "distanceKm": 8,
+                    "primaryZone": "Zone 2",
+                    "humanReadable": "EASY RUN:\n40 min @ 5:50-6:10/km (Zone 2)\n\n4x20s strides at the end\nKeep legs turning over\n\n5 min walk cool-down\n\nStay relaxed and fresh!",
                     "completed": false
                   }
                 ]
               }
             ],
             "summary": {
-              "totalHours": 6,
+              "totalHours": 7,
               "bySport": {
-                "swim": { "sessions": 2, "hours": 1.25, "meters": 3600 },
-                "bike": { "sessions": 2, "hours": 1.5, "km": 40 },
-                "run": { "sessions": 2, "hours": 0.9, "km": 11 }
+                "swim": { "sessions": 2, "hours": 1.5, "km": 3.8 },
+                "bike": { "sessions": 1, "hours": 1.0, "km": 26 },
+                "run": { "sessions": 2, "hours": 1.4, "km": 15 },
+                "brick": { "sessions": 1, "hours": 1.4 }
               }
             }
           },
           {
-            "weekNumber": 20,
+            "weekNumber": 12,
             "startDate": "2025-06-09",
             "endDate": "2025-06-15",
-            "phase": "Race",
-            "focus": "Race week taper and execution",
-            "targetHours": 5,
+            "phase": "Taper",
+            "focus": "RACE WEEK - Rest, sharpen, trust your training",
+            "targetHours": 4,
             "isRecoveryWeek": false,
             "days": [
               {
@@ -44896,14 +43818,11 @@ ${a.join(`
                 "dayOfWeek": "Monday",
                 "workouts": [
                   {
-                    "id": "w20-mon-swim",
-                    "sport": "swim",
-                    "type": "technique",
-                    "name": "Easy Swim",
-                    "durationMinutes": 35,
-                    "distanceMeters": 1800,
-                    "primaryZone": "Zone 1-2",
-                    "humanReadable": "WU: 200\n1000 easy\n4x100 @race pace\nCD: 200",
+                    "id": "w12-mon-rest",
+                    "sport": "rest",
+                    "type": "rest",
+                    "name": "Rest Day",
+                    "description": "Complete rest - prepare race gear",
                     "completed": false
                   }
                 ]
@@ -44913,25 +43832,15 @@ ${a.join(`
                 "dayOfWeek": "Tuesday",
                 "workouts": [
                   {
-                    "id": "w20-tue-bike",
-                    "sport": "bike",
-                    "type": "recovery",
-                    "name": "Easy Spin",
-                    "durationMinutes": 45,
-                    "distanceKm": 20,
-                    "primaryZone": "Zone 1",
-                    "humanReadable": "30 min easy\n3x2 min @IM power\nTest bike",
-                    "completed": false
-                  },
-                  {
-                    "id": "w20-tue-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Shake Out",
-                    "durationMinutes": 25,
-                    "distanceKm": 5,
-                    "primaryZone": "Zone 1-2",
-                    "humanReadable": "20 min easy\n3x15s strides",
+                    "id": "w12-tue-swim",
+                    "sport": "swim",
+                    "type": "race-prep",
+                    "name": "Race Week Swim",
+                    "description": "Stay sharp with race-pace touches",
+                    "durationMinutes": 35,
+                    "distanceMeters": 1400,
+                    "primaryZone": "Zone 2-3",
+                    "humanReadable": "WARM-UP (300m):\n200m easy freestyle\n4x25m fast starts\n\nRACE PACE SET (800m):\n4x200m @ race pace (1:58/100m)\n20s rest between\nFocus on rhythm and sighting\n\nCOOL-DOWN (300m):\n300m very easy\n\nYou're ready for race day!",
                     "completed": false
                   }
                 ]
@@ -44941,14 +43850,16 @@ ${a.join(`
                 "dayOfWeek": "Wednesday",
                 "workouts": [
                   {
-                    "id": "w20-wed-swim",
-                    "sport": "swim",
-                    "type": "technique",
-                    "name": "Race Prep",
-                    "durationMinutes": 30,
-                    "distanceMeters": 1400,
+                    "id": "w12-wed-bike",
+                    "sport": "bike",
+                    "type": "openers",
+                    "name": "Bike Openers",
+                    "description": "Short openers to stay sharp",
+                    "durationMinutes": 40,
+                    "distanceKm": 18,
                     "primaryZone": "Zone 2",
-                    "humanReadable": "WU: 200\n800 @race pace\n4x50 fast\nCD: 200",
+                    "targetPower": "110-175W",
+                    "humanReadable": "OPENER RIDE:\n40 min easy spinning with race touches:\n\n- 15 min easy Zone 2\n- 3x2 min @ race effort with 2 min easy between\n- 10 min easy to finish\n\nKeep legs fresh and sharp!",
                     "completed": false
                   }
                 ]
@@ -44958,10 +43869,15 @@ ${a.join(`
                 "dayOfWeek": "Thursday",
                 "workouts": [
                   {
-                    "id": "w20-thu-rest",
-                    "sport": "rest",
-                    "type": "rest",
-                    "name": "Rest Day",
+                    "id": "w12-thu-run",
+                    "sport": "run",
+                    "type": "openers",
+                    "name": "Run Openers",
+                    "description": "Short run with strides",
+                    "durationMinutes": 25,
+                    "distanceKm": 4,
+                    "primaryZone": "Zone 1-2",
+                    "humanReadable": "OPENER RUN:\n20 min very easy jog @ 6:00-6:20/km\n\n4x30s @ race pace with 30s easy\n\n5 min easy walk\n\nLegs should feel bouncy and ready!",
                     "completed": false
                   }
                 ]
@@ -44971,25 +43887,15 @@ ${a.join(`
                 "dayOfWeek": "Friday",
                 "workouts": [
                   {
-                    "id": "w20-fri-bike",
-                    "sport": "bike",
-                    "type": "recovery",
-                    "name": "Openers",
-                    "durationMinutes": 30,
-                    "distanceKm": 12,
-                    "primaryZone": "Zone 1",
-                    "humanReadable": "15 min easy\n3x2 min @race power\nRack bike at transition",
-                    "completed": false
-                  },
-                  {
-                    "id": "w20-fri-run",
-                    "sport": "run",
-                    "type": "easy",
-                    "name": "Final Shake Out",
-                    "durationMinutes": 15,
-                    "distanceKm": 3,
-                    "primaryZone": "Zone 1",
-                    "humanReadable": "10 min jog\n2x20s strides\nVisualize race",
+                    "id": "w12-fri-swim",
+                    "sport": "swim",
+                    "type": "pre-race",
+                    "name": "Pre-Race Swim",
+                    "description": "Final swim - stay loose",
+                    "durationMinutes": 25,
+                    "distanceMeters": 1000,
+                    "primaryZone": "Zone 2",
+                    "humanReadable": "PRE-RACE SWIM:\nWarm-up: 200m easy\n\nMain: 4x100m @ race pace with 15s rest\n       4x50m @ 90% with 10s rest\n\nCool-down: 200m very easy\n\nFeel the water. You're ready!",
                     "completed": false
                   }
                 ]
@@ -44999,10 +43905,12 @@ ${a.join(`
                 "dayOfWeek": "Saturday",
                 "workouts": [
                   {
-                    "id": "w20-sat-rest",
+                    "id": "w12-sat-prep",
                     "sport": "rest",
                     "type": "rest",
-                    "name": "Pre-Race Rest",
+                    "name": "Race Eve Prep",
+                    "description": "Light activity, final preparations",
+                    "humanReadable": "RACE EVE:\n\nMorning: Optional 15 min easy spin or 10 min jog\nJust shake out legs if feeling antsy\n\nAfternoon: \n- Check in and get race packet\n- Set up transition\n- Attend race briefing\n- Prep nutrition and gear\n\nEvening:\n- Light dinner (familiar foods!)\n- Early to bed\n- Visualize your race\n\nTrust your training!",
                     "completed": false
                   }
                 ]
@@ -45012,108 +43920,266 @@ ${a.join(`
                 "dayOfWeek": "Sunday",
                 "workouts": [
                   {
-                    "id": "w20-sun-race",
+                    "id": "w12-sun-race",
                     "sport": "race",
                     "type": "race",
-                    "name": "IRONMAN RACE DAY",
-                    "durationMinutes": 720,
+                    "name": "OLYMPIC TRIATHLON RACE DAY",
+                    "description": "Your Olympic distance triathlon!",
+                    "durationMinutes": 165,
                     "primaryZone": "Race",
-                    "humanReadable": "3.8km Swim: 1:03-1:08\n180km Bike: 5:00-5:15\n42.2km Run: 4:15-4:35\n\nTOTAL: 11:30-12:00\n\nExecute your plan. Trust your training.",
+                    "humanReadable": "RACE DAY!\n\nPRE-RACE:\n- Wake 3 hours before start\n- Breakfast: 100-150g carbs (oatmeal, banana, toast)\n- Arrive 90 min early\n- Set up transition, check bike\n- 200m warm-up swim 15 min before start\n\nSWIM (1500m): ~30-32 min target\n- Start positioning based on ability\n- First 100m: Hard but controlled\n- Settle into 1:58-2:00/100m rhythm\n- Sight every 8-10 strokes\n- Draft when possible\n\nT1: Under 2 minutes\n- Wetsuit off at designated area\n- Helmet first, then shoes\n- Move quickly but smoothly\n\nBIKE (40km): ~65-70 min target\n- First 5 min: Settle, don't surge\n- Power: 155-175W (78-88% FTP)\n- HR: Under 155\n- Aero position, smooth pedaling\n- Nutrition: 60g carbs, drink every 15 min\n- Save something for the run!\n\nT2: Under 90 seconds\n- Shoes off before dismount line\n- Run shoes on, race belt, go!\n\nRUN (10km): ~50-52 min target\n- First km will feel HARD - normal!\n- Settle into 5:00-5:10/km by km 2\n- Walk aid stations if needed\n- Water and cola at each station\n- Push last 2km - you've got this!\n\nTARGET FINISH: 2:45-3:00\n\nEnjoy it - you've earned this!",
                     "completed": false
                   }
                 ]
               }
             ],
             "summary": {
-              "totalHours": 5,
+              "totalHours": 4,
               "bySport": {
-                "swim": { "sessions": 2, "hours": 1.1, "meters": 3200 },
-                "bike": { "sessions": 2, "hours": 1.25, "km": 32 },
-                "run": { "sessions": 2, "hours": 0.7, "km": 8 },
-                "race": { "sessions": 1, "hours": 12 }
+                "swim": { "sessions": 2, "hours": 1.0, "km": 2.4 },
+                "bike": { "sessions": 1, "hours": 0.67, "km": 18 },
+                "run": { "sessions": 1, "hours": 0.4, "km": 4 },
+                "race": { "sessions": 1, "hours": 2.75, "km": "1.5km + 40km + 10km" }
               }
             }
           }
         ],
         "raceStrategy": {
           "event": {
-            "name": "Ironman",
+            "name": "Olympic Distance Triathlon",
             "date": "2025-06-15",
-            "type": "140.6",
-            "distances": { "swim": 3800, "bike": 180000, "run": 42200 }
+            "type": "Olympic",
+            "distances": { "swim": 1500, "bike": 40, "run": 10 },
+            "distanceUnits": { "swim": "meters", "bike": "kilometers", "run": "kilometers" }
+          },
+          "targetFinish": {
+            "conservative": "3:00:00",
+            "target": "2:50:00",
+            "aggressive": "2:45:00",
+            "breakdown": {
+              "swim": { "target": "30-32 min", "pace": "1:58-2:05/100m" },
+              "t1": { "target": "Under 2 min" },
+              "bike": { "target": "65-70 min", "avgSpeed": "34-37 km/h" },
+              "t2": { "target": "Under 90 sec" },
+              "run": { "target": "50-52 min", "pace": "5:00-5:12/km" }
+            }
           },
           "pacing": {
             "swim": {
-              "target": "1:45-1:50/100m",
-              "splitTime": "1:03-1:08",
-              "notes": "Start wide, settle into rhythm at 100m. Draft when possible. Sight every 8-10 strokes. Negative split if possible."
+              "target": "1:58-2:05/100m",
+              "startStrategy": "Position yourself based on ability. If aggressive, go with front pack. If conservative, start wide to avoid contact.",
+              "firstLapApproach": "First 100m will be fast and chaotic. Go hard to get into position, then settle into sustainable rhythm by 200m mark.",
+              "mainPacing": "Hold 1:58-2:05/100m throughout. Even splits or slight negative split.",
+              "sighting": {
+                "frequency": "Every 8-10 strokes",
+                "technique": "\"Crocodile eyes\" - lift just eyes above water, not whole head. Quick look forward during natural head rotation.",
+                "landmarks": "Identify bright or unique course markers. Use other swimmers as reference when between buoys."
+              },
+              "drafting": "Legal and encouraged! Stay at feet or hip of slightly faster swimmer. Saves 10-20% energy.",
+              "exitStrategy": "Increase kick intensity last 100m to prepare legs for bike. Sight often for swim exit. Stand up gradually to avoid dizziness."
             },
             "bike": {
-              "targetPower": "185-195W (70-75% FTP)",
-              "targetHR": "<140",
-              "splitTime": "5:00-5:15",
-              "notes": "Hold steady power. Do NOT surge on hills. Stay aero. Eat/drink every 15-20 min. Save matches for the run."
+              "targetPower": "155-175W (78-88% FTP)",
+              "targetHR": "Under 155 bpm",
+              "avgSpeed": "34-37 km/h (terrain dependent)",
+              "firstKmApproach": "CRITICAL: First 5km at 150W or lower! Heart rate from swim will be elevated. Let it settle before pushing.",
+              "mainPacing": "Steady power, not steady speed. Power may vary on hills but aim for consistent output. Avoid surges.",
+              "cadence": "85-95 rpm optimal. Higher on climbs (100+) if comfortable.",
+              "position": "Aero bars as much as possible. Only sit up for technical sections, fueling, and steep climbs.",
+              "hills": {
+                "climbing": "Stay seated when possible. Gear down early, maintain cadence. Power may spike 10-15W.",
+                "descending": "Tuck, recover, but don't stop pedaling entirely. Maintain momentum."
+              },
+              "paceByKm": {
+                "0-10": "Settle in, find rhythm. Power 150-165W. Don't chase!",
+                "10-25": "Steady race effort. Power 155-175W. Focus on form.",
+                "25-35": "Maintain. Start taking final nutrition. Power 155-175W.",
+                "35-40": "Prepare for run. Increase cadence. Power 150-170W."
+              },
+              "nutrition": {
+                "carbsPerHour": 60,
+                "fluidPerHour": "600-750ml depending on conditions",
+                "timing": "Eat/drink every 15-20 min. Set watch reminder!",
+                "strategy": "Front-load nutrition. Take most calories in first half of bike. Switch to lighter options (gels, sports drink) in final 10km."
+              },
+              "commonMistakes": [
+                "Going too hard first 5-10km (ruins the run!)",
+                "Chasing faster cyclists (race YOUR race)",
+                "Not eating/drinking enough",
+                "Poor aero position wastes energy",
+                "Forgetting to increase cadence before dismount"
+              ]
             },
             "run": {
-              "targetPace": "4:50-5:05/km",
-              "targetHR": "<150",
-              "splitTime": "4:15-4:35",
-              "notes": "Walk aid stations first 20km. Negative split the marathon. Start conservative 5:05-5:10/km. Build after halfway if feeling good."
+              "targetPace": "5:00-5:12/km",
+              "targetHR": "Under 165 bpm initially, can rise to 170+ in final 2km",
+              "offTheBike": {
+                "firstKm": "Will feel TERRIBLE. This is normal! Heart rate high, legs heavy. Run by feel, not pace.",
+                "strategy": "Start 10-15 sec/km slower than target. Walk through first aid station if needed.",
+                "adaptation": "Legs should 'find' their running rhythm by km 2-3. Gradually increase to race pace."
+              },
+              "paceByKm": {
+                "0-2": "Settle. 5:15-5:30/km. Don't panic at slow pace!",
+                "2-5": "Build to race pace. 5:05-5:15/km. Find rhythm.",
+                "5-8": "Maintain. 5:00-5:10/km. This is the 'hold on' section.",
+                "8-10": "Empty the tank! 4:50-5:05/km. Push to finish line."
+              },
+              "aidStations": {
+                "strategy": "Walk through first 1-2 stations. Running through wastes more time than walking and drinking properly.",
+                "hydration": "Cup of water at every station. Pour some on head if hot.",
+                "nutrition": "Cola or flat sports drink. Small amounts frequently."
+              },
+              "mentalCues": [
+                "First km doesn't count - just survive it",
+                "Catch one person at a time",
+                "You trained for this",
+                "Finish line is closer every step",
+                "Smile - it actually helps!"
+              ],
+              "commonMistakes": [
+                "Starting too fast off the bike",
+                "Not walking aid stations",
+                "Stopping to stretch (keeps moving, even if walking)",
+                "Giving up when legs feel heavy (they improve!)"
+              ]
+            }
+          },
+          "transitions": {
+            "t1": {
+              "target": "Under 2 minutes",
+              "setup": "Bike racked with helmet on handlebars. Shoes attached to bike if using speed lacing. Race belt with number attached.",
+              "execution": [
+                "Start wetsuit removal before reaching transition (pull down to waist in water or while running)",
+                "Locate your rack row and position",
+                "Remove wetsuit completely at your spot or designated area",
+                "HELMET ON FIRST (rule!)",
+                "Shoes on (or attached to bike for flying mount)",
+                "Grab bike, run to mount line",
+                "Mount after the line"
+              ],
+              "tips": [
+                "Practice finding your spot - use permanent landmarks",
+                "Wetsuit over timing chip strap",
+                "Sunglasses can wait until on bike",
+                "Body glide on ankles helps wetsuit removal"
+              ]
             },
-            "transitions": {
-              "T1": "<5 min",
-              "T2": "<3 min",
-              "notes": "Keep it simple. Don't rush. Apply sunscreen in T1."
+            "t2": {
+              "target": "Under 90 seconds",
+              "setup": "Run shoes with speed laces. Hat or visor. Race belt already on from T1.",
+              "execution": [
+                "Increase cadence in final km of bike",
+                "Unclip shoes on bike if using flying dismount",
+                "Dismount BEFORE the line",
+                "Run to your spot",
+                "Rack bike, helmet off",
+                "Shoes on, grab anything else needed",
+                "Go!"
+              ],
+              "tips": [
+                "Keep it simple - shoes and go",
+                "Skip socks if trained without them",
+                "Elastic laces are essential",
+                "Have small towel to wipe feet if conditions are wet"
+              ]
             }
           },
           "nutrition": {
             "preRace": {
-              "nightBefore": "Pasta, rice - familiar foods. Hydrate well. Early to bed.",
-              "morning": "3-3.5 hrs before: 600-800 cal (oatmeal, banana, toast). 1 hr before: 200 cal + 500ml water. 15 min before: gel"
+              "dayBefore": "Carb-rich dinner (pasta, rice, potato). Normal portions, don't overeat. Stay hydrated. Avoid fiber and heavy fats.",
+              "morningOf": {
+                "timing": "Eat 3 hours before race start",
+                "meal": "100-150g carbs from familiar foods: oatmeal with banana and honey, toast with jam, or sports drink",
+                "hydration": "500ml water or sports drink with breakfast"
+              },
+              "final30min": "Sip water or sports drink. Optional: Half gel 10-15 min before start."
             },
-            "during": {
-              "swim": "Nothing - just focus on the swim",
+            "duringRace": {
+              "swim": "Nothing needed. Focus on technique and pacing.",
               "bike": {
-                "carbsPerHour": "80-90g",
-                "fluidPerHour": "750-1000ml",
+                "carbsPerHour": 60,
+                "fluidPerHour": "600-750ml",
                 "products": [
-                  "Gels every 30 min",
-                  "Drink mix continuously",
-                  "Solid food first 3 hrs if desired"
+                  "2-3 gels or equivalent",
+                  "1-2 bottles sports drink",
+                  "Water as backup"
                 ],
-                "totalCarbs": "400-450g over 5+ hrs",
-                "sodiumPerHour": "500-1000mg"
+                "schedule": "Every 15-20 min. Set watch reminder. Don't skip!"
               },
               "run": {
-                "carbsPerHour": "60-80g",
-                "fluidPerHour": "400-600ml",
-                "products": [
-                  "Gel every 30-40 min",
-                  "Coke in second half",
-                  "Water/sports drink at aid stations"
-                ],
-                "totalCarbs": "250-350g over marathon"
+                "carbsPerHour": 30,
+                "strategy": "Small sips water at every aid station. Cola or sports drink for quick energy. Gel at km 5 if needed."
               }
             },
-            "notes": "Nothing new on race day. Practice this exact plan in training. Adjust for heat - more fluid, more sodium."
+            "practiceNote": "NOTHING NEW ON RACE DAY. Practice your nutrition plan on long training days. Know what your stomach tolerates.",
+            "backup": "Know what's on course and have practiced with it. Race-provided nutrition is your backup."
           },
-          "mentalStrategy": {
-            "swim": "Stay calm. Find your rhythm. This is just the warmup.",
-            "bike": "Be patient. It's a long day. Focus on power, not position.",
-            "run": "This is where the race begins. Execute the plan. Break it into 7km segments.",
-            "darkMoments": "They will come. Accept them. Keep moving forward. It always passes.",
-            "mantras": ["Trust the process", "Relentless forward progress", "I trained for this"]
+          "taper": {
+            "startDate": "2025-06-02",
+            "volumeReduction": 40,
+            "intensityNote": "Volume drops significantly but keep short race-pace touches to stay sharp.",
+            "guidelines": [
+              "Week 11: 70% of peak volume, maintain some intensity",
+              "Week 12: 40-50% of peak volume, short openers only",
+              "Sleep: Prioritize 8+ hours per night",
+              "Nutrition: Increase carbs slightly, stay hydrated",
+              "Mental: Visualize your race, stay calm",
+              "Physical: Light activity, stretching, stay loose"
+            ],
+            "commonMistakes": [
+              "Training too much because you feel 'fresh'",
+              "Trying new foods or equipment",
+              "Stressing about phantom pains (normal!)",
+              "Overeating carbs and gaining water weight",
+              "Staying up late or drinking alcohol"
+            ]
           },
-          "targetTime": {
-            "low": "11:30",
-            "high": "12:00",
-            "splits": {
-              "swim": "1:03-1:08",
-              "T1": "5 min",
-              "bike": "5:00-5:15",
-              "T2": "3 min",
-              "run": "4:15-4:35"
+          "mentalPreparation": {
+            "visualization": "Night before and morning of race: Visualize yourself successfully completing each leg. See yourself having a great swim exit, smooth transitions, strong bike, and finishing the run strong.",
+            "mantras": [
+              "Smooth is fast",
+              "I trained for this",
+              "One leg at a time",
+              "Run your own race",
+              "Pain is temporary, pride is forever"
+            ],
+            "contingencyPlans": {
+              "badSwim": "It's only 1500m. Settle down, find rhythm. You have 40km and 10km to make up time.",
+              "mechanicalIssue": "Stay calm. Fix it and continue. Finishing is always the priority.",
+              "bonk": "Slow down, take in calories, walk if needed. You can always recover and finish.",
+              "bad weather": "Same race for everyone. Dress appropriately. Adjust pace expectations on bike."
             }
+          },
+          "raceDay": {
+            "wakeUpTime": "3 hours before race start",
+            "preRaceMeal": {
+              "timing": "2.5-3 hours before start",
+              "content": "100-150g carbs: Oatmeal, banana, toast with honey, or familiar breakfast",
+              "hydration": "500ml water or sports drink"
+            },
+            "arrivalTime": "90 minutes before race start",
+            "checklist": [
+              "Timing chip on ankle",
+              "Wetsuit (if applicable)",
+              "Goggles (and backup pair)",
+              "Bike checked and ready",
+              "Helmet, shoes, sunglasses",
+              "Race number on belt",
+              "Run shoes with elastic laces",
+              "Nutrition on bike/in pockets",
+              "Water bottles filled"
+            ],
+            "warmUp": {
+              "swim": "200-300m easy swim 10-15 min before start. Get body used to water temperature. Practice sighting.",
+              "general": "Light jog or walking to stay loose"
+            },
+            "mentalCues": [
+              "Trust your training - you've done the work",
+              "Race YOUR race - don't get caught up with others",
+              "Enjoy the experience - you trained 12 weeks for this!",
+              "When it hurts, that's when you're racing",
+              "Finish line feeling > any shortcut"
+            ]
           }
         }
       }

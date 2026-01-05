@@ -14,7 +14,7 @@ function getActualDayOfWeek(dateStr: string): string {
 }
 
 describe("Demo Plan Validation", () => {
-  const demosDir = join(__dirname, "../../website/demos");
+  const demosDir = join(__dirname, "../../docs/demos");
   const planFiles = readdirSync(demosDir).filter((f) => f.endsWith("-plan.json"));
 
   for (const planFile of planFiles) {

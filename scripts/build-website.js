@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Build script for the Claude Coach marketing website.
+ * Build script for the Claude Coach marketing docs.
  *
  * This script:
  * 1. Renders demo training plan JSON files to HTML
@@ -19,7 +19,7 @@ import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(__dirname, "..");
-const demosDir = join(rootDir, "website", "demos");
+const demosDir = join(rootDir, "docs", "demos");
 
 // Script to inject into demo HTML files
 // This pre-populates localStorage with completed workouts from the plan data
@@ -54,12 +54,12 @@ function renderDemos() {
 }
 
 function main() {
-  console.log("Building Claude Coach website...\n");
+  console.log("Building Claude Coach docs...\n");
 
   try {
     renderDemos();
     console.log("\nWebsite build complete!");
-    console.log("Output: website/");
+    console.log("Output: docs/");
   } catch (error) {
     console.error("Build failed:", error.message);
     process.exit(1);
