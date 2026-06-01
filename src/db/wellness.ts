@@ -37,6 +37,8 @@ export interface ReminderPrefs {
   quiet_hours_end: string | null;
   timezone: string | null;
   reminders_enabled: number;
+  notify_channel: string;
+  notify_webhook_url: string | null;
   updated_at: string | null;
 }
 
@@ -57,6 +59,8 @@ export type PrefsPatch = Partial<{
   quiet_hours_end: string | null;
   timezone: string | null;
   reminders_enabled: number;
+  notify_channel: string;
+  notify_webhook_url: string | null;
 }>;
 
 const PREFS_TEXT_COLS = new Set([
@@ -65,6 +69,8 @@ const PREFS_TEXT_COLS = new Set([
   "quiet_hours_start",
   "quiet_hours_end",
   "timezone",
+  "notify_channel",
+  "notify_webhook_url",
 ]);
 
 export function updatePrefs(patch: PrefsPatch): void {

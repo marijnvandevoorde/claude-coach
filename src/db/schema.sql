@@ -85,6 +85,8 @@ CREATE TABLE IF NOT EXISTS reminder_prefs (
   quiet_hours_end TEXT,                   -- local 'HH:MM' — no reminders before
   timezone TEXT,                          -- IANA tz, e.g. 'Europe/Brussels'
   reminders_enabled INTEGER DEFAULT 1,    -- 0/1 master switch
+  notify_channel TEXT DEFAULT 'auto',     -- auto | webhook | macos | stdout
+  notify_webhook_url TEXT,                -- push webhook (e.g. Home Assistant webhook URL)
   updated_at TEXT DEFAULT (datetime('now'))
 );
 
