@@ -126,6 +126,27 @@ TSB = CTL - ATL
 
 ---
 
+## Trail & Ultra Load: Equivalent Flat Distance (EFD)
+
+On the road, weekly kilometres are a fair proxy for volume. On vert-heavy trail they are not: a 10 km run with 1000 m of climbing costs far more than 10 flat km, and counting both as "10 km" silently under-loads the climber. **Equivalent Flat Distance (EFD)** restores km as an honest volume currency by adding the cost of vertical gain.
+
+```
+EFD_km = distance_km + (D+_m / 100) × k        # k in km per 100 m of vert
+default k = 1.0   (100 m of climb ≈ 1 flat km — the classic heuristic)
+```
+
+`k` is a **tunable heuristic, not physics** — adjust it to the terrain:
+
+| Terrain                      | Suggested k | Rationale                          |
+| ---------------------------- | ----------- | ---------------------------------- |
+| Steep / technical vert       | 1.3 – 1.5   | Costs more per metre climbed       |
+| Default mixed mountain trail | 1.0         | The standard heuristic             |
+| Very runnable, gradual vert  | 0.7 – 0.9   | Cheaper than the heuristic implies |
+
+**Worked example:** a 10 km run with 1000 m D+ → `10 + (1000/100)×1.0 = 20 km EFD`. The same 10 km on the flat stays 10 km EFD. Treating the two as equal raw km is the mistake EFD fixes.
+
+**When to use it:** switch the volume currency from raw km to EFD for any athlete logging **> ~400 m D+/week**. Below that, raw km is fine and EFD only adds noise. D+ (total elevation gain) comes from the activity — Strava's `total_elevation_gain`, or Garmin activity detail.
+
 ## Recovery Monitoring
 
 > **With Garmin connected**, most of this is measured for you. `get_training_readiness` already fuses sleep, HRV, recovery time, acute load, and stress into one 0–100 score — use it as the daily go/hold-back signal (see `garmin.md`). The indicators below explain what feeds that score and are the manual fallback when Garmin isn't available. The `coach checkin` CLI surfaces these each day; `coach log` captures the subjective ones.
