@@ -175,6 +175,23 @@ Great for teaching pace discipline and finishing strong
 | Ultra (50K)   | 35-45km or 4-5hr | Every 2-3 weeks | Time-based, practice nutrition   |
 | Ultra (100K+) | 50-60km or 5-6hr | Monthly         | Back-to-back long runs work well |
 
+### Trail / Ultra Sessions
+
+Trail adds vertical gain and technical descent that road sessions don't train. Use these alongside the table above, and pace them by **effort and grade**, not a target pace — HR lags on climbs and runs low on descents (see `race-day.md`). How *much* trail work to prescribe is governed by EFD and the two-axis (EFD + D+) load model in `load-management.md`.
+
+| Session Type            | Structure                                                | Zone/Effort        | When to Use                           |
+| ----------------------- | -------------------------------------------------------- | ------------------ | ------------------------------------- |
+| Uphill / vert intervals | 4-6 × 3-5min hard climb, jog/walk-down recovery          | Z4-5               | Build-Vert; climbing power + lactate  |
+| Trail fartlek           | Effort by terrain: surge climbs, float flats, ride descents | Varies          | Build; teaches grade-aware pacing     |
+| Stacked-climb long run  | Repeat one climb to bank race-level D+ at easy effort    | Z2                 | Vert specificity without a P2P route  |
+| Downhill repeats        | 4-8 × 1-3min controlled-fast descent, easy back up       | Z3-4 legs, easy HR | Eccentric / quad conditioning (below) |
+| Power-hike intervals    | 4-6 × 3-5min steep hands-on-quads hike                   | Z3-4               | Train the run/hike transition (below) |
+| Back-to-back weekend    | Long day + 50-70% second long day on tired legs          | Z2                 | Fatigue resistance; Specificity phase |
+
+**Downhill repeats / quad conditioning** — 4–8 × 1–3 min of *controlled-fast* descent on a moderate, non-technical grade, walking or easy-jogging back up. **Progress eccentric tolerance gradually** — start at 2–3 reps and add 1–2 per week. This is the single best insurance against quads blowing up on a long race descent, and it's the session most road-style trail plans omit. Eccentric load is real load: count a hard downhill set toward the day's stress and respect the legs-soreness gate (legs ≤ 2/5 → skip it).
+
+**Power-hike by grade** — treat the run-to-hike transition as a *skill*, not a failure. As a rule of thumb: **run grades < ~10–12%**, **power-hike (hands on quads) grades > ~15–20%**, with the gray zone between decided by HR economy (hike when hiking holds the same speed at a lower HR). Practised, power-hiking a steep wall is faster and cheaper than grinding a run up it — rehearse it in training so it's automatic on race day.
+
 ---
 
 ## Strength Training
