@@ -186,11 +186,12 @@ Trail adds vertical gain and technical descent that road sessions don't train. U
 | Stacked-climb long run  | Repeat one climb to bank race-level D+ at easy effort    | Z2                 | Vert specificity without a P2P route  |
 | Downhill repeats        | 4-8 × 1-3min controlled-fast descent, easy back up       | Z3-4 legs, easy HR | Eccentric / quad conditioning (below) |
 | Power-hike intervals    | 4-6 × 3-5min steep hands-on-quads hike                   | Z3-4               | Train the run/hike transition (below) |
+| Technical descent skills| Controlled reps on progressively rougher ground; quick cadence, eyes ahead, relaxed | Easy-moderate | Falls & quad failure happen *here*, not on smooth descents |
 | Back-to-back weekend    | Long day + 50-70% second long day on tired legs          | Z2                 | Fatigue resistance; Specificity phase |
 
-**Downhill repeats / quad conditioning** — 4–8 × 1–3 min of *controlled-fast* descent on a moderate, non-technical grade, walking or easy-jogging back up. **Progress eccentric tolerance gradually** — start at 2–3 reps and add 1–2 per week. This is the single best insurance against quads blowing up on a long race descent, and it's the session most road-style trail plans omit. Eccentric load is real load: count a hard downhill set toward the day's stress and respect the legs-soreness gate (legs ≤ 2/5 → skip it).
+**Downhill repeats / quad conditioning** — 4–8 × 1–3 min of *controlled-fast* descent on a moderate, non-technical grade, walking or easy-jogging back up. **Progress gradually and in order: reps first (start at 2–3, add 1–2/week), then grade and speed** — never jump grade and volume together. Keep hard downhill sessions **≥48–72 h apart and to ~1–2/week**, and bank an easy low-stakes downhill *primer* in Base before the first real session (the first eccentric exposure does the most damage — get it over with early and gentle; see `periodization.md`). This is the single best insurance against quads blowing up on a long race descent, and it's the session most road-style trail plans omit. Eccentric load is real load: count a hard downhill set toward the day's stress and respect the legs gate (legs ≤ 2/5 → skip it; see `load-management.md`). Note this trains the *conditioning*; the **technical descent skills** session above (rougher ground, line choice, foot speed) is a separate skill — don't fold the two together.
 
-**Power-hike by grade** — treat the run-to-hike transition as a *skill*, not a failure. As a rule of thumb: **run grades < ~10–12%**, **power-hike (hands on quads) grades > ~15–20%**, with the gray zone between decided by HR economy (hike when hiking holds the same speed at a lower HR). Practised, power-hiking a steep wall is faster and cheaper than grinding a run up it — rehearse it in training so it's automatic on race day.
+**Power-hike by grade** — treat the run-to-hike transition as a *skill*, not a failure. Rule of thumb: **run grades < ~12%**, **power-hike (hands on quads) grades > ~15–20%**, gray zone between by economy. Note *why* you hike at 15–20%: it's a **pacing/durability** choice, not because hiking is metabolically cheaper there — for most trained runners walking only becomes truly more economical than running at much steeper grades (~25–30%+). On a long climb you hike sooner to spare the legs and hold effort. Practised, power-hiking a steep wall is faster and far cheaper on the legs than grinding a run up it — rehearse it so it's automatic on race day.
 
 ---
 
@@ -242,17 +243,30 @@ Cool-down: 5min stretching
 
 ### Trail / Ultra Strength (Durability)
 
-For trail and ultra runners the strength priority is **descending durability** — the eccentric load that protects quads, calves, and connective tissue when the legs brake downhill for hours. This complements the downhill-repeat *runs* above; do it 1–2×/week and taper to maintenance.
+Two jobs: **maximal strength** (the best-evidenced lever for running economy *and* durability — and the layer most trail plans omit) and **descending durability** (eccentric tolerance so the quads survive hours of braking). Do 1–2 sessions/week, schedule away from key runs (6+ h apart or separate days), and taper to maintenance in race week. Within a session and across the block, progress **load → reps → tempo**, in that order.
 
-| Focus                 | Exercises                                                   | Why                                            |
-| --------------------- | ----------------------------------------------------------- | ---------------------------------------------- |
-| Eccentric quad        | Slow (3-4s lowering) single-leg squats, step-downs          | Brakes the descent; #1 quad-blowup defense     |
-| Eccentric calf        | Slow eccentric calf raises, single-leg off a step           | Achilles / calf resilience on long descents    |
-| Posterior chain       | Single-leg Romanian deadlift                                | Climbing power; hamstring/glute durability     |
-| Lateral / multi-plane | Walking lunges, lateral lunges                              | Off-camber and uneven-terrain strength         |
-| Ankle stability       | Single-leg balance, wobble-board / BOSU work                | Ankle proprioception on technical ground       |
+**Layer 1 — Heavy / maximal strength** (base→build; highest yield):
 
-**The eccentric tempo is the point** — the slow 3–4 s lowering is what builds braking tolerance; rushing the reps trains the wrong thing. Progress load gradually and back off into race week (maintenance only — 2 sets, light).
+| Lift                            | Dose                         | Why                                       |
+| ------------------------------- | ---------------------------- | ----------------------------------------- |
+| Squat / split squat / step-up   | 3–5 × 3–6 @ heavy (RPE 7–8)  | Economy, climbing power, force            |
+| Deadlift / single-leg RDL       | 3–4 × 4–6                    | Posterior chain, climbing, hamstring      |
+| Hip thrust / single-leg bridge  | 3 × 6–10                     | Glute power for climbs + pelvic control   |
+
+Heavy = low reps, full recovery, good form — *not* lifting to failure. Build this base before adding plyometrics.
+
+**Layer 2 — Eccentric & durability-specific** (build→specificity; complements the downhill-repeat *runs* above):
+
+| Focus           | Exercises & dose                                                                 | Why                                                                            |
+| --------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Eccentric quad  | Slow (3–4 s lowering) single-leg squats / decline step-downs, 3 × 6–10/leg       | Braking tolerance; #1 quad-blowup defense                                      |
+| Calf / Achilles | Calf raises (rise up, **slow 3–4 s down**), 3 × 12–15 single-leg off a step      | Push-off on **climbs** *and* landing on descents — the calf is loaded most while climbing, not just descending |
+| Hip / glute     | Banded lateral walks, side-lying abduction, monster walks, 2–3 × 10–15           | Controls pelvic drop & knee valgus on descents — a key injury defense          |
+| Ankle stability | Single-leg balance, wobble-board / BOSU, 2–3 × 30–45 s                           | Ankle proprioception on technical ground                                       |
+
+**Layer 3 — Plyometric / reactive** (build→specificity, *after* a strength base; skip for true beginners): low-dose hops, pogos, low box jumps, 2–3 × 6–10 — builds tendon stiffness for both climbing push-off and descent absorption.
+
+**Eccentric tempo is the active ingredient** in Layer 2 — the slow lowering is what builds braking tolerance; rushing the reps trains the wrong thing. Combined concentric-eccentric loading (Silbernagel-style) is as effective as pure-eccentric for tendons and easier to stick with. **Older athletes** take more eccentric damage and recover slower — space eccentric work more generously and don't stack it the day before a long run. Back everything off to maintenance (2 sets, light) in race week.
 
 ### Timing Considerations
 
