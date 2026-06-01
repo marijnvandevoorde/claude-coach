@@ -1,0 +1,23 @@
+# Claude Coach — reminder service. The image is built + published by the
+# "Build Docker image" GitHub Action; this compose just PULLS it.
+#
+#   docker compose pull && docker compose up -d
+#   docker compose run --rm coach wellness        # one-off CLI
+#
+# See DEPLOYMENT.md. Put coach.db + Garmin tokens under ./data and copy .env.example -> .env.
+# The optional remote MCP runs the same image in `mcp` mode behind your own reverse proxy
+# + Cloudflare Access — keep that host-specific compose out of the repo (e.g. a gitignored dir).
+
+services:
+  coach:
+    image: ghcr.io/marijnvandevoorde/claude-coach:latest
+    container_name: coach
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TZ: ${TZ:-Europe/Brussels}
+      COACH_DB_PATH: /data/coach.db
+      GARMINTOKENS: /data/garminconnect
+      COACH_NOTIFY_CHANNEL: webhook
+    volumes:
+      - ./data:/data

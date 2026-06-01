@@ -43,3 +43,9 @@ cloud-output/
 # src/lib holds real source (config, logging, notify), not a build artifact —
 # override the global ~/.gitignore_global "lib/" rule so new files here are tracked.
 !src/lib/
+
+# Docker deploy bundle — REAL secrets (.env), Garmin tokens, and a coach.db copy. Never commit.
+docker_dist/
+
+# ...but DO keep the committed env template (overrides the .env.* rule above).
+!.env.example
