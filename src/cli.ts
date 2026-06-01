@@ -26,6 +26,9 @@ import {
   type ReminderPrefs,
 } from "./db/wellness.js";
 import { resolveNotify, sendNotification } from "./lib/notify.js";
+import { generateIcs } from "./viewer/lib/export/ics.js";
+import { getSportIcon } from "./viewer/lib/utils.js";
+import type { TrainingPlan } from "./schema/training-plan.js";
 import { getValidTokens } from "./strava/oauth.js";
 import { getAllActivities, getAthlete } from "./strava/api.js";
 import type { StravaActivity, StravaTokenResponse } from "./strava/types.js";
@@ -67,6 +70,13 @@ interface RenderArgs {
   command: "render";
   inputFile: string;
   outputFile?: string;
+}
+
+interface ExportCalendarArgs {
+  command: "export-calendar";
+  inputFile: string;
+  outputFile?: string;
+  json: boolean;
 }
 
 interface QueryArgs {
@@ -122,6 +132,7 @@ interface WellnessArgs {
 type CliArgs =
   | SyncArgs
   | RenderArgs
+  | ExportCalendarArgs
   | QueryArgs
   | AuthArgs
   | HelpArgs
@@ -204,6 +215,27 @@ function parseArgs(): CliArgs {
     }
 
     return renderArgs;
+  }
+
+  if (args[0] === "export-calendar") {
+    if (!args[1]) {
+      log.error("export-calendar requires a plan JSON file");
+      process.exit(1);
+    }
+    const calArgs: ExportCalendarArgs = {
+      command: "export-calendar",
+      inputFile: args[1],
+      json: args.includes("--json"),
+    };
+    for (let i = 2; i < args.length; i++) {
+      if (args[i] === "--output" || args[i] === "-o") {
+        calArgs.outputFile = args[i + 1];
+        i++;
+      } else if (args[i].startsWith("--output=")) {
+        calArgs.outputFile = args[i].split("=")[1];
+      }
+    }
+    return calArgs;
   }
 
   if (args[0] === "query") {
@@ -291,6 +323,7 @@ Commands:
   sync              Sync activities from Strava
   auth              Get Strava authorization URL or exchange code for tokens
   render <file>     Render a training plan JSON to HTML
+  export-calendar <file>  Plan → .ics (or --json events to push to Google Calendar)
   query <sql>       Run a SQL query against the database
   log <type> <val>  Log wellness/intake (water|sleep|energy|soreness|mood|weight)
   wellness          Show today's hydration + wellness snapshot
@@ -333,6 +366,10 @@ Examples:
 
   # Render a training plan to HTML
   npx claude-coach render plan.json --output my-plan.html
+
+  # Export a plan to calendar (.ics to import, or --json to push via the Google Calendar MCP)
+  npx claude-coach export-calendar plan.json
+  npx claude-coach export-calendar plan.json --json
 
   # Query the database
   npx claude-coach query "SELECT * FROM weekly_volume LIMIT 5"
@@ -682,6 +719,63 @@ function getTemplatePath(): string {
   }
 
   throw new Error("Could not find plan-viewer.html template");
+}
+
+interface CalendarEvent {
+  date: string;
+  title: string;
+  sport: string;
+  durationMinutes?: number;
+  description: string;
+}
+
+/** Flatten a training plan into one calendar event per non-rest workout. */
+function planToEvents(plan: TrainingPlan): CalendarEvent[] {
+  const events: CalendarEvent[] = [];
+  for (const week of plan.weeks ?? []) {
+    for (const day of week.days ?? []) {
+      for (const w of day.workouts ?? []) {
+        if (w.sport === "rest") continue;
+        const parts: string[] = [];
+        if (w.description) parts.push(w.description);
+        if (w.humanReadable) parts.push(w.humanReadable);
+        if (w.primaryZone) parts.push(`Primary zone: ${w.primaryZone}`);
+        events.push({
+          date: day.date,
+          title: `${getSportIcon(w.sport)} ${w.name}`.trim(),
+          sport: w.sport,
+          durationMinutes: w.durationMinutes,
+          description: parts.join("\n\n"),
+        });
+      }
+    }
+  }
+  return events;
+}
+
+function runExportCalendar(args: ExportCalendarArgs): void {
+  let plan: TrainingPlan;
+  try {
+    plan = JSON.parse(readFileSync(args.inputFile, "utf-8"));
+  } catch {
+    log.error(`Could not read/parse plan JSON: ${args.inputFile}`);
+    process.exit(1);
+  }
+
+  // --json: emit a clean event list for an agent to push via the Google Calendar MCP.
+  if (args.json) {
+    console.log(JSON.stringify(planToEvents(plan), null, 2));
+    return;
+  }
+
+  // Default: write an .ics the user can import into any calendar.
+  const ics = generateIcs(plan);
+  const outPath = args.outputFile ?? args.inputFile.replace(/\.json$/i, "") + ".ics";
+  writeFileSync(outPath, ics);
+  log.success(`Wrote ${planToEvents(plan).length} workouts to ${outPath}`);
+  log.info(
+    "Import this .ics into your calendar, or ask Claude to push them to your linked Google Calendar."
+  );
 }
 
 function runRender(args: RenderArgs): void {
@@ -1311,6 +1405,9 @@ async function main() {
       break;
     case "render":
       runRender(args);
+      break;
+    case "export-calendar":
+      runExportCalendar(args);
       break;
     case "query":
       await runQuery(args);

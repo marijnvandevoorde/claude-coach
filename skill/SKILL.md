@@ -319,6 +319,7 @@ Read these files as needed during plan creation:
 | `skill/reference/periodization.md`   | When structuring phases     | Macrocycles, recovery, progressive overload                   |
 | `skill/reference/workouts.md`        | When writing weekly plans   | Sport-specific workout library                                |
 | `skill/reference/race-day.md`        | Final section of plan       | Pacing strategy, nutrition                                    |
+| `skill/reference/calendar.md`        | Athlete wants it scheduled  | Push plan to Google Calendar (MCP) or export .ics             |
 
 ---
 
@@ -607,6 +608,7 @@ After both files are created, tell the user:
 1. The JSON file path (for data)
 2. The HTML file path (for viewing)
 3. Suggest opening the HTML file in a browser
+4. **Offer to put it on their calendar** — push the workouts straight into their Google Calendar (via the Google Calendar MCP) or export an `.ics`. See `skill/reference/calendar.md`.
 
 ---
 
