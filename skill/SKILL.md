@@ -652,3 +652,17 @@ Use `coach checkin` (which already computes a recovery level + flags) as the tri
 ### At the start of a coaching chat
 
 Run `npx claude-coach checkin --greeting` and, if it surfaces anything overdue (water behind, near/past bedtime, low readiness), weave it in briefly — **once, without nagging**. In Claude Code this can be automated with a `SessionStart` hook (see `REMINDERS.md`).
+
+### Logging from chat
+
+When the athlete mentions wellness or intake in passing, capture it with the `log` command so it feeds tomorrow's check-in — don't make them fill in a form:
+
+| They say…                                  | Run                                                   |
+| ------------------------------------------ | ----------------------------------------------------- |
+| "just drank 500 ml" / "had a glass"        | `coach log water 500` (a glass ≈ 250 ml)              |
+| "slept about 7 hours" / "rough night, ~5h" | `coach log sleep 7` (add `--score=` if they give one) |
+| "legs are pretty sore"                     | `coach log soreness 4`                                |
+| "feeling great" / "really flat today"      | `coach log energy 5` / `coach log energy 2`           |
+| "weighed in at 72.5"                       | `coach log weight 72.5`                               |
+
+Confirm briefly ("logged 💧") rather than interrogating — estimate sensible values when they're vague, and only ask back if it actually changes a decision. For "did my run / finished the session," acknowledge it and mark it complete in the plan if you're tracking one; the activity's volume/load itself comes from the Strava/Garmin sync, not a manual log.
