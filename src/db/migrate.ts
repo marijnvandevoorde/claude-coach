@@ -7,10 +7,10 @@ import { log } from "../lib/logging.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-export function migrate(): void {
+export function migrate(silent = false): void {
   ensureConfigDir();
   const schemaPath = join(__dirname, "schema.sql");
   const schema = readFileSync(schemaPath, "utf-8");
   runScript(schema);
-  log.success("Database schema initialized");
+  if (!silent) log.success("Database schema initialized");
 }
