@@ -27,8 +27,11 @@ mkdir -p /etc/crontabs
 # so each job sees COACH_*, GARMINTOKENS and TZ.
 printenv | grep -E '^(COACH_|GARMINTOKENS|TZ)=' > "$CRONTAB"
 
-# Schedules are overridable via env; defaults = 07:30 morning, hourly hydration 09–21, 22:00 bedtime.
+# Schedules are overridable via env; defaults = 07:15 Garmin pull, 07:30 morning,
+# hourly hydration 09–21, 22:00 bedtime. The Garmin fetch runs just before the
+# morning check-in so readiness/sleep are fresh in coach.db.
 cat >> "$CRONTAB" <<EOF
+${COACH_GARMIN_FETCH_CRON:-15 7 * * *} node /app/dist/cli.js garmin-fetch >> /proc/1/fd/1 2>&1
 ${COACH_MORNING_CRON:-30 7 * * *} node /app/dist/cli.js checkin --notify >> /proc/1/fd/1 2>&1
 ${COACH_HYDRATION_CRON:-0 9-21 * * *} node /app/dist/cli.js checkin --notify --only=hydration >> /proc/1/fd/1 2>&1
 ${COACH_BEDTIME_CRON:-0 22 * * *} node /app/dist/cli.js checkin --notify --only=bedtime >> /proc/1/fd/1 2>&1
