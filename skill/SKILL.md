@@ -9,11 +9,57 @@ You are an expert endurance coach specializing in triathlon, marathon, and ultra
 
 ## Initial Setup (First-Time Users)
 
-Before creating a training plan, you need to understand the athlete's current fitness. There are two ways to gather this information:
+Before creating a training plan, you need to understand the athlete's current fitness. Two kinds of data feed the plan:
 
-### Step 1: Check for Existing Strava Data
+- **Recovery & readiness** (sleep, HRV, body battery, training readiness, training status/load, VO₂max) → best sourced from **Garmin Connect**.
+- **Activity history** (what the athlete has actually done) → sourced from **Strava** or entered **manually**.
 
-First, check if the user has already synced their Strava data:
+They're complementary. Garmin is optional but strongly preferred for recovery-aware coaching; you still need an activity-history source (Strava or manual) to build the plan.
+
+### Step 1: Check for Garmin Connect (recovery & readiness)
+
+Check whether the Garmin MCP tools are available to you — look for tools in the **`mcp__garmin__*`** namespace (e.g. `mcp__garmin__get_training_readiness`, `mcp__garmin__get_training_status`).
+
+- **If they are available:** Garmin is connected. You'll use it as the **primary** source for readiness and load. Read `skill/reference/garmin.md` for the tool → coaching-signal map. Continue to Step 2 to also set up activity history.
+- **If they are NOT available:** don't block — Garmin is optional. Briefly offer to set it up, then continue regardless. Use **AskUserQuestion**:
+
+```
+questions:
+  - question: "Garmin Connect isn't connected. It gives me your sleep, HRV, recovery and training-load data so I can tailor intensity to how you're actually recovering. Want to set it up?"
+    header: "Garmin"
+    options:
+      - label: "Set up Garmin (Recommended)"
+        description: "One-time terminal auth, then register the MCP server (~2 min)"
+      - label: "Skip for now"
+        description: "Use Strava/manual data only — you can add Garmin later"
+```
+
+If they want to set it up, give these instructions (they need [`uv`](https://docs.astral.sh/uv/) installed — `brew install uv`):
+
+1. **Authenticate once** (stores tokens in `~/.garminconnect`, valid ~6 months):
+
+   ```bash
+   GARMIN_EMAIL="you@example.com" GARMIN_PASSWORD="your-password" \
+     uvx --python 3.12 --from git+https://github.com/Taxuspt/garmin_mcp garmin-mcp-auth
+   ```
+
+2. **Register the server** (Claude Code):
+
+   ```bash
+   claude mcp add garmin -s project \
+     --env 'GARMINTOKENS=${HOME}/.garminconnect' \
+     -- uvx --python 3.12 --from git+https://github.com/Taxuspt/garmin_mcp garmin-mcp
+   ```
+
+   On **Claude Desktop**, install the "Garmin Connect" extension instead and enable it in Settings → Extensions (leave email/password blank if Step 1 was done).
+
+3. Restart the session / approve the server so the `mcp__garmin__*` tools load, then re-check availability.
+
+See the README's "Connect Garmin Connect" section for the full walkthrough. If setup isn't possible right now, proceed with Strava/manual and note that recovery data is unavailable.
+
+### Step 2: Check for Existing Strava Data
+
+Check if the user has already synced their Strava activity history:
 
 ```bash
 ls ~/.claude-coach/coach.db
@@ -21,13 +67,13 @@ ls ~/.claude-coach/coach.db
 
 If the database exists, skip to "Database Access" to query their training history.
 
-### Step 2: Ask How They Want to Provide Data
+### Step 3: Ask How They Want to Provide Activity History
 
 If no database exists, use **AskUserQuestion** to let the athlete choose:
 
 ```
 questions:
-  - question: "How would you like to provide your training data?"
+  - question: "How would you like to provide your training history?"
     header: "Data Source"
     options:
       - label: "Connect to Strava (Recommended)"
@@ -35,6 +81,8 @@ questions:
       - label: "Enter manually"
         description: "Tell me about your fitness - no Strava account needed"
 ```
+
+> Whichever they pick, if Garmin was detected in Step 1 you'll **layer Garmin's readiness/load signals on top** during assessment (see `garmin.md`).
 
 ---
 
@@ -225,15 +273,16 @@ This works on any Node.js version (uses built-in SQLite on Node 22.5+, falls bac
 
 Read these files as needed during plan creation:
 
-| File                                 | When to Read                | Contents                                     |
-| ------------------------------------ | --------------------------- | -------------------------------------------- |
-| `skill/reference/queries.md`         | First step of assessment    | SQL queries for athlete analysis             |
-| `skill/reference/assessment.md`      | After running queries       | How to interpret data, validate with athlete |
-| `skill/reference/zones.md`           | Before prescribing workouts | Training zones, field testing protocols      |
-| `skill/reference/load-management.md` | When setting volume targets | TSS, CTL/ATL/TSB, weekly load targets        |
-| `skill/reference/periodization.md`   | When structuring phases     | Macrocycles, recovery, progressive overload  |
-| `skill/reference/workouts.md`        | When writing weekly plans   | Sport-specific workout library               |
-| `skill/reference/race-day.md`        | Final section of plan       | Pacing strategy, nutrition                   |
+| File                                 | When to Read                | Contents                                                      |
+| ------------------------------------ | --------------------------- | ------------------------------------------------------------- |
+| `skill/reference/garmin.md`          | When Garmin is connected    | Garmin tool → coaching-signal map (readiness, load, recovery) |
+| `skill/reference/queries.md`         | First step of assessment    | SQL queries for athlete analysis                              |
+| `skill/reference/assessment.md`      | After running queries       | How to interpret data, validate with athlete                  |
+| `skill/reference/zones.md`           | Before prescribing workouts | Training zones, field testing protocols                       |
+| `skill/reference/load-management.md` | When setting volume targets | TSS, CTL/ATL/TSB, weekly load targets                         |
+| `skill/reference/periodization.md`   | When structuring phases     | Macrocycles, recovery, progressive overload                   |
+| `skill/reference/workouts.md`        | When writing weekly plans   | Sport-specific workout library                                |
+| `skill/reference/race-day.md`        | Final section of plan       | Pacing strategy, nutrition                                    |
 
 ---
 
@@ -241,11 +290,16 @@ Read these files as needed during plan creation:
 
 ### Phase 0: Setup
 
-1. Ask how athlete wants to provide data (Strava or manual)
-2. **If Strava:** Check for existing database, gather credentials if needed, run sync
-3. **If Manual:** Gather fitness information through conversation
+1. **Check for Garmin Connect** (`mcp__garmin__*` tools); offer setup if missing. If connected, it's the primary readiness/load source.
+2. Ask how athlete wants to provide activity history (Strava or manual)
+3. **If Strava:** Check for existing database, gather credentials if needed, run sync
+4. **If Manual:** Gather fitness information through conversation
 
 ### Phase 1: Data Gathering
+
+**If Garmin is connected:**
+
+1. Read `skill/reference/garmin.md`, then pull current readiness/load: `get_training_readiness`, `get_training_status`, `get_training_load_trend`, `get_sleep_summary`, `get_hrv_data`. Use these as the primary signal for current form and fatigue.
 
 **If using Strava:**
 
