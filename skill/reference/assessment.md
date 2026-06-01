@@ -18,6 +18,21 @@ These are two different things:
 
 Their plan should focus on **rebuilding** (faster progression possible) rather than **building from scratch** (conservative progression required).
 
+## Reading Current Form: Garmin First
+
+When Garmin Connect is available (`mcp__garmin__*` tools — see `garmin.md`), it is the **primary source for current form**, because it measures recovery and readiness directly instead of inferring them from activity history:
+
+| Current-form question                | Primary (Garmin)                                                  | Fallback (Strava / `coach.db`)                |
+| ------------------------------------ | ----------------------------------------------------------------- | --------------------------------------------- |
+| How recovered is the athlete today?  | `get_training_readiness`, `get_body_battery`, `get_sleep_summary` | Recent RHR trend, subjective check-in         |
+| Where are fitness / fatigue / form?  | `get_training_load_trend` (CTL/ATL/TSB), `get_training_status`    | Weekly `suffer_score` load trend (queries.md) |
+| Is the athlete adapting or stalling? | `get_hrv_trend`, `get_vo2max_trend`                               | Volume / pace trend over weeks                |
+| Aerobic fitness anchor               | `get_training_status` → VO₂max                                    | Long sessions at low HR (queries.md)          |
+
+Pull these at assessment time and read `garmin.md` for interpretation thresholds. Treat **Strava / `coach.db` history as the source for athletic _foundation_** (lifetime peaks, race history, training depth): Garmin readiness tells you about _now_, Strava history tells you about _what the athlete is capable of_. Use both together — Garmin for the starting point, history for the ceiling.
+
+If Garmin is **not** connected, use the Strava SQL queries (queries.md) for both dimensions, as before, and rely on subjective check-ins for readiness.
+
 ## Interpreting Foundation vs Form
 
 | Scenario                       | Foundation  | Current Form | Plan Approach                                      |
@@ -62,6 +77,8 @@ _"The athlete's swim data shows 5000m sessions at avg HR 125 with suffer_score o
 ## Validating With The Athlete
 
 **IMPORTANT**: Before creating the training plan, always share your assessment and validate it with the athlete.
+
+> When Garmin data is in play, fold it into the conversation rather than quoting numbers blindly: _"Your Garmin readiness has been sitting in the 40s with HRV unbalanced this week — does that line up with feeling run-down, or is the watch missing something (poor sleep tracking, travel, alcohol)?"_ Devices can misread; the athlete's lived experience wins ties.
 
 ### What to Ask
 
