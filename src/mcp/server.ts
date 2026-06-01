@@ -135,9 +135,18 @@ const TOOLS: Record<string, ToolDef> = {
       ]),
     ],
   },
+  garmin_refresh: {
+    description:
+      "Pull live data directly FROM Garmin Connect (readiness, sleep, HRV, body battery, resting HR, training status + recent activities) and store it in coach.db. This is the real 'sync with Garmin' — it fetches on the server using the saved Garmin tokens. (Contrast garmin_sync, which only caches numbers you pass in.)",
+    inputSchema: {
+      type: "object",
+      properties: { date: { type: "string", description: "YYYY-MM-DD (default today)" } },
+    },
+    toArgs: (a) => ["garmin-fetch", "--json", ...flags(a, ["date"])],
+  },
   garmin_sync: {
     description:
-      "Cache a daily Garmin snapshot (readiness, sleep, HRV, body battery, …) into coach.db.",
+      "Cache Garmin metrics you ALREADY have (readiness, sleep, HRV, body battery, …) into coach.db. Does NOT contact Garmin — pass the values in. To fetch live from Garmin, use garmin_refresh.",
     inputSchema: {
       type: "object",
       properties: {
