@@ -13,7 +13,8 @@ This file is the index. Each topic lives in the reference doc it belongs to — 
 - **Vert-separate periodization:** Base → Build-Vert → Mountain/Specificity → Terrain-Preserving Taper; **back-to-back weekends** (second day 50–70% of the first on tired legs). Start D+ from the athlete's *actual* baseline, not the template. → `periodization.md`
 - **Power-hike by grade:** run < ~12%, power-hike > ~15–20% — a *pacing* choice to spare the legs, not an economy crossover (that's ~25–30%+). Train the transition. → `workouts.md`, `race-day.md`
 - **Strength (3 layers):** heavy/maximal (economy + durability), eccentric/durability-specific (3–4 s lowering, hip/glute, calf, ankle), then plyometric after a base. **Downhill repeats** to build quad tolerance — progress reps→grade→speed, ≥48–72 h apart, easy primer in Base first. → `workouts.md`
-- **Fueling:** periodized daily carbs (3–4 / 5–6 / 7–9 g/kg by day type — shift the *mix*, don't cut total energy); in-race **60–90 g/hr** (up to **~90–120** for long gut-trained efforts) using **multiple-transportable carbs** above ~60–70 g/hr (~1:0.8 glu:fru preferred, 2:1 fine); start by 45 min; caffeine **~45–60 min before the hard finish**. **Sodium is individual; drink to thirst — over-drinking causes hyponatremia (EAH), and extra salt doesn't prevent it.** → `race-day.md`
+- **Fueling:** periodized daily carbs (3–4 / 5–6 / 7–9 g/kg by day type — shift the *mix*, don't cut total energy); **pre-race carb-load 8–12 g/kg/day × 36–48 h** (low-residue); in-race **60–90 g/hr** (up to **~90–120** for long gut-trained efforts) using **multiple-transportable carbs** above ~60–70 g/hr (~1:0.8 glu:fru preferred, 2:1 fine); start by 45 min; caffeine **~45–60 min before the hard finish**. **Sodium is individual; drink to thirst — over-drinking causes hyponatremia (EAH), and extra salt doesn't prevent it.** → `race-day.md`
+- **Race prep extras:** if the race runs **hot**, acclimatize 5–10 days (active, or passive sauna/hot-bath) ending in taper — decays in ~2–4 wk. **No mountains / time-limited?** Treadmill incline + hands-on-rail for climbs, eccentric strength + repeatable descents (stairs/garages/ramps) for the descent gap a treadmill can't train, single-hill repeats. → `race-day.md`, `workouts.md`
 
 ## Where each topic lives
 
@@ -22,8 +23,9 @@ This file is the index. Each topic lives in the reference doc it belongs to — 
 | EFD metric + two-axis (EFD + D+) load    | `load-management.md` |
 | Trail periodization + sample 12-wk block | `periodization.md`   |
 | Trail sessions + downhill/power-hike + durability strength | `workouts.md` |
-| Grade-aware pacing + race execution      | `race-day.md`        |
-| Trail/ultra fueling                      | `race-day.md`        |
+| Grade-aware pacing + race execution + safety + heat | `race-day.md`     |
+| Trail/ultra fueling + pre-race carb-load | `race-day.md`        |
+| Flat-terrain / time-limited substitutions | `workouts.md`       |
 | Vert history, durability, race-EFD gap   | `assessment.md`      |
 | Readiness → ease/swap (legs-soreness gate) | `adaptive.md`       |
 | Garmin hill / endurance / VO₂max signals | `garmin.md`          |
