@@ -147,6 +147,27 @@ default k = 1.0   (100 m of climb ≈ 1 flat km — the classic heuristic)
 
 **When to use it:** switch the volume currency from raw km to EFD for any athlete logging **> ~400 m D+/week**. Below that, raw km is fine and EFD only adds noise. D+ (total elevation gain) comes from the activity — Strava's `total_elevation_gain`, or Garmin activity detail.
 
+### Two axes: ramp EFD and D+ independently
+
+EFD collapses distance and climb into one number, which is right for *volume* but hides *musculoskeletal* load: two athletes at equal EFD can carry very different leg damage depending on how much of it was vert. So track **two axes and cap each at ≤10%/week**:
+
+1. **Weekly EFD (km)** — the aerobic / volume currency defined above.
+2. **Weekly D+ (m)** — the climbing-and-descending load on its own.
+
+You can blow an athlete up on vert while flat distance barely moves; ramping only EFD would miss it. Recovery weeks deload **both** axes.
+
+| D+ tier  | Weekly D+ (m) | Use                                |
+| -------- | ------------- | ---------------------------------- |
+| Flat     | < 300         | Road / flat trail                  |
+| Moderate | 300 – 800     | Rolling trail                      |
+| Hilly    | 800 – 1500    | Hilly trail racer                  |
+| Mountain | 1500 – 3000   | Mountain / ultra build             |
+| Alpine   | > 3000        | Big alpine / vert-heavy ultra peak |
+
+**Big-vert recovery multiplier:** any single session with **> 800 m D+** gets a **1.5× recovery weighting** — schedule it like a hard/long day even if HR stayed easy. Eccentric descent damage shows up in the legs (and in next-day session quality) more than in HRV or training readiness, so the objective scores *understate* the cost. This ties to the legs-soreness gate: **legs ≤ 2/5 → no big-vert session and no technical descents** (see `assessment.md` and `adaptive.md`).
+
+> **With Garmin connected**, `get_hill_score` and `get_endurance_score` track climbing-specific and durability fitness over time — use them to confirm the D+ axis is building *fitness*, not just fatigue. But trust the legs-soreness gate over HRV/readiness for descent damage: the watch lags it.
+
 ## Recovery Monitoring
 
 > **With Garmin connected**, most of this is measured for you. `get_training_readiness` already fuses sleep, HRV, recovery time, acute load, and stress into one 0–100 score — use it as the daily go/hold-back signal (see `garmin.md`). The indicators below explain what feeds that score and are the manual fallback when Garmin isn't available. The `coach checkin` CLI surfaces these each day; `coach log` captures the subjective ones.
