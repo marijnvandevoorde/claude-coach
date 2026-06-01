@@ -48,13 +48,13 @@ Drop `coach.db` + `garmin_tokens.json` into `./data/` and `cp .env.example .env`
 | `COACH_NOTIFY_CHANNEL` / `COACH_NOTIFY_WEBHOOK_URL`                  | Push channel + webhook (your HA webhook).                                 |
 | `COACH_MORNING_CRON` / `COACH_HYDRATION_CRON` / `COACH_BEDTIME_CRON` | Override the schedules.                                                   |
 
-> **Known limit:** the morning check-in reads the **cached** Garmin snapshot in `coach.db`. Hydration + bedtime work fully offline; live overnight readiness needs a Garmin sync into the db.
+> **Live Garmin data:** the image bundles a python fetcher (`garmin-fetch`) that logs in to Garmin Connect with the tokens in `GARMINTOKENS` and writes a fresh wellness snapshot + recent activities into `coach.db`. A cron job runs it at **07:15** (override `COACH_GARMIN_FETCH_CRON`), just before the 07:30 check-in, so morning readiness/sleep are current. Trigger it on demand with `docker compose run --rm coach garmin-fetch`, or from any Claude client via the `garmin_refresh` MCP tool. Hydration + bedtime still work fully offline.
 
 ---
 
 ## Tier 2 — coach as a remote MCP (with built-in OAuth)
 
-Talk to the coach (`log`, `checkin`, `wellness`, `config`, `export_calendar`, `export_garmin`, `notify`, cached Garmin reads) from **any** Claude client — including **mobile** — with no local install.
+Talk to the coach (`log`, `checkin`, `wellness`, `config`, `garmin_refresh` live Garmin pull, `export_calendar`, `export_garmin`, `notify`) from **any** Claude client — including **mobile** — with no local install.
 
 `coach-mcp` runs its **own** OAuth server and federates the login to **Google**, restricted to your email. Claude auto-registers (no manual Client ID), you sign in with Google, done.
 
