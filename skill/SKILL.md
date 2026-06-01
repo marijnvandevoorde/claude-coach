@@ -311,6 +311,7 @@ Read these files as needed during plan creation:
 | File                                 | When to Read                | Contents                                                      |
 | ------------------------------------ | --------------------------- | ------------------------------------------------------------- |
 | `skill/reference/garmin.md`          | When Garmin is connected    | Garmin tool → coaching-signal map (readiness, load, recovery) |
+| `skill/reference/adaptive.md`        | Adjusting today's session   | Readiness → ease/swap/green-light decision matrix             |
 | `skill/reference/queries.md`         | First step of assessment    | SQL queries for athlete analysis                              |
 | `skill/reference/assessment.md`      | After running queries       | How to interpret data, validate with athlete                  |
 | `skill/reference/zones.md`           | Before prescribing workouts | Training zones, field testing protocols                       |
@@ -633,3 +634,17 @@ After both files are created, tell the user:
 - **Explain the "why"** - Athletes trust and follow plans they understand
 - **Be conservative with manual data** - When working without Strava, err on the side of caution with volume and intensity
 - **Recommend field tests** - For manual data athletes, include zone validation workouts in the first 1-2 weeks
+- **Adapt to today's readiness** - Before confirming today's session, check Garmin readiness/sleep/HRV and ease, swap, or green-light per `skill/reference/adaptive.md` — a plan is a starting point, not a contract
+
+---
+
+## Ongoing Use: Readiness-Driven Adjustment
+
+Beyond creating the plan, act as a coach **day to day**. Whenever the athlete asks about today's session, or you're reviewing the day, adapt the prescribed workout to how they actually recovered:
+
+1. Pull today's readiness/sleep/HRV/body battery (see `garmin.md`), or read the cached snapshot via `npx claude-coach checkin --json`.
+2. Apply the decision matrix in `skill/reference/adaptive.md` — green-light quality when fresh, trim when moderate, swap to easy/rest when low.
+3. **Explain the why and offer the choice** — the athlete knows context the watch doesn't. Protect the week's key session by moving it rather than deleting it.
+4. Log the outcome if they mention it (`coach log ...`) so tomorrow's adjustment has fresh subjective data.
+
+Use `coach checkin` (which already computes a recovery level + flags) as the trigger; use `adaptive.md` to decide the actual change.
