@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Example macOS launchd agent: morning check-in at 07:30 local.
+  Copy to ~/Library/LaunchAgents/, edit the paths + webhook, then:
+      launchctl load ~/Library/LaunchAgents/com.claude-coach.morning.plist
+  launchd (unlike cron) re-fires a missed run when the laptop wakes.
+  Clone this file for bedtime (22:00, args: --only=bedtime) and hourly hydration.
+-->
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.claude-coach.morning</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/Users/CHANGE_ME/Sites/marijnvandevoorde/claude-coach/scheduling/coach-remind.sh</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>COACH_NOTIFY_WEBHOOK_URL</key>
+      <string>https://homeassistant.local/api/webhook/CHANGE_ME</string>
+      <key>COACH_REPO</key>
+      <string>/Users/CHANGE_ME/Sites/marijnvandevoorde/claude-coach</string>
+    </dict>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+      <key>Hour</key><integer>7</integer>
+      <key>Minute</key><integer>30</integer>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/tmp/coach-morning.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/coach-morning.err</string>
+  </dict>
+</plist>
