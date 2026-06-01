@@ -193,6 +193,18 @@ Trail adds vertical gain and technical descent that road sessions don't train. U
 
 **Power-hike by grade** — treat the run-to-hike transition as a *skill*, not a failure. Rule of thumb: **run grades < ~12%**, **power-hike (hands on quads) grades > ~15–20%**, gray zone between by economy. Note *why* you hike at 15–20%: it's a **pacing/durability** choice, not because hiking is metabolically cheaper there — for most trained runners walking only becomes truly more economical than running at much steeper grades (~25–30%+). On a long climb you hike sooner to spare the legs and hold effort. Practised, power-hiking a steep wall is faster and far cheaper on the legs than grinding a run up it — rehearse it so it's automatic on race day.
 
+### No mountains / limited time
+
+Most athletes training for a hilly race don't live in the hills. You can build the climb fitness on flat ground; the harder gap to close is **descent durability**, because a treadmill won't go downhill. Plan for both:
+
+| Need              | Flat-terrain substitute                                                                                       |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ |
+| Climbing / vert   | **Treadmill incline** (uphill intervals, stacked-climb time-on-feet); most cap at 12–15%, so add **hands-on-rail power-hiking** to train steeper walls. Trains the climb + aerobic cost — **not** the descent. |
+| Descent durability| **Eccentric strength** (Layer 2 below) is the floor. Add any *repeatable* descent: parking garages, stadium ramps, highway overpasses, levees, dunes, **stairwells** (run/walk down, elevator or easy walk back up). |
+| Vert specificity  | **Single-hill repeats** — one short rise (even 30–90 s) lapped to bank D+ and downhill reps when that's all you have. |
+
+**If time is tight, prioritise in this order:** (1) one long run with vert/EFD, (2) a downhill/eccentric stimulus (run *or* strength), (3) one quality climb session, (4) heavy strength 1×. Drop from the bottom up. And set EFD `k` and the D+ entry tier to the terrain you can *actually* train on, not the race profile (see `load-management.md`, `periodization.md`).
+
 ---
 
 ## Strength Training
