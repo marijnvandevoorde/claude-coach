@@ -200,10 +200,10 @@ Target archetype: a hilly/mountain race ~26 km / ~1200 m D+ (**race EFD ≈ 38 k
 | --- | ----------------- | --------- | --------- | -------------- | ------------------------------------------------------------ |
 | 1   | Base              | 38        | 600       | 14             | Hilly Z2 long; strides; trail-strength 2×                    |
 | 2   | Base              | 42        | 700       | 16             | Uphill intervals 5×3'; easy vert; strength                   |
-| 3   | Base              | 46        | 800       | 18             | Stacked-climb long (repeat one climb); strength              |
+| 3   | Base              | 46        | 800       | 18             | Stacked-climb long; **easy downhill primer**; strength       |
 | 4   | **Recovery**      | 28        | 450       | 12             | Deload both axes ~−40%; mobility                             |
-| 5   | Build-Vert        | 46        | 950       | 20             | Uphill intervals 6×4'; **downhill repeats 4×2'** (intro)     |
-| 6   | Build-Vert        | 50        | 1100      | 22             | Trail fartlek (effort by terrain); downhill repeats 5×2'     |
+| 5   | Build-Vert        | 46        | 950       | 20             | Uphill intervals 6×4'; **downhill repeats 4×2'** (1st full)  |
+| 6   | Build-Vert        | 50        | 1090      | 22             | Trail fartlek (effort by terrain); downhill repeats 5×2'     |
 | 7   | Build-Vert        | 54        | 1250      | 25             | **B2B**: Sat 25 EFD / Sun 14 EFD; power-hike drills          |
 | 8   | **Recovery**      | 34        | 700       | 16             | Deload; keep one short downhill set for tendon stiffness     |
 | 9   | Mountain-Specific | 54        | 1400      | 27 (≈72% race) | Race-terrain long; technical descents; downhill reps 6×2-3'  |
