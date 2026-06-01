@@ -39,3 +39,7 @@ npm-debug.log*
 templates/plan-viewer.html
 cloud-output/
 cloud-output/
+
+# src/lib holds real source (config, logging, notify), not a build artifact —
+# override the global ~/.gitignore_global "lib/" rule so new files here are tracked.
+!src/lib/

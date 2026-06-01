@@ -127,6 +127,37 @@ In the next step, Claude will ask you about yourself, the event you're training 
 
 Claude will use this information to create a plan tailored to your current fitness level. The more detail you provide, the better your plan will be.
 
+## Push notifications (optional)
+
+Claude Coach can send reminders (hydration, bedtime, recovery) as push notifications. Delivery is handled by a small, dependency-free `notify` command that picks the best available channel:
+
+- **Webhook (recommended)** — POSTs `{ "title", "message" }` JSON to a URL you configure. This works great with a **Home Assistant** webhook: HA receives the POST and fires `notify.mobile_app_*` to your phone (the same pattern as UptimeRobot). No extra app to install if you already use Home Assistant.
+- **macOS** — native notification banner (falls back to this on a Mac when no webhook is set).
+- **stdout** — prints the reminder (last-resort fallback, so reminders never silently fail).
+
+```bash
+# Point it at your Home Assistant webhook (stored locally in coach.db)
+npx claude-coach config --notify-webhook=https://homeassistant.local/api/webhook/your-id
+
+# Send one
+npx claude-coach notify "Time to hydrate 💧"
+```
+
+In Home Assistant, add an automation with a **Webhook** trigger and a notify action, e.g.:
+
+```yaml
+trigger:
+  - platform: webhook
+    webhook_id: your-id
+action:
+  - service: notify.mobile_app_your_phone
+    data:
+      title: "{{ trigger.json.title }}"
+      message: "{{ trigger.json.message }}"
+```
+
+You can override config per-call with `--url=`, `--channel=` (`webhook`/`macos`/`stdout`), or the `COACH_NOTIFY_WEBHOOK_URL` / `COACH_NOTIFY_CHANNEL` environment variables.
+
 # About
 
 Claude Coach is an independent, open-source project and is not made by, endorsed by, or affiliated with Anthropic, PBC. "Claude" is a trademark of Anthropic. This tool is a skill/plugin that works with Claude products but is developed and maintained independently. License: MIT.
