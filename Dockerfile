@@ -16,17 +16,26 @@ RUN npx tsc && cp src/db/schema.sql dist/db/
 
 # ---------- runtime: prod deps + dist only ----------
 FROM node:22-alpine AS runtime
-# tzdata = local-time cron; sqlite = CLI fallback if node:sqlite is flagged off
-RUN apk add --no-cache tzdata sqlite
+# tzdata = local-time cron; sqlite = CLI fallback if node:sqlite is flagged off;
+# python3 + garminconnect = the server-side Garmin fetcher (`garmin-fetch`).
+# Build deps are added in a throwaway virtual package and removed after the
+# pip install — garminconnect's deps (incl. pydantic-core) ship musllinux
+# wheels, so this is normally a no-compile install on amd64 + arm64.
+RUN apk add --no-cache tzdata sqlite python3 py3-pip \
+ && apk add --no-cache --virtual .pybuild gcc musl-dev python3-dev libffi-dev \
+ && pip install --no-cache-dir --break-system-packages garminconnect \
+ && apk del .pybuild
 WORKDIR /app
 ENV NODE_ENV=production \
     COACH_DB_PATH=/data/coach.db \
     GARMINTOKENS=/data/garminconnect \
-    COACH_NOTIFY_CHANNEL=webhook
+    COACH_NOTIFY_CHANNEL=webhook \
+    COACH_GARMIN_PYTHON=python3
 
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 COPY --from=builder /app/dist ./dist
+COPY scripts ./scripts
 COPY scheduling/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
  && printf '#!/bin/sh\nexec node /app/dist/cli.js "$@"\n' > /usr/local/bin/coach \
