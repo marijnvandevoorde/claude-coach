@@ -320,6 +320,7 @@ Read these files as needed during plan creation:
 | `skill/reference/workouts.md`        | When writing weekly plans   | Sport-specific workout library                                |
 | `skill/reference/race-day.md`        | Final section of plan       | Pacing strategy, nutrition                                    |
 | `skill/reference/calendar.md`        | Athlete wants it scheduled  | Push plan to Google Calendar (MCP) or export .ics             |
+| `skill/reference/garmin-workouts.md` | Athlete wants it on Garmin  | Create + schedule structured workouts → syncs to the watch    |
 
 ---
 
@@ -609,6 +610,7 @@ After both files are created, tell the user:
 2. The HTML file path (for viewing)
 3. Suggest opening the HTML file in a browser
 4. **Offer to put it on their calendar** — push the workouts straight into their Google Calendar (via the Google Calendar MCP) or export an `.ics`. See `skill/reference/calendar.md`.
+5. **Offer to push workouts to their Garmin/watch** — create + schedule structured workouts via the garmin MCP so they sync to the device (e.g. a Fenix). See `skill/reference/garmin-workouts.md`.
 
 ---
 
