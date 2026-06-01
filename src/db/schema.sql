@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS reminder_prefs (
   wake_target TEXT,                       -- local 'HH:MM' wake target
   hydration_goal_ml INTEGER DEFAULT 2500, -- daily water goal (ml)
   water_cadence_minutes INTEGER DEFAULT 60, -- min between water nudges while awake
+  hydration_per_active_hour_ml INTEGER DEFAULT 500, -- extra fluid goal per hour of training
   quiet_hours_start TEXT,                 -- local 'HH:MM' — no reminders after
   quiet_hours_end TEXT,                   -- local 'HH:MM' — no reminders before
   timezone TEXT,                          -- IANA tz, e.g. 'Europe/Brussels'
@@ -121,6 +122,7 @@ CREATE TABLE IF NOT EXISTS wellness_state (
   resting_hr INTEGER,
   hrv_status TEXT,                -- balanced | unbalanced | low
   training_status TEXT,          -- Garmin training status label
+  training_minutes INTEGER,      -- today's planned/actual training load (minutes)
   -- reminder bookkeeping (so nudges don't repeat)
   last_water_reminder_at TEXT,    -- UTC ISO 8601
   last_bedtime_reminder_at TEXT,  -- UTC ISO 8601

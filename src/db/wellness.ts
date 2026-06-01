@@ -33,6 +33,7 @@ export interface ReminderPrefs {
   wake_target: string | null;
   hydration_goal_ml: number;
   water_cadence_minutes: number;
+  hydration_per_active_hour_ml: number;
   quiet_hours_start: string | null;
   quiet_hours_end: string | null;
   timezone: string | null;
@@ -55,6 +56,7 @@ export type PrefsPatch = Partial<{
   wake_target: string | null;
   hydration_goal_ml: number;
   water_cadence_minutes: number;
+  hydration_per_active_hour_ml: number;
   quiet_hours_start: string | null;
   quiet_hours_end: string | null;
   timezone: string | null;
@@ -134,6 +136,7 @@ export interface WellnessRow {
   resting_hr: number | null;
   hrv_status: string | null;
   training_status: string | null;
+  training_minutes: number | null;
   last_water_reminder_at: string | null;
   last_bedtime_reminder_at: string | null;
   updated_at: string | null;
