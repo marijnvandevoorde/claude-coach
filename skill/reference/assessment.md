@@ -72,6 +72,32 @@ _"The athlete's swim data shows 5000m sessions at avg HR 125 with suffer_score o
 
 **Gap analysis**: Compare their longest recent/historical sessions against these requirements.
 
+**Trail / ultra events** are defined by vertical gain as much as distance — assess them in **EFD** and run the race-EFD gap analysis in the Trail / Ultra Assessment section below.
+
+---
+
+## Trail / Ultra Assessment
+
+For a trail or ultra goal, distance alone under-describes both the athlete and the race. Assess the **vertical** dimension and **durability** alongside the usual foundation/form picture.
+
+**Signals to gather:**
+
+- **Weekly D+ history** — metres of climbing per week over the last 8–12 weeks (the D+ axis baseline; see `load-management.md`).
+- **Longest single-session D+** — the biggest climb day handled recently.
+- **Biggest descent handled without a quad blow-up** — descending durability is usually the real limiter, not climbing fitness.
+- **Technical-terrain experience** — comfort on rocky / rooty / steep ground (a pacing and safety factor, not just fitness).
+- **EFD trend** — weekly Equivalent Flat Distance over time, not raw km.
+
+**Race-EFD gap analysis.** Convert the goal race to EFD (`race_km + race_D+/100 × k`) and compare it to where the athlete is now:
+
+| Compare                          | Against                               | Flags                                                   |
+| -------------------------------- | ------------------------------------- | ------------------------------------------------------- |
+| Race EFD                         | Current weekly EFD & longest long run | Long-run anchor should reach 70–80% of race EFD         |
+| Race D+                          | Current weekly D+ & longest D+ day    | Big gap → vert is the limiter; ramp the D+ axis         |
+| Race's longest sustained descent | Longest descent trained without DOMS  | Gap → prioritise downhill repeats early (`workouts.md`) |
+
+**Garmin signals** (see `garmin.md`): `get_hill_score` and `get_endurance_score` verify that climbing-specific and durability fitness are actually building through the block; `get_vo2max_trend` / `get_training_status` VO₂max remain the aerobic anchor. **Durability readiness gate:** legs ≤ 2/5 → no demanding D+ session and no technical descents — eccentric damage shows in the legs before it shows in HRV or training readiness, so the legs win that tie (see `adaptive.md`).
+
 ---
 
 ## Validating With The Athlete
