@@ -355,6 +355,7 @@ Examples:
   # Send due reminders as push notifications (for cron); --only filters types
   npx claude-coach checkin --notify
   npx claude-coach checkin --notify --only=hydration
+  npx claude-coach checkin --greeting   # one-line wellness context for a SessionStart hook
 
   # Cache a Garmin snapshot (an agent fetches the values via the garmin MCP)
   npx claude-coach garmin-sync --readiness=78 --sleep-hours=7.5 --hrv-status=balanced
@@ -1249,6 +1250,17 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
     const onlyStr = flagStr(args.flags, "only");
     const only = onlyStr ? new Set(onlyStr.split(",").map((s) => s.trim())) : null;
     await deliverReminders(date, prefs, wellness, reminders, only);
+  }
+
+  // Compact one-line context for a SessionStart hook: print only if something is due.
+  if (args.flags["greeting"]) {
+    const due = reminders.filter((rem) => !rem.suppressed);
+    if (due.length > 0) {
+      console.log(
+        `[Claude Coach wellness] ${due.map((rem) => rem.message).join(" ")} (If it fits naturally, gently surface this; for recovery, consider adjusting today's session per adaptive.md.)`
+      );
+    }
+    return;
   }
 
   if (args.flags["json"]) {

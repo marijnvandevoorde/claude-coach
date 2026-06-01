@@ -648,3 +648,7 @@ Beyond creating the plan, act as a coach **day to day**. Whenever the athlete as
 4. Log the outcome if they mention it (`coach log ...`) so tomorrow's adjustment has fresh subjective data.
 
 Use `coach checkin` (which already computes a recovery level + flags) as the trigger; use `adaptive.md` to decide the actual change.
+
+### At the start of a coaching chat
+
+Run `npx claude-coach checkin --greeting` and, if it surfaces anything overdue (water behind, near/past bedtime, low readiness), weave it in briefly — **once, without nagging**. In Claude Code this can be automated with a `SessionStart` hook (see `REMINDERS.md`).

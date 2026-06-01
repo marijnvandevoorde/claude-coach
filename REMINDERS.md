@@ -96,3 +96,19 @@ The cadence and tone borrow from [`ClutchEngineering/coach-claude`](https://gith
 - **Load-aware.** The hydration goal grows with the day's training (`+hydration_per_active_hour_ml` per training hour).
 
 > Movement/stretch nudges during an active coding session are a separate, in-session feature (a later sprint), not part of this cron backbone.
+
+## Ambient nudges in Claude Code (SessionStart hook)
+
+To have Claude gently surface anything overdue at the **start of a Claude Code session**, add a `SessionStart` hook that runs `checkin --greeting` — it prints one line of context when something's due (water behind, near/past bedtime, low readiness) and **nothing** otherwise. In `.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [{ "type": "command", "command": "npx claude-coach checkin --greeting" }] }
+    ]
+  }
+}
+```
+
+The line is injected as session context, so Claude can weave it in naturally — and, for low readiness, adjust today's session (see `skill/reference/adaptive.md`). From a source checkout, point it at your build the same way as the cron jobs.
