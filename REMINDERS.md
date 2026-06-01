@@ -10,6 +10,8 @@ How it fits together:
 
 ## 1. One-time setup
 
+> **Running from a source checkout?** Run `npm run build` once so `claude-coach` / `npx claude-coach` resolve the compiled `dist/`. Otherwise use `npm start -- <command>` (the dev runner). The `coach-remind.sh` wrapper already handles both.
+
 ```bash
 # Goals + windows (24h local time)
 npx claude-coach config \

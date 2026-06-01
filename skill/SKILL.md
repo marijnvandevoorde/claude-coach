@@ -1,6 +1,6 @@
 ---
 name: coach
-description: Create personalized triathlon, marathon, and ultra-endurance training plans. Use when athletes ask for training plans, workout schedules, race preparation, or coaching advice. Can sync with Strava to analyze training history, or work from manually provided fitness data. Generates periodized plans with sport-specific workouts, zones, and race-day strategies.
+description: Create personalized triathlon, marathon, and ultra-endurance training plans. Use when athletes ask for training plans, workout schedules, race preparation, or coaching advice. Pulls recovery and readiness data from Garmin Connect (sleep, HRV, body battery, training load) when available, plus activity history from Strava or manual entry. Generates periodized plans with sport-specific workouts, zones, and race-day strategies, and can send proactive wellness reminders (hydration, bedtime, recovery).
 ---
 
 # Claude Coach: Endurance Training Plan Skill
@@ -83,6 +83,41 @@ questions:
 ```
 
 > Whichever they pick, if Garmin was detected in Step 1 you'll **layer Garmin's readiness/load signals on top** during assessment (see `garmin.md`).
+
+### Step 4: Offer proactive reminders (optional, Claude Code)
+
+When running in **Claude Code** (local CLI access), offer to turn on proactive wellness reminders — hydration, bedtime wind-down, and a recovery-aware morning check-in — delivered as phone push notifications. Use **AskUserQuestion**:
+
+```
+questions:
+  - question: "Want me to set up proactive reminders (hydration, bedtime, morning recovery check-in) as phone notifications?"
+    header: "Reminders"
+    options:
+      - label: "Yes, set them up"
+        description: "Configure goals + a push webhook, then schedule local cron/launchd jobs"
+      - label: "Not now"
+        description: "You can enable these anytime later"
+```
+
+If yes:
+
+1. Capture their targets and enable reminders:
+
+   ```bash
+   npx claude-coach config --water-goal=3000 --bedtime=22:30 \
+     --quiet-start=22:00 --quiet-end=07:00 --enable
+   ```
+
+2. Set a push channel. Easiest is a **webhook** (e.g. a Home Assistant webhook that fires a phone notification); with none configured it falls back to a macOS banner:
+
+   ```bash
+   npx claude-coach config --notify-webhook=<their webhook URL>
+   npx claude-coach notify "Reminders are on ✅"   # test it reaches their phone
+   ```
+
+3. Schedule the daily jobs — 07:30 check-in, hourly hydration, 22:00 bedtime — each running `claude-coach checkin --notify [--only=…]`. Point them to **`REMINDERS.md`** in the repo for ready-to-paste cron and launchd entries.
+
+The reminders read Garmin readiness/sleep cached in `coach.db`. For a recovery-aware **morning** check-in, a scheduled Claude agent can fetch fresh Garmin data via the `mcp__garmin__*` tools and run `claude-coach garmin-sync …` (then `checkin --notify`) — see `REMINDERS.md`.
 
 ---
 
