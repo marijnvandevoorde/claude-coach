@@ -174,6 +174,26 @@ Race:
 
 ---
 
+## Trail / Ultra Fueling
+
+Trail/ultra fueling keeps everything in the carb, hydration, and caffeine tables above and adds three things: **periodized daily carbs**, **multiple-transportable carbs** for high in-race intake, and **corrected caffeine timing**. The per-hour **sodium** guidance in the Hydration table stays — do not drop it.
+
+**Periodized daily carbs — fuel for the work required:**
+
+| Day type        | Carbs (g/kg) | Protein      | Fat            |
+| --------------- | ------------ | ------------ | -------------- |
+| Rest / recovery | 3 – 4        | 1.6–1.8 g/kg | Normal         |
+| Moderate        | 5 – 6        | 1.6–1.8 g/kg | Normal         |
+| Long / intense  | 7 – 9        | 1.6–1.8 g/kg | Reduced on day |
+
+**In-race carbs:** 60–90 g/hr for efforts > 2.5 h, and **start by 45 min** ("before you're hungry"). To absorb **> 60 g/hr** you must use **multiple-transportable carbs at glucose:fructose ~1:0.8** — a single-source carb can't be cleared fast enough and backs up into GI distress. Eat on **descents and flats, not mid-hard-climb** (climbing cuts gut tolerance). Add **real food** at aid stations (dates, banana, pretzels, boiled potatoes) alongside gels once past ~2 h. **Gut training is mandatory** — rehearse the exact race protocol on ≥ 3 long runs (the B2B and peak long runs are ideal).
+
+**Caffeine timing (corrected):** onset is ~30–45 min, so dose **~45–60 min before the hard finish** or spread it across the back half — **not at the finish line**, where it can't act in time. Roughly 3 mg/kg pre-race + 1–2 mg/kg during for multi-hour efforts.
+
+**Altitude:** appetite is suppressed at altitude — practice eating to schedule, not to hunger, on high races.
+
+---
+
 ## Handling Athlete Constraints
 
 When the athlete mentions constraints in their goal notes, adapt accordingly:
