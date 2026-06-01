@@ -77,12 +77,23 @@ _Exceeding these early will result in catastrophic fade later._
 
 Rolling, vert-heavy terrain breaks the assumptions behind even-pace and fixed-HR pacing. Pace **by effort and grade**, not by a target pace or HR alone:
 
-- **HR misleads on grade.** HR *lags* on punchy climbs (it spikes after you crest, not during) and runs *low* on descents. The Ultra (50K+) **75–80% LTHR** ceiling above still holds, but read it across whole climb/descent cycles — not minute-to-minute.
-- **Power-hike vs run by grade.** Run grades < ~12%, power-hike (hands on quads) grades > ~18%, gray zone by economy — and **train the transition** before taper, not on race day (see `workouts.md`).
-- **Descend conservatively early.** Early-descent quad debt is the trail equivalent of going out too fast on the road; the bill comes due on the final descents. Run light and braked, don't hammer downhills in the first third.
+- **HR misleads on grade.** HR *lags* on punchy climbs (it spikes after you crest, not during) and runs *low* on descents. The Ultra (50K+) **75–80% LTHR** ceiling above still holds as an average, read across whole climb/descent cycles — not minute-to-minute. And for very long efforts (> ~6–8 h) expect the *sustainable* HR to drift **down** over time (cardiac drift / decoupling), so the early-race ceiling should sit a touch *below* the table value.
+- **Power-hike vs run by grade.** Run grades < ~12%, power-hike (hands on quads) grades > ~15–20%, gray zone by economy — and **train the transition** before taper, not on race day (see `workouts.md`). At 15–20% you hike to *spare the legs and hold effort*, not because hiking is metabolically cheaper (that crossover is steeper, ~25–30%+).
+- **Descend conservatively early, but plan to run the late ones.** Early-descent quad debt is the trail equivalent of going out too fast on the road; the bill comes due on the final descents. Run light and braked early — because **time is made on descents, not climbs**: faster finishers run the *downhills* relatively faster and the climbs slower than slower runners. Banking your quads early is what lets you still *run* downhill at the end.
 - **Budget time by climb / descent / flat splits**, not even pace. A flat-pace projection on a course with 1500 m D+ will be wildly optimistic on the climbs and meaningless overall.
 - **Aid-station execution:** walk-and-eat on climbs and flats, never on technical descents (eating steals focus exactly where a fall is most likely).
 - **Poles:** decide whether to use them and **train with them** before taper — race day is not the time to discover they change your fueling rhythm and HR.
+
+### Mountain race execution & safety
+
+Long mountain races are ended by logistics and conditions as often as by fitness. Plan these before race week:
+
+- **Cutoffs / time budget.** Build a checkpoint-by-checkpoint time budget from your climb/descent/flat split estimates and check it against each aid-station cutoff — a realistic, vert-aware plan, not a flat-pace guess. Know which cutoffs are tight.
+- **Mandatory kit.** Carry the required and sensible kit — waterproof jacket, space blanket, headlamp (+ spare batteries), whistle, phone, cup, enough fluid/food between aids. In the mountains weather turns fast; the rule list exists because people have died of hypothermia in summer races.
+- **Weather & cold/wet.** Rehearse layering; a soaked runner moving slowly on an exposed ridge chills dangerously. Have a plan (and the kit) for the worst weather the course can throw, not the forecast.
+- **Night running.** If the race runs into darkness, train at night first: headlamp setup, slower technical descending in the dark, the alertness/low dip in the small hours, and warm layers for the temperature drop.
+- **Crew & drop bags.** Pre-plan what's in each drop bag / what crew hands you at which aid (fuel, dry socks, layers, fresh bottles, headlamp), so transitions are fast and nothing is forgotten when you're foggy.
+- **Feet.** Blister and maceration management is a finish-or-DNF skill on long wet/rocky courses — lube/tape hot spots proactively, plan a sock change, manage grit.
 
 ---
 
@@ -186,9 +197,13 @@ Trail/ultra fueling keeps everything in the carb, hydration, and caffeine tables
 | Moderate        | 5 – 6        | 1.6–1.8 g/kg | Normal         |
 | Long / intense  | 7 – 9        | 1.6–1.8 g/kg | Reduced on day |
 
-**In-race carbs:** 60–90 g/hr for efforts > 2.5 h, and **start by 45 min** ("before you're hungry"). To absorb **> 60 g/hr** you must use **multiple-transportable carbs at glucose:fructose ~1:0.8** — a single-source carb can't be cleared fast enough and backs up into GI distress. Eat on **descents and flats, not mid-hard-climb** (climbing cuts gut tolerance). Add **real food** at aid stations (dates, banana, pretzels, boiled potatoes) alongside gels once past ~2 h. **Gut training is mandatory** — rehearse the exact race protocol on ≥ 3 long runs (the B2B and peak long runs are ideal).
+"Reduced on day" means **shift the macro mix toward carbs, not cut total energy** — protect total energy availability, especially in heavy weeks, or you drift toward low energy availability / RED-S (see `load-management.md`).
 
-**Caffeine timing (corrected):** onset is ~30–45 min, so dose **~45–60 min before the hard finish** or spread it across the back half — **not at the finish line**, where it can't act in time. Roughly 3 mg/kg pre-race + 1–2 mg/kg during for multi-hour efforts.
+**In-race carbs:** **60–90 g/hr** is the default working range for efforts > 2.5 h; for the **longest efforts (> ~3–4 h) with a gut-trained athlete, go up to ~90–120 g/hr** (consistent with the 4+ h row in the table above — trail-marathon studies show ~120 g/hr lowers muscle damage and speeds recovery). **Start by 45 min** ("before you're hungry"). Single-source glucose oxidation plateaus near **~60 g/hr**, so to fuel reliably at **~70 g/hr and above** use **multiple-transportable carbs (glucose + fructose)** — modern products use **~1:0.8 glucose:fructose**, which oxidises efficiently with less GI distress at high intakes; the older **2:1** is still fine, and the performance difference between ratios isn't decisive — the point is *don't run high intakes on glucose alone*. Eat on **descents and flats, not mid-hard-climb** (climbing cuts gut tolerance). Add **real food** at aid stations (dates, banana, pretzels, boiled potatoes) alongside gels once past ~2 h. **Gut training is mandatory** — rehearse the exact race protocol on ≥ 3 long runs (the B2B and peak long runs are ideal). If the gut rebels mid-race: back off intensity, drop to liquid carb/cola, dilute, and let it settle rather than forcing solids.
+
+**Hydration & sodium — drink to thirst.** Keep the per-hour sodium table above as a *starting point*, but note two things. (1) Sodium need is **highly individual** — sweat sodium varies ~10× between athletes; "salty sweaters" (visible salt/white residue on kit, cramping despite intake) need the high end or a sweat test, light sweaters the low end. (2) The dominant fluid **safety** risk in ultras is **exercise-associated hyponatremia (EAH) from over-drinking**, not low sodium — extra salt does **not** prevent it. **Drink to thirst, don't force fluids on a schedule.** Warning signs: headache, nausea, confusion or bloating *with weight gain* during the race → stop drinking, take salty food, seek help; these can be life-threatening.
+
+**Caffeine timing (corrected):** onset is ~30–45 min, so dose **~45–60 min before the hard finish** or spread it across the back half — **not at the finish line**, where it can't act in time. Roughly 3 mg/kg pre-race + 1–2 mg/kg during for multi-hour efforts. In **late-finishing or multi-day** events, weigh the benefit against post-race sleep disruption (caffeine's half-life is ~5 h).
 
 **Altitude:** appetite is suppressed at altitude — practice eating to schedule, not to hunger, on high races.
 
