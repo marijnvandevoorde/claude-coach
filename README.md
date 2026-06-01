@@ -37,9 +37,50 @@ Use the most capable model available to you (as I'm writing this, that's Opus 4.
 
 > Help me create a training plan for the Ironman 70.3 Oceanside on March 29th 2026 using the "coach" skill.
 
-Claude will ask how you'd like to provide your fitness data. You have two options: You can either tell Claude about your fitness history manually - or you can give it access to your Strava activities. I recommend the later - data doesn't lie and more data allows Claude to make a training plan that really fits you.
+Claude will ask how you'd like to provide your fitness data. You have a few options: you can tell Claude about your fitness history manually, give it access to your **Strava** activities, or connect **Garmin Connect** for recovery and readiness data. I recommend connecting your data - it doesn't lie, and more data allows Claude to make a training plan that really fits you.
 
-#### Option 1: Connect to Strava (Recommended)
+**Strava vs. Garmin — which should I connect?**
+
+- **Garmin Connect** is the best source for _recovery and readiness_ signals: sleep, HRV, body battery, stress, resting heart rate, training readiness, and Garmin's own training status (CTL/ATL/TSB) and VO₂max. Claude uses these as the primary signal for how hard to push on any given day.
+- **Strava** is great for _activity history_: a long, portable record of your workouts across devices and apps. Claude uses it as the supporting record of what you've actually done.
+
+They're complementary — connect both if you can. Garmin alone is enough for recovery-aware coaching; Strava alone is enough for a history-based plan.
+
+#### Option 1: Connect Garmin Connect (Recommended for recovery & readiness)
+
+Garmin access is provided through the [`garmin_mcp`](https://github.com/Taxuspt/garmin_mcp) MCP server (by Alexandre Domingues), which talks to Garmin Connect via the `garminconnect` library. You authenticate **once** in a terminal; tokens are saved locally (`~/.garminconnect`) and stay valid for ~6 months. Your Garmin credentials are only ever used to mint those tokens — they're not shared with anyone.
+
+You need [`uv`](https://docs.astral.sh/uv/) installed (`brew install uv` on macOS, or see the uv docs).
+
+**Step 1 — Authenticate with Garmin once:**
+
+```bash
+# Generates and stores OAuth tokens in ~/.garminconnect
+GARMIN_EMAIL="you@example.com" GARMIN_PASSWORD="your-password" \
+  uvx --python 3.12 --from git+https://github.com/Taxuspt/garmin_mcp garmin-mcp-auth
+```
+
+If your account has MFA enabled, you'll be prompted for the code. Once this succeeds you won't need your password again until the tokens expire.
+
+**Step 2 — Register the MCP server.**
+
+**Claude Code:**
+
+```bash
+claude mcp add garmin -s project \
+  --env 'GARMINTOKENS=${HOME}/.garminconnect' \
+  -- uvx --python 3.12 --from git+https://github.com/Taxuspt/garmin_mcp garmin-mcp
+```
+
+`-s project` writes a `.mcp.json` to the repo so the server is available whenever you work in this project (you'll be asked to approve it the first time you launch `claude`). Use `-s user` instead to make it available in every project. Run `claude mcp list` to confirm it shows up.
+
+**Claude Desktop:**
+
+Install the **Garmin Connect** desktop extension (`.dxt`/`.mcpb`) and enable it in **Settings → Extensions**. Leave the email/password fields blank if you already ran Step 1 — it will reuse the saved tokens. (Desktop extensions are managed separately from the "add MCP" / connectors list, so the Garmin server won't appear there to add manually — that's expected.)
+
+> First run will take a moment while `uvx` downloads and resolves the package from GitHub.
+
+#### Option 2: Connect to Strava (Recommended for activity history)
 
 The easiest way to get a personalized plan is to let Claude analyze your Strava training history. This gives Claude real data about your current fitness, training patterns, and progress.
 
@@ -56,9 +97,9 @@ Claude needs a `Client ID` and `Client Secret` to access your Strava activities.
 3. Check the box to agree to Strava's API Agreement and click **Create**
 4. Copy your **Client ID** and **Client Secret** and give them to Claude when prompted
 
-#### Option 2: Manual Entry
+#### Option 3: Manual Entry
 
-Don't use Strava, or prefer not to connect it? No problem. You can tell Claude about your fitness directly. Be prepared to share:
+Don't use Strava or Garmin, or prefer not to connect them? No problem. You can tell Claude about your fitness directly. Be prepared to share:
 
 **Current Training (recent 4-8 weeks):**
 
