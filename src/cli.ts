@@ -109,6 +109,11 @@ interface NotifyArgs {
   flags: Flags;
 }
 
+interface GarminSyncArgs {
+  command: "garmin-sync";
+  flags: Flags;
+}
+
 interface WellnessArgs {
   command: "wellness";
   flags: Flags;
@@ -124,6 +129,7 @@ type CliArgs =
   | ConfigArgs
   | CheckinArgs
   | NotifyArgs
+  | GarminSyncArgs
   | WellnessArgs;
 
 type Flags = Record<string, string | boolean>;
@@ -259,6 +265,10 @@ function parseArgs(): CliArgs {
     return { command: "notify", message, flags: parseFlags(args.slice(1)) };
   }
 
+  if (args[0] === "garmin-sync") {
+    return { command: "garmin-sync", flags: parseFlags(args.slice(1)) };
+  }
+
   if (args[0] === "wellness" || args[0] === "today") {
     return { command: "wellness", flags: parseFlags(args.slice(1)) };
   }
@@ -286,6 +296,7 @@ Commands:
   wellness          Show today's hydration + wellness snapshot
   config            Show/set reminder preferences (bedtime, water goal, quiet hours)
   notify <message>  Send a push notification (webhook/Home Assistant, macOS, or stdout)
+  garmin-sync       Cache today's Garmin metrics (readiness, sleep, HRV…) to coach.db
   checkin           Assemble plan + Garmin + wellness into a coaching/reminder payload
   help              Show this help message
 
@@ -344,6 +355,9 @@ Examples:
   # Send due reminders as push notifications (for cron); --only filters types
   npx claude-coach checkin --notify
   npx claude-coach checkin --notify --only=hydration
+
+  # Cache a Garmin snapshot (an agent fetches the values via the garmin MCP)
+  npx claude-coach garmin-sync --readiness=78 --sleep-hours=7.5 --hrv-status=balanced
 `);
 }
 
@@ -884,6 +898,44 @@ async function runConfig(args: ConfigArgs): Promise<void> {
   }
 }
 
+async function runGarminSync(args: GarminSyncArgs): Promise<void> {
+  await ensureDb();
+  const date = flagStr(args.flags, "date") ?? localDate();
+  const patch: WellnessPatch = {};
+  const setInt = (flag: string, col: keyof WellnessPatch) => {
+    const v = flagNum(args.flags, flag);
+    if (v !== undefined) (patch as Record<string, unknown>)[col] = Math.round(v);
+  };
+
+  setInt("readiness", "readiness_score");
+  setInt("sleep-score", "sleep_score");
+  setInt("body-battery", "body_battery_morning");
+  setInt("resting-hr", "resting_hr");
+  const sleepHours = flagNum(args.flags, "sleep-hours");
+  if (sleepHours !== undefined) patch.sleep_hours = sleepHours;
+  const weight = flagNum(args.flags, "weight-kg");
+  if (weight !== undefined) patch.weight_kg = weight;
+  const hrvStatus = flagStr(args.flags, "hrv-status");
+  if (hrvStatus !== undefined) patch.hrv_status = hrvStatus;
+  const trainingStatus = flagStr(args.flags, "training-status");
+  if (trainingStatus !== undefined) patch.training_status = trainingStatus;
+
+  if (Object.keys(patch).length === 0) {
+    log.error(
+      "garmin-sync needs at least one metric, e.g. --readiness=78 --sleep-hours=7.5 --hrv-status=balanced"
+    );
+    process.exit(1);
+  }
+
+  upsertWellness(date, patch);
+  const snapshot = getWellness(date);
+  if (args.flags["json"]) {
+    console.log(JSON.stringify(snapshot, null, 2));
+    return;
+  }
+  log.success(`Cached Garmin snapshot for ${date}: ${Object.keys(patch).join(", ")}.`);
+}
+
 async function runNotify(args: NotifyArgs): Promise<void> {
   await ensureDb();
   const prefs = getPrefs();
@@ -1231,6 +1283,9 @@ async function main() {
       break;
     case "notify":
       await runNotify(args);
+      break;
+    case "garmin-sync":
+      await runGarminSync(args);
       break;
     case "wellness":
       await runWellness(args);
