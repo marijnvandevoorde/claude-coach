@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """Fetch a day's Garmin Connect snapshot + recent activities and print JSON.
 
-This is the *real* Garmin sync: it logs in to Garmin Connect (read-only) using
-the OAuth tokens in $GARMINTOKENS (a directory written by `garmin-mcp-auth` /
-garth) and prints everything it found as a single JSON object on stdout.
+Talks to Garmin Connect read-only using the OAuth2 ("diauth") tokens stored in
+$GARMINTOKENS (a garmin_tokens.json with di_token / di_refresh_token /
+di_client_id). Garmin access tokens are short-lived, so this refreshes on every
+run and persists the rotated refresh token back — the fetcher stays alive for
+months without any re-auth or password.
 
-It deliberately does NOT touch coach.db — the Node CLI (`garmin-fetch`) ingests
-this JSON through the tested upsert path, so the DB schema lives in one place.
+Uses only the Python standard library (urllib) — no third-party deps, so the
+image stays tiny. It never touches coach.db: the Node CLI (`garmin-fetch`)
+ingests this JSON through the tested upsert path, keeping the schema in one
+place.
 
 Usage:  garmin_fetch.py [YYYY-MM-DD]   (default: today, in the container's TZ)
 Output: {"date", "wellness": {...}, "activities": [...], "errors": [...]}
@@ -18,6 +22,14 @@ import datetime
 import json
 import os
 import sys
+import urllib.error
+import urllib.parse
+import urllib.request
+
+DIAUTH = "https://diauth.garmin.com/di-oauth2-service/oauth/token"
+API = "https://connectapi.garmin.com"
+APP_UA = "com.garmin.android.apps.connectmobile"  # for the token refresh
+API_UA = "GCM-iOS-5.7.2.1"  # connectapi rejects unknown clients
 
 # Garmin activityType.typeKey -> the sport vocabulary used in the activities table.
 SPORT = {
@@ -45,6 +57,51 @@ def _int(value):
         return int(round(float(value)))
     except (TypeError, ValueError):
         return None
+
+
+def _http(method, url, headers=None, data=None, timeout=25):
+    req = urllib.request.Request(url, data=data, method=method, headers=headers or {})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        body = resp.read()
+    return json.loads(body) if body else None
+
+
+def token_path():
+    store = os.environ.get("GARMINTOKENS") or os.path.expanduser("~/.garminconnect")
+    if os.path.isdir(store):
+        return os.path.join(store, "garmin_tokens.json")
+    return store
+
+
+def refresh_access(tokens):
+    """Exchange the long-lived refresh token for a fresh access token."""
+    data = urllib.parse.urlencode(
+        {
+            "grant_type": "refresh_token",
+            "refresh_token": tokens["di_refresh_token"],
+            "client_id": tokens["di_client_id"],
+        }
+    ).encode()
+    return _http(
+        "POST",
+        DIAUTH,
+        headers={"User-Agent": APP_UA, "Content-Type": "application/x-www-form-urlencoded"},
+        data=data,
+    )
+
+
+def persist(path, tokens, refreshed):
+    """Cache the latest access token + rotate the refresh token (best effort)."""
+    try:
+        updated = dict(tokens)
+        if refreshed.get("access_token"):
+            updated["di_token"] = refreshed["access_token"]
+        if refreshed.get("refresh_token"):
+            updated["di_refresh_token"] = refreshed["refresh_token"]
+        with open(path, "w") as f:
+            json.dump(updated, f)
+    except Exception:
+        pass
 
 
 def map_activity(a):
@@ -75,44 +132,45 @@ def map_activity(a):
     }
 
 
-def do_login(Garmin, tokenstore):
-    """Resume a session from saved tokens; try the two known API shapes."""
-    last = None
-    try:
-        api = Garmin()
-        api.login(tokenstore)
-        return api
-    except Exception as e:  # noqa: BLE001 - record and try the next form
-        last = e
-    try:
-        api = Garmin(tokenstore=tokenstore)
-        api.login()
-        return api
-    except Exception as e:  # noqa: BLE001
-        last = e
-    raise last
-
-
 def main():
     date = sys.argv[1] if len(sys.argv) > 1 else datetime.date.today().isoformat()
     out = {"date": date, "wellness": {}, "activities": [], "errors": []}
 
+    path = token_path()
     try:
-        from garminconnect import Garmin
+        with open(path) as f:
+            tokens = json.load(f)
     except Exception as e:  # noqa: BLE001
-        out["errors"].append(f"import garminconnect: {e}")
+        out["errors"].append(f"tokens ({path}): {e}")
         print(json.dumps(out))
         return
 
-    tokenstore = os.environ.get("GARMINTOKENS") or os.path.expanduser("~/.garminconnect")
+    for k in ("di_refresh_token", "di_client_id"):
+        if not tokens.get(k):
+            out["errors"].append(f"tokens: missing {k} (expected garmin_tokens.json)")
+            print(json.dumps(out))
+            return
+
     try:
-        api = do_login(Garmin, tokenstore)
-    except Exception as e:  # noqa: BLE001
-        out["errors"].append(f"login ({tokenstore}): {e}")
+        refreshed = refresh_access(tokens)
+        access = refreshed["access_token"]
+    except urllib.error.HTTPError as e:  # noqa: BLE001
+        out["errors"].append(f"refresh: HTTP {e.code} {e.read()[:120]!r}")
         print(json.dumps(out))
         return
+    except Exception as e:  # noqa: BLE001
+        out["errors"].append(f"refresh: {e}")
+        print(json.dumps(out))
+        return
+    persist(path, tokens, refreshed)
+
+    headers = {"Authorization": "Bearer " + access, "User-Agent": API_UA, "NK": "NT"}
+
+    def api_get(p):
+        return _http("GET", API + p, headers=headers)
 
     w = out["wellness"]
+    display_name = [None]
 
     def attempt(label, fn):
         try:
@@ -120,31 +178,47 @@ def main():
         except Exception as e:  # noqa: BLE001
             out["errors"].append(f"{label}: {e}")
 
+    def _profile():
+        p = api_get("/userprofile-service/socialProfile") or {}
+        display_name[0] = p.get("displayName")
+
     def _readiness():
-        d = api.get_training_readiness(date)
+        d = api_get("/metrics-service/metrics/trainingreadiness/" + date)
         if isinstance(d, list) and d:
             d = d[0]
         if isinstance(d, dict) and d.get("score") is not None:
             w["readiness_score"] = _int(d["score"])
 
     def _sleep():
-        d = api.get_sleep_data(date) or {}
+        if not display_name[0]:
+            return
+        d = (
+            api_get(
+                f"/wellness-service/wellness/dailySleepData/{display_name[0]}"
+                f"?date={date}&nonSleepBufferMinutes=60"
+            )
+            or {}
+        )
         dto = d.get("dailySleepDTO") or {}
-        secs = dto.get("sleepTimeSeconds")
-        if secs:
-            w["sleep_hours"] = round(secs / 3600.0, 2)
+        if dto.get("sleepTimeSeconds"):
+            w["sleep_hours"] = round(dto["sleepTimeSeconds"] / 3600.0, 2)
         overall = (dto.get("sleepScores") or {}).get("overall") or {}
         if overall.get("value") is not None:
             w["sleep_score"] = _int(overall["value"])
 
     def _hrv():
-        d = api.get_hrv_data(date) or {}
+        d = api_get("/hrv-service/hrv/" + date) or {}
         status = (d.get("hrvSummary") or {}).get("status")
         if status:
             w["hrv_status"] = str(status).lower()
 
     def _stats():
-        d = api.get_stats(date) or {}
+        if not display_name[0]:
+            return
+        d = (
+            api_get(f"/usersummary-service/usersummary/daily/{display_name[0]}?calendarDate={date}")
+            or {}
+        )
         if d.get("restingHeartRate") is not None:
             w["resting_hr"] = _int(d["restingHeartRate"])
         bb = d.get("bodyBatteryMostRecentValue")
@@ -154,8 +228,12 @@ def main():
             w["body_battery_morning"] = _int(bb)
 
     def _training_status():
-        d = api.get_training_status(date) or {}
-        latest = d.get("latestTrainingStatusData") or {}
+        d = api_get("/metrics-service/metrics/trainingstatus/aggregated/" + date) or {}
+        latest = (
+            (d.get("mostRecentTrainingStatus") or {}).get("latestTrainingStatusData")
+            or d.get("latestTrainingStatusData")
+            or {}
+        )
         for v in latest.values():
             if not isinstance(v, dict):
                 continue
@@ -165,12 +243,14 @@ def main():
                 return
 
     def _activities():
-        for a in api.get_activities(0, 15) or []:
+        d = api_get("/activitylist-service/activities/search/activities?start=0&limit=15") or []
+        for a in d:
             try:
                 out["activities"].append(map_activity(a))
             except Exception as e:  # noqa: BLE001
                 out["errors"].append(f"activity: {e}")
 
+    attempt("profile", _profile)
     attempt("readiness", _readiness)
     attempt("sleep", _sleep)
     attempt("hrv", _hrv)

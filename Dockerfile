@@ -17,14 +17,10 @@ RUN npx tsc && cp src/db/schema.sql dist/db/
 # ---------- runtime: prod deps + dist only ----------
 FROM node:22-alpine AS runtime
 # tzdata = local-time cron; sqlite = CLI fallback if node:sqlite is flagged off;
-# python3 + garminconnect = the server-side Garmin fetcher (`garmin-fetch`).
-# Build deps are added in a throwaway virtual package and removed after the
-# pip install — garminconnect's deps (incl. pydantic-core) ship musllinux
-# wheels, so this is normally a no-compile install on amd64 + arm64.
-RUN apk add --no-cache tzdata sqlite python3 py3-pip \
- && apk add --no-cache --virtual .pybuild gcc musl-dev python3-dev libffi-dev \
- && pip install --no-cache-dir --break-system-packages garminconnect \
- && apk del .pybuild
+# python3 = the server-side Garmin fetcher (`garmin-fetch`). The fetcher uses
+# only the stdlib (urllib) — it refreshes the Garmin OAuth token and reads the
+# Connect API directly — so there's nothing to pip-install.
+RUN apk add --no-cache tzdata sqlite python3
 WORKDIR /app
 ENV NODE_ENV=production \
     COACH_DB_PATH=/data/coach.db \
