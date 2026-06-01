@@ -3,9 +3,9 @@
 **One image, two services.** A single image (built by the GitHub Action, published to GHCR) runs as:
 
 - **`coach`** — the always-on reminder cron (Tier 1). Outbound-only → **no ingress**.
-- **`coach-mcp`** — the remote MCP (Tier 2), the same image in `mcp` mode, behind **your reverse proxy + Cloudflare Access**.
+- **`coach-mcp`** — the remote MCP (Tier 2), the same image in `mcp` mode, with **built-in Google OAuth** so any Claude client (Desktop, web, mobile, Code) can use it.
 
-The compose files just **pull** the image. Tier 1 is built and ready; Tier 2's MCP server is built and runs in `mcp` mode — you wire it to your own proxy (kept out of this repo).
+The compose files just **pull** the image.
 
 ---
 
@@ -20,11 +20,11 @@ A super-light `node:22-alpine` image runs the CLI on a cron schedule: `checkin -
 - `docker-compose.yml` + `.env.example` — committed template; **pulls** the published image.
 - `.github/workflows/docker-build.yml` — **manually-triggered** (`workflow_dispatch`) multi-arch (amd64 + arm64) build pushing `ghcr.io/<you>/claude-coach:<tag>`.
 
-> Keep your real bundle — `.env` (with secrets), a copy of `coach.db`, Garmin tokens, and any host-specific (reverse-proxy) compose — in a **gitignored** directory; never commit it.
+> Keep your real bundle — `.env` (with secrets), a copy of `coach.db`, Garmin tokens, and any host-specific compose — in a **gitignored** directory; never commit it.
 
 ### Step 1 — publish the image (the manual Action)
 
-GitHub → **Actions → "Build Docker image" → Run workflow** (pick a tag). It builds and pushes `ghcr.io/<you>/claude-coach:latest`. Re-run whenever you ship new code.
+GitHub → **Actions → "Build Docker image" → Run workflow** (or `gh workflow run "Build Docker image"`). It builds and pushes `ghcr.io/<you>/claude-coach:latest`.
 
 ### Step 2 — run it
 
@@ -37,83 +37,59 @@ docker compose run --rm coach notify "alive ✅"         # test the push to your
 docker compose logs -f
 ```
 
-Drop `coach.db` + `garmin_tokens.json` into `./data/` and `cp .env.example .env` first. No registry? Build locally: `docker build -t ghcr.io/<you>/claude-coach:latest .`.
+Drop `coach.db` + `garmin_tokens.json` into `./data/` and `cp .env.example .env` first.
 
 ### Config knobs (env)
 
 | Var                                                                  | What                                                                      |
 | -------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | `TZ`                                                                 | Local timezone — reminders fire in local time (needs `tzdata`, baked in). |
-| `COACH_DB_PATH`                                                      | DB path in the container (default `/data/coach.db`).                      |
-| `GARMINTOKENS`                                                       | Garmin tokens dir (default `/data/garminconnect`).                        |
+| `COACH_DB_PATH` / `GARMINTOKENS`                                     | DB + Garmin-tokens paths in the container (default under `/data`).        |
 | `COACH_NOTIFY_CHANNEL` / `COACH_NOTIFY_WEBHOOK_URL`                  | Push channel + webhook (your HA webhook).                                 |
-| `COACH_AUTH_SECRET`                                                  | Bearer secret for the Tier 2 MCP (unused by the cron).                    |
-| `COACH_MCP_PORT`                                                     | MCP listen port (default `8080`).                                         |
 | `COACH_MORNING_CRON` / `COACH_HYDRATION_CRON` / `COACH_BEDTIME_CRON` | Override the schedules.                                                   |
 
-> **Known limit:** the container's morning check-in reads the **cached** Garmin snapshot in `coach.db`. Hydration + bedtime work fully offline; live overnight readiness needs a Garmin sync into the db.
+> **Known limit:** the morning check-in reads the **cached** Garmin snapshot in `coach.db`. Hydration + bedtime work fully offline; live overnight readiness needs a Garmin sync into the db.
 
 ---
 
-## Tier 2 — coach as a remote MCP
+## Tier 2 — coach as a remote MCP (with built-in OAuth)
 
-Goal: talk to the coach (`log`, `checkin`, `wellness`, `config`, `export_calendar`, `export_garmin`, `notify`, cached Garmin reads) from **any** Claude client — Desktop, web, phone — with no local install.
+Talk to the coach (`log`, `checkin`, `wellness`, `config`, `export_calendar`, `export_garmin`, `notify`, cached Garmin reads) from **any** Claude client — including **mobile** — with no local install.
+
+`coach-mcp` runs its **own** OAuth server and federates the login to **Google**, restricted to your email. Claude auto-registers (no manual Client ID), you sign in with Google, done.
 
 ### How it runs
 
-The published image runs the MCP in `mcp` mode (`command: ["mcp"]`): an Express server on `COACH_MCP_PORT` (default 8080), `/health` open, optional `Bearer COACH_AUTH_SECRET`. Add it as a **second service** sharing the `/data` volume, and put it behind:
+Same image, `mcp` mode (`command: ["mcp"]`): an Express server on `COACH_MCP_PORT` (default 8080), `/health` open. Add it as a **second service** sharing the `/data` volume, behind your reverse proxy terminating TLS for `coach.example.com` → `coach-mcp:8080`.
 
-1. **Your reverse proxy** (nginx, Caddy, etc.) terminating TLS for a hostname like `coach.example.com` → `coach-mcp:8080`. Keep this host-specific compose/proxy config in your gitignored bundle.
-2. **Cloudflare Access** in front (proxied DNS). Humans get SSO; machines (Claude) authenticate with a **Service Token** — header auth that skips the interactive login.
+> **Do not put Cloudflare Access in front of this host** — `coach-mcp` does its own auth, and Access would block the OAuth discovery/callback. Keep DNS **proxied** (TLS/DDoS) but with **no Access policy** on the MCP hostname.
 
-### Cloudflare Access (do this now)
+### Step A — create a Google OAuth client (one-time)
 
-1. **Access application** — Zero Trust → Access → Applications → _Self-hosted_, your hostname.
-2. **Service token** — Zero Trust → Access → Service Auth → _Create Service Token_. Save the **Client ID** + **Client Secret**.
-3. **Policy** — Allow, include = that Service Token (the non-interactive path for Claude). Optionally a second Allow for your email (browser). Else deny.
+1. Google Cloud Console → **APIs & Services → Credentials → Create credentials → OAuth client ID → Web application**.
+2. **Authorized redirect URI** (exactly): `https://coach.example.com/oauth/google/callback` — i.e. your `COACH_OAUTH_ISSUER` + `/oauth/google/callback`.
+3. Configure the OAuth **consent screen** if prompted (External; add yourself as a test user).
+4. Copy the **Client ID** + **Client Secret**.
 
-### Connect Claude
+### Step B — enable OAuth (env on `coach-mcp`)
 
-**Claude Code** (the reliable client for header-auth MCPs):
+Set all of these and OAuth turns on (the static `COACH_AUTH_SECRET` is then ignored):
 
-```bash
-claude mcp add coach --transport http https://coach.example.com/mcp \
-  --header "CF-Access-Client-Id: <token-client-id>" \
-  --header "CF-Access-Client-Secret: <token-client-secret>"
-```
+| Var                                         | What                                                         |
+| ------------------------------------------- | ------------------------------------------------------------ |
+| `COACH_OAUTH_ISSUER`                        | The MCP's public base URL, e.g. `https://coach.example.com`. |
+| `COACH_OAUTH_ALLOWED_EMAILS`                | Comma-separated allowlist (your Google email).               |
+| `COACH_OAUTH_SIGNING_SECRET`                | Long random string — signs the access tokens.                |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | From Step A.                                                 |
 
-**Claude Desktop:** the connector UI can't paste static headers, so add a small **local bridge** that injects the same service-token headers — [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) in `claude_desktop_config.json` (where stdio MCP servers live):
+### Step C — connect Claude (every client, incl. mobile)
 
-```json
-{
-  "mcpServers": {
-    "coach": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote",
-        "https://coach.example.com/mcp",
-        "--header",
-        "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}",
-        "--header",
-        "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}"
-      ],
-      "env": {
-        "CF_ACCESS_CLIENT_ID": "<service-token-id>",
-        "CF_ACCESS_CLIENT_SECRET": "<service-token-secret>"
-      }
-    }
-  }
-}
-```
+Add a **custom connector** pointing at `https://coach.example.com/mcp` — on Desktop, claude.ai web, **mobile**, or Code. Claude auto-registers (DCR), bounces you to Google, you sign in with the allowed email, and you're connected. No headers, no `mcp-remote`, no service token. Upload the skill zip alongside it — they work together (the skill is MCP-aware).
 
-This reuses the Cloudflare Access service token — no OAuth needed, and it pairs with the uploaded skill in the same conversation. **claude.ai web / mobile** can't spawn a local bridge, so they'd need real remote-MCP OAuth (e.g. Cloudflare Access's MCP OAuth, or an OAuth layer) — not covered here.
+### How the auth works
 
-> A plain `oauth2-proxy` (cookie/redirect auth) does **not** satisfy the MCP client's token flow — don't use it for this.
+- `coach-mcp` advertises itself as the authorization server (`/.well-known/oauth-authorization-server` + `/.well-known/oauth-protected-resource`), supports **dynamic client registration**, runs **authorization-code + PKCE**, and federates login to **Google**.
+- On success it issues a short-lived HS256 JWT (signed with `COACH_OAUTH_SIGNING_SECRET`); `/mcp` requires a valid one. Only `COACH_OAUTH_ALLOWED_EMAILS` get through.
+- Registered clients persist to `oauth-clients.json` in `/data`; `coach.db` + Garmin tokens stay on your volume. Single-user, personal use.
 
-### Security model
-
-- Cloudflare proxied + Access = nothing reaches the origin without a valid identity **or** the service token.
-- `COACH_AUTH_SECRET` = belt-and-suspenders bearer check in the app.
-- Garmin tokens + `coach.db` stay on your host volume; the unofficial Garmin API is personal-use only.
-- Single-user: one `coach.db`, your tokens — don't multi-tenant.
+> Not yet verified end-to-end here (OAuth handshakes are fiddly). If a client errors: check `docker compose logs -f coach-mcp`, confirm the Google redirect URI matches `ISSUER/oauth/google/callback` **exactly**, and that `coach.example.com` is reachable **without** a Cloudflare Access challenge.

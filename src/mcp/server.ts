@@ -9,6 +9,7 @@ import { spawnSync } from "node:child_process";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { oauthEnabled, oauthRouter, verifyAccessToken, resourceMetadataUrl } from "./oauth.js";
 
 const CLI = process.env.COACH_CLI || "/app/dist/cli.js";
 const PORT = Number(process.env.COACH_MCP_PORT || process.env.PORT || 8080);
@@ -227,14 +228,31 @@ function buildServer(): Server {
 
 const app = express();
 app.use(express.json({ limit: "4mb" }));
+app.use(express.urlencoded({ extended: true })); // OAuth token endpoint posts form-encoded
 
 // Health check (unauthenticated) for the reverse proxy.
 app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "coach-mcp" });
 });
 
-// Optional bearer check (defense-in-depth; Cloudflare Access is the primary gate).
-app.use((req, res, next) => {
+// Built-in OAuth (Google-federated): mounts discovery + /oauth/* publicly.
+if (oauthEnabled()) {
+  app.use(oauthRouter());
+}
+
+// Auth gate for everything below (i.e. /mcp).
+app.use(async (req, res, next) => {
+  if (oauthEnabled()) {
+    if (await verifyAccessToken(req.headers.authorization)) {
+      next();
+      return;
+    }
+    // Point the MCP client at the authorization-server discovery doc.
+    res.set("WWW-Authenticate", `Bearer resource_metadata="${resourceMetadataUrl()}"`);
+    res.status(401).json({ error: "unauthorized" });
+    return;
+  }
+  // Fallback when OAuth isn't configured: optional static bearer, else open.
   const secret = process.env.COACH_AUTH_SECRET;
   if (!secret || req.headers.authorization === `Bearer ${secret}`) {
     next();
@@ -256,7 +274,6 @@ app.post("/mcp", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(
-    `coach-mcp listening on :${PORT} (auth: ${process.env.COACH_AUTH_SECRET ? "bearer" : "none"})`
-  );
+  const mode = oauthEnabled() ? "oauth(google)" : process.env.COACH_AUTH_SECRET ? "bearer" : "none";
+  console.log(`coach-mcp listening on :${PORT} (auth: ${mode})`);
 });
