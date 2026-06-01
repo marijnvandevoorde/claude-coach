@@ -22,6 +22,8 @@ If Garmin Connect is available (`mcp__garmin__*` tools — see `garmin.md`), **u
 
 The manual TSS math below remains the model for **Strava-only / manual** athletes and for understanding what the Garmin numbers represent.
 
+> **Caveat on load ratios.** CTL/ATL/TSB and acute:chronic-style workload ratios are _monitoring aids_, not validated injury predictors — recent work disputes the acute:chronic workload ratio as a causal or predictive tool. Use them to watch direction and flag spikes, but weight subjective signals and the legs gate (see the trail-load section) at least as heavily; never let a green ratio override sore or painful legs.
+
 ## Training Stress Score (TSS)
 
 TSS measures the physiological cost of a workout. For cycling with power:
@@ -125,6 +127,76 @@ TSB = CTL - ATL
 | Recovery week | 50-60%        | Every 3-4 weeks                        |
 
 ---
+
+## Trail & Ultra Load: Equivalent Flat Distance (EFD)
+
+On the road, weekly kilometres are a fair proxy for volume. On vert-heavy trail they are not: a 10 km run with 1000 m of climbing costs far more than 10 flat km, and counting both as "10 km" silently under-loads the climber. **Equivalent Flat Distance (EFD)** restores km as an honest volume currency by adding the cost of vertical gain.
+
+```
+EFD_km = distance_km + (D+_m / 100) × k        # k in km per 100 m of vert
+default k = 1.0   (100 m of climb ≈ 1 flat km — the classic heuristic)
+```
+
+`k` is a **tunable coaching heuristic, not physics.** Use **k = 1.0 by default and leave it there** unless you have a specific reason not to — for most athletes one consistent number is all EFD needs to do its job (stop under-counting vert).
+
+> **Reality check on grade cost.** Per _vertical_ metre, climbing is actually _cheapest_ on steep grades and _most expensive_ on gentle ones — a shallow grade makes you cover far more horizontal ground per metre of gain (Minetti 2002; vertical-kilometre running-economy work). So a higher `k` is **not** justified by "steep vert costs more per metre" — it doesn't. Only raise `k` as a **musculoskeletal / technical surcharge**: rough, technical, or descent-heavy terrain beats up the legs and slows you for reasons that aren't aerobic cost.
+
+| Tune k…                           | Suggested k | Why                                                         |
+| --------------------------------- | ----------- | ----------------------------------------------------------- |
+| Technical / rough / descent-heavy | 1.1 – 1.2   | Skill + musculoskeletal surcharge, not extra metabolic cost |
+| Default — most trail              | 1.0         | The standard heuristic; start, and usually stay, here       |
+| Smooth, very runnable, gradual    | 0.8 – 0.9   | Buttery terrain runs closer to its flat distance            |
+
+**Worked example:** a 10 km run with 1000 m D+ → `10 + (1000/100)×1.0 = 20 km EFD`. The same 10 km on the flat stays 10 km EFD. Treating the two as equal raw km is the mistake EFD fixes.
+
+**When to use it:** switch the volume currency from raw km to EFD for any athlete logging **> ~400 m D+/week**. Below that, raw km is fine and EFD only adds noise. D+ (total elevation gain) comes from the activity — Strava's `total_elevation_gain`, or Garmin activity detail.
+
+**Limitation — EFD counts only the climb.** It says nothing about the **eccentric cost of descending**, which is where trail legs actually blow up. A net-downhill or descent-heavy race can be far harder on the quads than its EFD or D+ suggests. EFD is a _volume_ currency; manage descent damage separately through the D+ axis, the big-descent recovery weighting, and downhill-specific training (below). (For a grade-sensitive _pace_ currency, Strava/Garmin's GAP is the complement — don't conflate the two.)
+
+### Two axes: aerobic load (EFD) and musculoskeletal load (D+)
+
+EFD collapses distance and climb into one number, which is right for _volume_ but hides _musculoskeletal_ load: two athletes at equal EFD can carry very different leg damage depending on how much of it was vert. So watch **two axes**:
+
+1. **Weekly EFD (km)** — the **aerobic** / volume currency defined above.
+2. **Weekly D+ (m)** — the **musculoskeletal** (climbing/descending) load on its own.
+
+These aren't independent — D+ is _inside_ EFD, so a vert spike inflates both at once. That's the point: D+ is the **primary musculoskeletal axis** and EFD the **aerobic axis**, and watching D+ separately catches a vert blow-up that flat-km would miss. Cap each (guidance below), and deload **both** on recovery weeks.
+
+| D+ tier  | Weekly D+ (m) | Use                                |
+| -------- | ------------- | ---------------------------------- |
+| Flat     | < 300         | Road / flat trail                  |
+| Moderate | 300 – 800     | Rolling trail                      |
+| Hilly    | 800 – 1500    | Hilly trail racer                  |
+| Mountain | 1500 – 3000   | Mountain / ultra build             |
+| Alpine   | > 3000        | Big alpine / vert-heavy ultra peak |
+
+**How fast to ramp — a prudent ceiling, not a validated threshold.** The ≤10%/week guide is sensible but _not_ strongly evidenced (cohort/RCT work hasn't shown a 10% cap prevents injury). The better-supported rule is to **avoid spiking any single long session well beyond the recent longest** — which is exactly why the long-run anchor below is scaled to race EFD. Apply both, and scale the cap to the athlete:
+
+| Athlete                                    | D+ / EFD ramp guidance                                                                             |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| Trained, consistent vert history           | ≤ ~10–15%/wk on each axis                                                                          |
+| Beginner / returning from injury / masters | ≤ 5–8%/wk on **D+**; hold a newly-introduced axis flat 1–2 wk, and establish EFD before ramping D+ |
+
+Bone and tendon adapt _slower_ than muscle and the cardiovascular system, so the **D+ (impact/eccentric) axis is the one to hold back** for these groups — readiness/HRV will look fine while connective tissue is still behind.
+
+**Big-descent recovery weighting (rule of thumb, not a measured constant):** any session with a big _descent_ load — **> ~800 m of descent (D−), or > ~800 m D+ on an out-and-back where you descend what you climb** — gets a **~1.5× recovery weighting**: schedule it like a hard/long day even if HR stayed easy. The damage is **eccentric (downhill)**, so it's _descent_ metres that count — a big climb with a gentle descent is far easier on the legs than a big technical descent. The 800 m / 1.5× figures are coaching heuristics; raise the weighting for masters and heavier runners, who take more eccentric load and recover slower.
+
+**The legs gate this, not the watch.** Eccentric descent damage shows up in the legs (and in next-day session quality) before it shows in HRV or training readiness, so the objective scores _understate_ it. Gate on the legs — but first tell soreness from injury:
+
+- **Diffuse, bilateral muscle soreness that's improving** = ordinary DOMS. Gate only the demanding work: **legs ≤ 2/5 → no big-vert session, no technical descents** (easy aerobic is fine). See `assessment.md` and `adaptive.md`.
+- **Sharp, localized, or worsening pain** — a specific tender spot on bone or tendon, pain that worsens _through_ a run, or pain at rest/at night — is **not** soreness. Don't gate-and-train-around it; stop and assess (red flags below).
+
+> **With Garmin connected**, `get_hill_score` and `get_endurance_score` track climbing-specific and durability fitness over time — use them to confirm the D+ axis is building _fitness_, not just fatigue. But trust the legs over HRV/readiness for descent damage: the watch lags it.
+
+### Pain, red flags & when to stop
+
+DOMS is expected in a vert build; injury is not. Treat these as **stop-and-assess**, not train-through:
+
+- **Bone:** focal, pinpoint pain on a bone (shin, foot, femoral neck/groin, pelvis), pain that _worsens_ as a run goes on, or pain at rest/at night → suspect a **bone stress injury**; stop running and get it assessed. Rapid load increase is the consensus driver.
+- **Tendon:** sharp localized tendon pain persisting > 24 h after loading, or warmth/swelling → reduce load, don't push through.
+- **Energy availability:** persistent fatigue, stalled progress, frequent niggles, poor sleep/mood, or sustained under-fuelling → screen for **low energy availability / RED-S**, which itself drives bone stress injury. The 3–4 g/kg recovery-day carb floor (see `race-day.md`) is for _easy_ days only — don't let heavy weeks run an energy deficit.
+
+When in doubt, refer to a sports physician/physio. A subjective soreness score will not catch a developing stress fracture.
 
 ## Recovery Monitoring
 

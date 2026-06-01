@@ -175,6 +175,36 @@ Great for teaching pace discipline and finishing strong
 | Ultra (50K)   | 35-45km or 4-5hr | Every 2-3 weeks | Time-based, practice nutrition   |
 | Ultra (100K+) | 50-60km or 5-6hr | Monthly         | Back-to-back long runs work well |
 
+### Trail / Ultra Sessions
+
+Trail adds vertical gain and technical descent that road sessions don't train. Use these alongside the table above, and pace them by **effort and grade**, not a target pace — HR lags on climbs and runs low on descents (see `race-day.md`). How _much_ trail work to prescribe is governed by EFD and the two-axis (EFD + D+) load model in `load-management.md`.
+
+| Session Type             | Structure                                                                           | Zone/Effort        | When to Use                                                |
+| ------------------------ | ----------------------------------------------------------------------------------- | ------------------ | ---------------------------------------------------------- |
+| Uphill / vert intervals  | 4-6 × 3-5min hard climb, jog/walk-down recovery                                     | Z4-5               | Build-Vert; climbing power + lactate                       |
+| Trail fartlek            | Effort by terrain: surge climbs, float flats, ride descents                         | Varies             | Build; teaches grade-aware pacing                          |
+| Stacked-climb long run   | Repeat one climb to bank race-level D+ at easy effort                               | Z2                 | Vert specificity without a P2P route                       |
+| Downhill repeats         | 4-8 × 1-3min controlled-fast descent, easy back up                                  | Z3-4 legs, easy HR | Eccentric / quad conditioning (below)                      |
+| Power-hike intervals     | 4-6 × 3-5min steep hands-on-quads hike                                              | Z3-4               | Train the run/hike transition (below)                      |
+| Technical descent skills | Controlled reps on progressively rougher ground; quick cadence, eyes ahead, relaxed | Easy-moderate      | Falls & quad failure happen _here_, not on smooth descents |
+| Back-to-back weekend     | Long day + 50-70% second long day on tired legs                                     | Z2                 | Fatigue resistance; Specificity phase                      |
+
+**Downhill repeats / quad conditioning** — 4–8 × 1–3 min of _controlled-fast_ descent on a moderate, non-technical grade, walking or easy-jogging back up. **Progress gradually and in order: reps first (start at 2–3, add 1–2/week), then grade and speed** — never jump grade and volume together. Keep hard downhill sessions **≥48–72 h apart and to ~1–2/week**, and bank an easy low-stakes downhill _primer_ in Base before the first real session (the first eccentric exposure does the most damage — get it over with early and gentle; see `periodization.md`). This is the single best insurance against quads blowing up on a long race descent, and it's the session most road-style trail plans omit. Eccentric load is real load: count a hard downhill set toward the day's stress and respect the legs gate (legs ≤ 2/5 → skip it; see `load-management.md`). Note this trains the _conditioning_; the **technical descent skills** session above (rougher ground, line choice, foot speed) is a separate skill — don't fold the two together.
+
+**Power-hike by grade** — treat the run-to-hike transition as a _skill_, not a failure. Rule of thumb: **run grades < ~12%**, **power-hike (hands on quads) grades > ~15–20%**, gray zone between by economy. Note _why_ you hike at 15–20%: it's a **pacing/durability** choice, not because hiking is metabolically cheaper there — for most trained runners walking only becomes truly more economical than running at much steeper grades (~25–30%+). On a long climb you hike sooner to spare the legs and hold effort. Practised, power-hiking a steep wall is faster and far cheaper on the legs than grinding a run up it — rehearse it so it's automatic on race day.
+
+### No mountains / limited time
+
+Most athletes training for a hilly race don't live in the hills. You can build the climb fitness on flat ground; the harder gap to close is **descent durability**, because a treadmill won't go downhill. Plan for both:
+
+| Need               | Flat-terrain substitute                                                                                                                                                                                              |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Climbing / vert    | **Treadmill incline** (uphill intervals, stacked-climb time-on-feet); most cap at 12–15%, so add **hands-on-rail power-hiking** to train steeper walls. Trains the climb + aerobic cost — **not** the descent.       |
+| Descent durability | **Eccentric strength** (Layer 2 below) is the floor. Add any _repeatable_ descent: parking garages, stadium ramps, highway overpasses, levees, dunes, **stairwells** (run/walk down, elevator or easy walk back up). |
+| Vert specificity   | **Single-hill repeats** — one short rise (even 30–90 s) lapped to bank D+ and downhill reps when that's all you have.                                                                                                |
+
+**If time is tight, prioritise in this order:** (1) one long run with vert/EFD, (2) a downhill/eccentric stimulus (run _or_ strength), (3) one quality climb session, (4) heavy strength 1×. Drop from the bottom up. And set EFD `k` and the D+ entry tier to the terrain you can _actually_ train on, not the race profile (see `load-management.md`, `periodization.md`).
+
 ---
 
 ## Strength Training
@@ -222,6 +252,33 @@ Circuit 2 (3 rounds):
   - Plank x 45s
 Cool-down: 5min stretching
 ```
+
+### Trail / Ultra Strength (Durability)
+
+Two jobs: **maximal strength** (the best-evidenced lever for running economy _and_ durability — and the layer most trail plans omit) and **descending durability** (eccentric tolerance so the quads survive hours of braking). Do 1–2 sessions/week, schedule away from key runs (6+ h apart or separate days), and taper to maintenance in race week. Within a session and across the block, progress **load → reps → tempo**, in that order.
+
+**Layer 1 — Heavy / maximal strength** (base→build; highest yield):
+
+| Lift                           | Dose                        | Why                                     |
+| ------------------------------ | --------------------------- | --------------------------------------- |
+| Squat / split squat / step-up  | 3–5 × 3–6 @ heavy (RPE 7–8) | Economy, climbing power, force          |
+| Deadlift / single-leg RDL      | 3–4 × 4–6                   | Posterior chain, climbing, hamstring    |
+| Hip thrust / single-leg bridge | 3 × 6–10                    | Glute power for climbs + pelvic control |
+
+Heavy = low reps, full recovery, good form — _not_ lifting to failure. Build this base before adding plyometrics.
+
+**Layer 2 — Eccentric & durability-specific** (build→specificity; complements the downhill-repeat _runs_ above):
+
+| Focus           | Exercises & dose                                                            | Why                                                                                                            |
+| --------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Eccentric quad  | Slow (3–4 s lowering) single-leg squats / decline step-downs, 3 × 6–10/leg  | Braking tolerance; #1 quad-blowup defense                                                                      |
+| Calf / Achilles | Calf raises (rise up, **slow 3–4 s down**), 3 × 12–15 single-leg off a step | Push-off on **climbs** _and_ landing on descents — the calf is loaded most while climbing, not just descending |
+| Hip / glute     | Banded lateral walks, side-lying abduction, monster walks, 2–3 × 10–15      | Controls pelvic drop & knee valgus on descents — a key injury defense                                          |
+| Ankle stability | Single-leg balance, wobble-board / BOSU, 2–3 × 30–45 s                      | Ankle proprioception on technical ground                                                                       |
+
+**Layer 3 — Plyometric / reactive** (build→specificity, _after_ a strength base; skip for true beginners): low-dose hops, pogos, low box jumps, 2–3 × 6–10 — builds tendon stiffness for both climbing push-off and descent absorption.
+
+**Eccentric tempo is the active ingredient** in Layer 2 — the slow lowering is what builds braking tolerance; rushing the reps trains the wrong thing. Combined concentric-eccentric loading (Silbernagel-style) is as effective as pure-eccentric for tendons and easier to stick with. **Older athletes** take more eccentric damage and recover slower — space eccentric work more generously and don't stack it the day before a long run. Back everything off to maintenance (2 sets, light) in race week.
 
 ### Timing Considerations
 
