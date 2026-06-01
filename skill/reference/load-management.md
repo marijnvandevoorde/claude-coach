@@ -22,6 +22,8 @@ If Garmin Connect is available (`mcp__garmin__*` tools — see `garmin.md`), **u
 
 The manual TSS math below remains the model for **Strava-only / manual** athletes and for understanding what the Garmin numbers represent.
 
+> **Caveat on load ratios.** CTL/ATL/TSB and acute:chronic-style workload ratios are *monitoring aids*, not validated injury predictors — recent work disputes the acute:chronic workload ratio as a causal or predictive tool. Use them to watch direction and flag spikes, but weight subjective signals and the legs gate (see the trail-load section) at least as heavily; never let a green ratio override sore or painful legs.
+
 ## Training Stress Score (TSS)
 
 TSS measures the physiological cost of a workout. For cycling with power:
@@ -135,26 +137,30 @@ EFD_km = distance_km + (D+_m / 100) × k        # k in km per 100 m of vert
 default k = 1.0   (100 m of climb ≈ 1 flat km — the classic heuristic)
 ```
 
-`k` is a **tunable heuristic, not physics** — adjust it to the terrain:
+`k` is a **tunable coaching heuristic, not physics.** Use **k = 1.0 by default and leave it there** unless you have a specific reason not to — for most athletes one consistent number is all EFD needs to do its job (stop under-counting vert).
 
-| Terrain                      | Suggested k | Rationale                          |
-| ---------------------------- | ----------- | ---------------------------------- |
-| Steep / technical vert       | 1.3 – 1.5   | Costs more per metre climbed       |
-| Default mixed mountain trail | 1.0         | The standard heuristic             |
-| Very runnable, gradual vert  | 0.7 – 0.9   | Cheaper than the heuristic implies |
+> **Reality check on grade cost.** Per *vertical* metre, climbing is actually *cheapest* on steep grades and *most expensive* on gentle ones — a shallow grade makes you cover far more horizontal ground per metre of gain (Minetti 2002; vertical-kilometre running-economy work). So a higher `k` is **not** justified by "steep vert costs more per metre" — it doesn't. Only raise `k` as a **musculoskeletal / technical surcharge**: rough, technical, or descent-heavy terrain beats up the legs and slows you for reasons that aren't aerobic cost.
+
+| Tune k…                           | Suggested k | Why                                                         |
+| --------------------------------- | ----------- | ----------------------------------------------------------- |
+| Technical / rough / descent-heavy | 1.1 – 1.2   | Skill + musculoskeletal surcharge, not extra metabolic cost |
+| Default — most trail              | 1.0         | The standard heuristic; start, and usually stay, here       |
+| Smooth, very runnable, gradual    | 0.8 – 0.9   | Buttery terrain runs closer to its flat distance            |
 
 **Worked example:** a 10 km run with 1000 m D+ → `10 + (1000/100)×1.0 = 20 km EFD`. The same 10 km on the flat stays 10 km EFD. Treating the two as equal raw km is the mistake EFD fixes.
 
 **When to use it:** switch the volume currency from raw km to EFD for any athlete logging **> ~400 m D+/week**. Below that, raw km is fine and EFD only adds noise. D+ (total elevation gain) comes from the activity — Strava's `total_elevation_gain`, or Garmin activity detail.
 
-### Two axes: ramp EFD and D+ independently
+**Limitation — EFD counts only the climb.** It says nothing about the **eccentric cost of descending**, which is where trail legs actually blow up. A net-downhill or descent-heavy race can be far harder on the quads than its EFD or D+ suggests. EFD is a *volume* currency; manage descent damage separately through the D+ axis, the big-descent recovery weighting, and downhill-specific training (below). (For a grade-sensitive *pace* currency, Strava/Garmin's GAP is the complement — don't conflate the two.)
 
-EFD collapses distance and climb into one number, which is right for *volume* but hides *musculoskeletal* load: two athletes at equal EFD can carry very different leg damage depending on how much of it was vert. So track **two axes and cap each at ≤10%/week**:
+### Two axes: aerobic load (EFD) and musculoskeletal load (D+)
 
-1. **Weekly EFD (km)** — the aerobic / volume currency defined above.
-2. **Weekly D+ (m)** — the climbing-and-descending load on its own.
+EFD collapses distance and climb into one number, which is right for *volume* but hides *musculoskeletal* load: two athletes at equal EFD can carry very different leg damage depending on how much of it was vert. So watch **two axes**:
 
-You can blow an athlete up on vert while flat distance barely moves; ramping only EFD would miss it. Recovery weeks deload **both** axes.
+1. **Weekly EFD (km)** — the **aerobic** / volume currency defined above.
+2. **Weekly D+ (m)** — the **musculoskeletal** (climbing/descending) load on its own.
+
+These aren't independent — D+ is *inside* EFD, so a vert spike inflates both at once. That's the point: D+ is the **primary musculoskeletal axis** and EFD the **aerobic axis**, and watching D+ separately catches a vert blow-up that flat-km would miss. Cap each (guidance below), and deload **both** on recovery weeks.
 
 | D+ tier  | Weekly D+ (m) | Use                                |
 | -------- | ------------- | ---------------------------------- |
@@ -164,9 +170,33 @@ You can blow an athlete up on vert while flat distance barely moves; ramping onl
 | Mountain | 1500 – 3000   | Mountain / ultra build             |
 | Alpine   | > 3000        | Big alpine / vert-heavy ultra peak |
 
-**Big-vert recovery multiplier:** any single session with **> 800 m D+** gets a **1.5× recovery weighting** — schedule it like a hard/long day even if HR stayed easy. Eccentric descent damage shows up in the legs (and in next-day session quality) more than in HRV or training readiness, so the objective scores *understate* the cost. This ties to the legs-soreness gate: **legs ≤ 2/5 → no big-vert session and no technical descents** (see `assessment.md` and `adaptive.md`).
+**How fast to ramp — a prudent ceiling, not a validated threshold.** The ≤10%/week guide is sensible but *not* strongly evidenced (cohort/RCT work hasn't shown a 10% cap prevents injury). The better-supported rule is to **avoid spiking any single long session well beyond the recent longest** — which is exactly why the long-run anchor below is scaled to race EFD. Apply both, and scale the cap to the athlete:
 
-> **With Garmin connected**, `get_hill_score` and `get_endurance_score` track climbing-specific and durability fitness over time — use them to confirm the D+ axis is building *fitness*, not just fatigue. But trust the legs-soreness gate over HRV/readiness for descent damage: the watch lags it.
+| Athlete                                     | D+ / EFD ramp guidance                                                                                              |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Trained, consistent vert history            | ≤ ~10–15%/wk on each axis                                                                                            |
+| Beginner / returning from injury / masters  | ≤ 5–8%/wk on **D+**; hold a newly-introduced axis flat 1–2 wk, and establish EFD before ramping D+                  |
+
+Bone and tendon adapt *slower* than muscle and the cardiovascular system, so the **D+ (impact/eccentric) axis is the one to hold back** for these groups — readiness/HRV will look fine while connective tissue is still behind.
+
+**Big-descent recovery weighting (rule of thumb, not a measured constant):** any session with a big *descent* load — **> ~800 m of descent (D−), or > ~800 m D+ on an out-and-back where you descend what you climb** — gets a **~1.5× recovery weighting**: schedule it like a hard/long day even if HR stayed easy. The damage is **eccentric (downhill)**, so it's *descent* metres that count — a big climb with a gentle descent is far easier on the legs than a big technical descent. The 800 m / 1.5× figures are coaching heuristics; raise the weighting for masters and heavier runners, who take more eccentric load and recover slower.
+
+**The legs gate this, not the watch.** Eccentric descent damage shows up in the legs (and in next-day session quality) before it shows in HRV or training readiness, so the objective scores *understate* it. Gate on the legs — but first tell soreness from injury:
+
+- **Diffuse, bilateral muscle soreness that's improving** = ordinary DOMS. Gate only the demanding work: **legs ≤ 2/5 → no big-vert session, no technical descents** (easy aerobic is fine). See `assessment.md` and `adaptive.md`.
+- **Sharp, localized, or worsening pain** — a specific tender spot on bone or tendon, pain that worsens *through* a run, or pain at rest/at night — is **not** soreness. Don't gate-and-train-around it; stop and assess (red flags below).
+
+> **With Garmin connected**, `get_hill_score` and `get_endurance_score` track climbing-specific and durability fitness over time — use them to confirm the D+ axis is building *fitness*, not just fatigue. But trust the legs over HRV/readiness for descent damage: the watch lags it.
+
+### Pain, red flags & when to stop
+
+DOMS is expected in a vert build; injury is not. Treat these as **stop-and-assess**, not train-through:
+
+- **Bone:** focal, pinpoint pain on a bone (shin, foot, femoral neck/groin, pelvis), pain that *worsens* as a run goes on, or pain at rest/at night → suspect a **bone stress injury**; stop running and get it assessed. Rapid load increase is the consensus driver.
+- **Tendon:** sharp localized tendon pain persisting > 24 h after loading, or warmth/swelling → reduce load, don't push through.
+- **Energy availability:** persistent fatigue, stalled progress, frequent niggles, poor sleep/mood, or sustained under-fuelling → screen for **low energy availability / RED-S**, which itself drives bone stress injury. The 3–4 g/kg recovery-day carb floor (see `race-day.md`) is for *easy* days only — don't let heavy weeks run an energy deficit.
+
+When in doubt, refer to a sports physician/physio. A subjective soreness score will not catch a developing stress fracture.
 
 ## Recovery Monitoring
 
