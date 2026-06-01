@@ -79,6 +79,11 @@ interface ExportCalendarArgs {
   json: boolean;
 }
 
+interface ExportGarminArgs {
+  command: "export-garmin";
+  inputFile: string;
+}
+
 interface QueryArgs {
   command: "query";
   sql: string;
@@ -133,6 +138,7 @@ type CliArgs =
   | SyncArgs
   | RenderArgs
   | ExportCalendarArgs
+  | ExportGarminArgs
   | QueryArgs
   | AuthArgs
   | HelpArgs
@@ -238,6 +244,14 @@ function parseArgs(): CliArgs {
     return calArgs;
   }
 
+  if (args[0] === "export-garmin") {
+    if (!args[1]) {
+      log.error("export-garmin requires a plan JSON file");
+      process.exit(1);
+    }
+    return { command: "export-garmin", inputFile: args[1] };
+  }
+
   if (args[0] === "query") {
     if (!args[1]) {
       log.error("query command requires a SQL statement");
@@ -324,6 +338,7 @@ Commands:
   auth              Get Strava authorization URL or exchange code for tokens
   render <file>     Render a training plan JSON to HTML
   export-calendar <file>  Plan → .ics (or --json events to push to Google Calendar)
+  export-garmin <file>    Plan → structured workouts JSON (to create + schedule on Garmin)
   query <sql>       Run a SQL query against the database
   log <type> <val>  Log wellness/intake (water|sleep|energy|soreness|mood|weight)
   wellness          Show today's hydration + wellness snapshot
@@ -370,6 +385,9 @@ Examples:
   # Export a plan to calendar (.ics to import, or --json to push via the Google Calendar MCP)
   npx claude-coach export-calendar plan.json
   npx claude-coach export-calendar plan.json --json
+
+  # Export structured workouts to create + schedule on Garmin (syncs to your watch)
+  npx claude-coach export-garmin plan.json
 
   # Query the database
   npx claude-coach query "SELECT * FROM weekly_volume LIMIT 5"
@@ -776,6 +794,63 @@ function runExportCalendar(args: ExportCalendarArgs): void {
   log.info(
     "Import this .ics into your calendar, or ask Claude to push them to your linked Google Calendar."
   );
+}
+
+interface GarminWorkoutExport {
+  date: string;
+  sport: string;
+  type: string;
+  name: string;
+  durationMinutes?: number;
+  distanceMeters?: number;
+  primaryZone?: string;
+  targetHR?: { low: number; high: number };
+  targetPace?: { low: string; high: string };
+  targetPower?: { low: number; high: number };
+  rpe?: number;
+  structure?: unknown;
+  humanReadable?: string;
+}
+
+/** Normalize a plan into per-workout records an agent can feed to the Garmin workout builders. */
+function planToGarminWorkouts(plan: TrainingPlan): GarminWorkoutExport[] {
+  const out: GarminWorkoutExport[] = [];
+  for (const week of plan.weeks ?? []) {
+    for (const day of week.days ?? []) {
+      for (const w of day.workouts ?? []) {
+        if (w.sport === "rest") continue;
+        out.push({
+          date: day.date,
+          sport: w.sport,
+          type: w.type,
+          name: w.name,
+          durationMinutes: w.durationMinutes,
+          distanceMeters: w.distanceMeters,
+          primaryZone: w.primaryZone,
+          targetHR: w.targetHR,
+          targetPace: w.targetPace,
+          targetPower: w.targetPower,
+          rpe: w.rpe,
+          structure: w.structure,
+          humanReadable: w.humanReadable,
+        });
+      }
+    }
+  }
+  return out;
+}
+
+function runExportGarmin(args: ExportGarminArgs): void {
+  let plan: TrainingPlan;
+  try {
+    plan = JSON.parse(readFileSync(args.inputFile, "utf-8"));
+  } catch {
+    log.error(`Could not read/parse plan JSON: ${args.inputFile}`);
+    process.exit(1);
+  }
+  // A structured workout feed for an agent to create + schedule on Garmin Connect
+  // (via the garmin MCP), which then syncs scheduled workouts to the watch.
+  console.log(JSON.stringify(planToGarminWorkouts(plan), null, 2));
 }
 
 function runRender(args: RenderArgs): void {
@@ -1408,6 +1483,9 @@ async function main() {
       break;
     case "export-calendar":
       runExportCalendar(args);
+      break;
+    case "export-garmin":
+      runExportGarmin(args);
       break;
     case "query":
       await runQuery(args);
