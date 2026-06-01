@@ -22,6 +22,8 @@ import {
   localDate,
   type PrefsPatch,
   type WellnessPatch,
+  type WellnessRow,
+  type ReminderPrefs,
 } from "./db/wellness.js";
 import { resolveNotify, sendNotification } from "./lib/notify.js";
 import { getValidTokens } from "./strava/oauth.js";
@@ -338,6 +340,10 @@ Examples:
 
   # Daily check-in (agent passes Garmin signals fetched via the garmin MCP)
   npx claude-coach checkin --plan=my-plan.json --readiness=78 --sleep-hours=7.5 --json
+
+  # Send due reminders as push notifications (for cron); --only filters types
+  npx claude-coach checkin --notify
+  npx claude-coach checkin --notify --only=hydration
 `);
 }
 
@@ -987,6 +993,47 @@ interface Reminder {
   message: string;
 }
 
+/**
+ * Send due, non-suppressed reminders as push notifications, with per-type
+ * dedup so a cron schedule doesn't spam: hydration respects water_cadence_minutes,
+ * bedtime fires at most once per local day. `only` (if set) restricts which
+ * reminder types are delivered (e.g. just "hydration" for an hourly job).
+ */
+async function deliverReminders(
+  date: string,
+  prefs: ReminderPrefs,
+  wellness: WellnessRow | null,
+  reminders: Reminder[],
+  only: Set<string> | null
+): Promise<void> {
+  if (prefs.reminders_enabled !== 1) return;
+  const nowIso = new Date().toISOString();
+  const cadenceMs = (prefs.water_cadence_minutes || 60) * 60_000;
+  const resolved = resolveNotify({
+    channel: process.env.COACH_NOTIFY_CHANNEL ?? prefs.notify_channel,
+    webhookUrl: process.env.COACH_NOTIFY_WEBHOOK_URL ?? prefs.notify_webhook_url,
+  });
+  const patch: WellnessPatch = {};
+  for (const rem of reminders) {
+    if (rem.suppressed) continue;
+    if (only && !only.has(rem.type)) continue;
+    if (rem.type === "hydration") {
+      const last = wellness?.last_water_reminder_at;
+      if (last && Date.now() - Date.parse(last) < cadenceMs) continue;
+      patch.last_water_reminder_at = nowIso;
+    } else if (rem.type === "bedtime") {
+      const last = wellness?.last_bedtime_reminder_at;
+      if (last && new Date(last).toDateString() === new Date().toDateString()) continue;
+      patch.last_bedtime_reminder_at = nowIso;
+    }
+    const label =
+      rem.type === "bedtime" ? "Bedtime" : rem.type === "hydration" ? "Hydration" : "Recovery";
+    const res = await sendNotification(rem.message, `Claude Coach — ${label}`, resolved);
+    if (!res.ok) log.warn(`notify (${rem.type}) failed: ${res.detail}`);
+  }
+  if (Object.keys(patch).length > 0) upsertWellness(date, patch);
+}
+
 async function runCheckin(args: CheckinArgs): Promise<void> {
   await ensureDb();
   const date = flagStr(args.flags, "date") ?? localDate();
@@ -1119,6 +1166,12 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
     },
     reminders,
   };
+
+  if (args.flags["notify"]) {
+    const onlyStr = flagStr(args.flags, "only");
+    const only = onlyStr ? new Set(onlyStr.split(",").map((s) => s.trim())) : null;
+    await deliverReminders(date, prefs, wellness, reminders, only);
+  }
 
   if (args.flags["json"]) {
     console.log(JSON.stringify(payload, null, 2));
