@@ -1174,19 +1174,19 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
   // 4. Bedtime (intentionally ignores quiet hours — it IS the wind-down signal)
   if (enabled && parseHHMM(prefs.bedtime_target) != null) {
     const toBed = bed - nowMin;
-    if (toBed <= 60 && toBed > 0) {
+    if (toBed >= 0 && toBed <= 90) {
       reminders.push({
         type: "bedtime",
         priority: "normal",
         suppressed: false,
-        message: `Start winding down — bedtime target ${prefs.bedtime_target} is in ${toBed} min.`,
+        message: `Winding down soon — bedtime target ${prefs.bedtime_target} is in ${toBed} min. Have some water before bed. 💧`,
       });
-    } else if (toBed <= 0 && toBed > -180) {
+    } else if (toBed < 0 && toBed > -180) {
       reminders.push({
         type: "bedtime",
         priority: "high",
         suppressed: false,
-        message: `You're ${-toBed} min past your ${prefs.bedtime_target} bedtime target — time to sleep.`,
+        message: `You're ${-toBed} min past your ${prefs.bedtime_target} bedtime target — time to wrap up and sleep (hydrate first). 💧`,
       });
     }
   }

@@ -84,3 +84,15 @@ The plain cron job uses whatever Garmin data is **cached** in `coach.db`. To mak
 > Then tell me in one line how I slept and whether to adjust today's session.
 
 This caches the fresh Garmin snapshot into `coach.db` (so later cron runs see it) **and** pushes the recovery-aware reminder. If you can't run an agent, the cron job still handles hydration and bedtime perfectly from local data.
+
+## Reminder design (framing)
+
+The cadence and tone borrow from [`ClutchEngineering/coach-claude`](https://github.com/ClutchEngineering/coach-claude): brief, non-nagging nudges, not lectures.
+
+- **Don't nag.** Each reminder type self-dedups — hydration only re-fires after `water_cadence_minutes` (default **60**), bedtime at most **once per local night**. Running a job more often than needed is harmless.
+- **Pace, not panic.** Hydration nudges only when you're meaningfully behind the day's pro-rated goal (≥250 ml), so you're not pinged when you're on track.
+- **Hydrate before bed.** The bedtime nudge (fires within ~90 min of your target) reminds you to drink water before winding down.
+- **Respect the day.** Quiet hours suppress non-bedtime nudges; reminders honor your `--enable`/`--disable` switch.
+- **Load-aware.** The hydration goal grows with the day's training (`+hydration_per_active_hour_ml` per training hour).
+
+> Movement/stretch nudges during an active coding session are a separate, in-session feature (a later sprint), not part of this cron backbone.
