@@ -6,6 +6,8 @@ The output is a beautiful training plan app that allows you to add, edit, or mov
 
 Workouts can be exported as simple calendar events (.ics), Zwift (.zwo), Garmin (.fit), or TrainerRoad/ERG (.mrc) workouts.
 
+Connect **Garmin Connect** and Claude uses your real recovery and readiness data — sleep, HRV, body battery, training readiness, and training load (CTL/ATL/TSB) — to tailor each day's intensity, not just build a static plan. It can also send **proactive wellness reminders** (hydration, bedtime wind-down, recovery-aware morning check-ins) to your phone. See [Push notifications](#push-notifications-optional) and [`REMINDERS.md`](REMINDERS.md).
+
 ## Examples
 
 See example training plans at [felixrieseberg.github.io/claude-coach](https://felixrieseberg.github.io/claude-coach/#demos).
