@@ -73,6 +73,19 @@ _Exceeding these early will result in catastrophic fade later._
 
 ---
 
+## Trail / Ultra Pacing & Execution
+
+Rolling, vert-heavy terrain breaks the assumptions behind even-pace and fixed-HR pacing. Pace **by effort and grade**, not by a target pace or HR alone:
+
+- **HR misleads on grade.** HR *lags* on punchy climbs (it spikes after you crest, not during) and runs *low* on descents. The Ultra (50K+) **75–80% LTHR** ceiling above still holds, but read it across whole climb/descent cycles — not minute-to-minute.
+- **Power-hike vs run by grade.** Run grades < ~12%, power-hike (hands on quads) grades > ~18%, gray zone by economy — and **train the transition** before taper, not on race day (see `workouts.md`).
+- **Descend conservatively early.** Early-descent quad debt is the trail equivalent of going out too fast on the road; the bill comes due on the final descents. Run light and braked, don't hammer downhills in the first third.
+- **Budget time by climb / descent / flat splits**, not even pace. A flat-pace projection on a course with 1500 m D+ will be wildly optimistic on the climbs and meaningless overall.
+- **Aid-station execution:** walk-and-eat on climbs and flats, never on technical descents (eating steals focus exactly where a fall is most likely).
+- **Poles:** decide whether to use them and **train with them** before taper — race day is not the time to discover they change your fueling rhythm and HR.
+
+---
+
 ## Race Nutrition Strategy
 
 ### Carbohydrate Intake Guidelines
