@@ -14,12 +14,14 @@ import { migrate } from "./db/migrate.js";
 import { execute, initDatabase, query, queryJson } from "./db/client.js";
 import {
   getPrefs,
+  updatePrefs,
   logHydration,
   hydrationTotal,
   getWellness,
   upsertWellness,
   localDate,
   type WellnessPatch,
+  type PrefsPatch,
 } from "./db/wellness.js";
 import { getValidTokens } from "./strava/oauth.js";
 import { getAllActivities, getAthlete } from "./strava/api.js";
@@ -88,12 +90,25 @@ interface LogArgs {
   flags: Flags;
 }
 
+interface ConfigArgs {
+  command: "config";
+  flags: Flags;
+}
+
 interface WellnessArgs {
   command: "wellness";
   flags: Flags;
 }
 
-type CliArgs = SyncArgs | RenderArgs | QueryArgs | AuthArgs | HelpArgs | LogArgs | WellnessArgs;
+type CliArgs =
+  | SyncArgs
+  | RenderArgs
+  | QueryArgs
+  | AuthArgs
+  | HelpArgs
+  | LogArgs
+  | ConfigArgs
+  | WellnessArgs;
 
 type Flags = Record<string, string | boolean>;
 
@@ -215,6 +230,10 @@ function parseArgs(): CliArgs {
     };
   }
 
+  if (args[0] === "config") {
+    return { command: "config", flags: parseFlags(args.slice(1)) };
+  }
+
   if (args[0] === "wellness" || args[0] === "today") {
     return { command: "wellness", flags: parseFlags(args.slice(1)) };
   }
@@ -240,6 +259,7 @@ Commands:
   query <sql>       Run a SQL query against the database
   log <type> <val>  Log wellness/intake (water|sleep|energy|soreness|mood|weight)
   wellness          Show today's hydration + wellness snapshot
+  config            Show/set reminder preferences (bedtime, water goal, quiet hours)
   help              Show this help message
 
 Auth Options (for headless/Claude environments):
@@ -283,6 +303,9 @@ Examples:
   npx claude-coach log water 500
   npx claude-coach log sleep 7.5 --score=82
   npx claude-coach log energy 4
+
+  # Set reminder preferences
+  npx claude-coach config --bedtime=22:30 --water-goal=3000 --quiet-start=22:00 --quiet-end=07:00 --enable
 `);
 }
 
@@ -664,13 +687,23 @@ async function runQuery(args: QueryArgs): Promise<void> {
 }
 
 // ============================================================================
-// Wellness CLI: log / wellness
+// Wellness CLI: log / config / wellness
 // ============================================================================
 
 /** Open the DB and ensure the (idempotent) schema, quietly. */
 async function ensureDb(): Promise<void> {
   await initDatabase();
   migrate(true);
+}
+
+function parseHHMM(value: string | null | undefined): number | null {
+  if (!value) return null;
+  const m = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (h > 23 || min > 59) return null;
+  return h * 60 + min;
 }
 
 function clampScale(value: number, label: string): number {
@@ -747,6 +780,62 @@ async function runLog(args: LogArgs): Promise<void> {
   }
 }
 
+async function runConfig(args: ConfigArgs): Promise<void> {
+  await ensureDb();
+
+  const patch: PrefsPatch = {};
+  const setTime = (flag: string, col: keyof PrefsPatch) => {
+    const v = flagStr(args.flags, flag);
+    if (v === undefined) return;
+    if (parseHHMM(v) === null) {
+      log.error(`--${flag} must be HH:MM (24h), got '${v}'`);
+      process.exit(1);
+    }
+    (patch as Record<string, unknown>)[col] = v;
+  };
+
+  setTime("bedtime", "bedtime_target");
+  setTime("wake", "wake_target");
+  setTime("quiet-start", "quiet_hours_start");
+  setTime("quiet-end", "quiet_hours_end");
+
+  const waterGoal = flagNum(args.flags, "water-goal");
+  if (waterGoal !== undefined) patch.hydration_goal_ml = Math.round(waterGoal);
+  const cadence = flagNum(args.flags, "cadence");
+  if (cadence !== undefined) patch.water_cadence_minutes = Math.round(cadence);
+  const tz = flagStr(args.flags, "timezone");
+  if (tz !== undefined) patch.timezone = tz;
+  if (args.flags["enable"]) patch.reminders_enabled = 1;
+  if (args.flags["disable"]) patch.reminders_enabled = 0;
+
+  if (Object.keys(patch).length > 0) {
+    updatePrefs(patch);
+  }
+
+  const prefs = getPrefs();
+  if (args.flags["json"]) {
+    console.log(JSON.stringify(prefs, null, 2));
+    return;
+  }
+  log.box(
+    [
+      "Reminder preferences",
+      `  Reminders:     ${prefs.reminders_enabled ? "enabled" : "disabled"}`,
+      `  Bedtime:       ${prefs.bedtime_target ?? "—"}`,
+      `  Wake:          ${prefs.wake_target ?? "—"}`,
+      `  Water goal:    ${prefs.hydration_goal_ml} ml/day`,
+      `  Water cadence: every ${prefs.water_cadence_minutes} min`,
+      `  Quiet hours:   ${prefs.quiet_hours_start ?? "—"}–${prefs.quiet_hours_end ?? "—"}`,
+      `  Timezone:      ${prefs.timezone ?? "(host default)"}`,
+    ].join("\n")
+  );
+  if (Object.keys(patch).length === 0) {
+    log.info(
+      "Update with flags, e.g. --bedtime=22:30 --water-goal=3000 --quiet-start=22:00 --quiet-end=07:00 --enable"
+    );
+  }
+}
+
 async function runWellness(args: WellnessArgs): Promise<void> {
   await ensureDb();
   const date = flagStr(args.flags, "date") ?? localDate();
@@ -806,6 +895,9 @@ async function main() {
       break;
     case "log":
       await runLog(args);
+      break;
+    case "config":
+      await runConfig(args);
       break;
     case "wellness":
       await runWellness(args);
