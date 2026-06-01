@@ -96,7 +96,7 @@ For a trail or ultra goal, distance alone under-describes both the athlete and t
 | Race D+                          | Current weekly D+ & longest D+ day    | Big gap → vert is the limiter; ramp the D+ axis         |
 | Race's longest sustained descent | Longest descent trained without DOMS  | Gap → prioritise downhill repeats early (`workouts.md`) |
 
-**Garmin signals** (see `garmin.md`): `get_hill_score` and `get_endurance_score` verify that climbing-specific and durability fitness are actually building through the block; `get_vo2max_trend` / `get_training_status` VO₂max remain the aerobic anchor. **Durability readiness gate:** legs ≤ 2/5 → no demanding D+ session and no technical descents — eccentric damage shows in the legs before it shows in HRV or training readiness, so the legs win that tie (see `adaptive.md`).
+**Garmin signals** (see `garmin.md`): `get_hill_score` and `get_endurance_score` verify that climbing-specific and durability fitness are actually building through the block; `get_vo2max_trend` / `get_training_status` VO₂max remain the aerobic anchor. **Durability readiness gate:** when the legs carry **diffuse, improving soreness ≤ 2/5**, skip demanding D+ sessions and technical descents — eccentric damage shows in the legs before HRV or training readiness, so the legs win that tie (see `adaptive.md`). But first tell soreness from injury: **sharp, localized, or worsening pain — especially focal bone or tendon pain, or pain at rest/night — is not a gate-and-train-around-it signal; stop and assess** (see the pain-vs-soreness rule and red flags in `load-management.md`).
 
 ---
 
