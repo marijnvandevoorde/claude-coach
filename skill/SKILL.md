@@ -670,3 +670,9 @@ When the athlete mentions wellness or intake in passing, capture it with the `lo
 | "weighed in at 72.5"                       | `coach log weight 72.5`                               |
 
 Confirm briefly ("logged 💧") rather than interrogating — estimate sensible values when they're vague, and only ask back if it actually changes a decision. For "did my run / finished the session," acknowledge it and mark it complete in the plan if you're tracking one; the activity's volume/load itself comes from the Strava/Garmin sync, not a manual log.
+
+### If the coach MCP is connected
+
+The coach is also available as **MCP tools** (`mcp__coach__*`) when the remote coach server is added as a connector — e.g. `mcp__coach__wellness`, `mcp__coach__log`, `mcp__coach__checkin`, `mcp__coach__config`, `mcp__coach__garmin_sync`, `mcp__coach__export_calendar`, `mcp__coach__export_garmin`, `mcp__coach__notify`. They mirror the CLI commands.
+
+**Prefer these tools when they're present** — they work anywhere the connector is added (e.g. Claude Desktop) without a local install or local `coach.db`. Fall back to `npx claude-coach …` only when the MCP isn't connected (e.g. a local-only Claude Code session in the repo).
