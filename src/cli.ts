@@ -12,6 +12,15 @@ import {
 import { log } from "./lib/logging.js";
 import { migrate } from "./db/migrate.js";
 import { execute, initDatabase, query, queryJson } from "./db/client.js";
+import {
+  getPrefs,
+  logHydration,
+  hydrationTotal,
+  getWellness,
+  upsertWellness,
+  localDate,
+  type WellnessPatch,
+} from "./db/wellness.js";
 import { getValidTokens } from "./strava/oauth.js";
 import { getAllActivities, getAthlete } from "./strava/api.js";
 import type { StravaActivity, StravaTokenResponse } from "./strava/types.js";
@@ -72,7 +81,46 @@ interface HelpArgs {
   command: "help";
 }
 
-type CliArgs = SyncArgs | RenderArgs | QueryArgs | AuthArgs | HelpArgs;
+interface LogArgs {
+  command: "log";
+  type: string;
+  value?: string;
+  flags: Flags;
+}
+
+interface WellnessArgs {
+  command: "wellness";
+  flags: Flags;
+}
+
+type CliArgs = SyncArgs | RenderArgs | QueryArgs | AuthArgs | HelpArgs | LogArgs | WellnessArgs;
+
+type Flags = Record<string, string | boolean>;
+
+/** Parse `--key=value` and bare `--flag` tokens into a map. Handles values containing '='. */
+function parseFlags(args: string[]): Flags {
+  const flags: Flags = {};
+  for (const a of args) {
+    if (!a.startsWith("--")) continue;
+    const body = a.slice(2);
+    const eq = body.indexOf("=");
+    if (eq === -1) flags[body] = true;
+    else flags[body.slice(0, eq)] = body.slice(eq + 1);
+  }
+  return flags;
+}
+
+function flagStr(flags: Flags, key: string): string | undefined {
+  const v = flags[key];
+  return typeof v === "string" ? v : undefined;
+}
+
+function flagNum(flags: Flags, key: string): number | undefined {
+  const v = flags[key];
+  if (typeof v !== "string") return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
 
 function parseArgs(): CliArgs {
   const args = process.argv.slice(2);
@@ -152,6 +200,25 @@ function parseArgs(): CliArgs {
     return authArgs;
   }
 
+  if (args[0] === "log") {
+    if (!args[1]) {
+      log.error("log requires a type, e.g. 'log water 500' or 'log sleep 7.5'");
+      process.exit(1);
+    }
+    // Second positional (the value) may be absent for some types; flags start with '--'.
+    const value = args[2] && !args[2].startsWith("--") ? args[2] : undefined;
+    return {
+      command: "log",
+      type: args[1],
+      value,
+      flags: parseFlags(args.slice(2)),
+    };
+  }
+
+  if (args[0] === "wellness" || args[0] === "today") {
+    return { command: "wellness", flags: parseFlags(args.slice(1)) };
+  }
+
   if (args[0] === "--help" || args[0] === "-h" || args[0] === "help") {
     return { command: "help" };
   }
@@ -171,6 +238,8 @@ Commands:
   auth              Get Strava authorization URL or exchange code for tokens
   render <file>     Render a training plan JSON to HTML
   query <sql>       Run a SQL query against the database
+  log <type> <val>  Log wellness/intake (water|sleep|energy|soreness|mood|weight)
+  wellness          Show today's hydration + wellness snapshot
   help              Show this help message
 
 Auth Options (for headless/Claude environments):
@@ -209,6 +278,11 @@ Examples:
 
   # Query the database
   npx claude-coach query "SELECT * FROM weekly_volume LIMIT 5"
+
+  # Log wellness / hydration
+  npx claude-coach log water 500
+  npx claude-coach log sleep 7.5 --score=82
+  npx claude-coach log energy 4
 `);
 }
 
@@ -590,6 +664,124 @@ async function runQuery(args: QueryArgs): Promise<void> {
 }
 
 // ============================================================================
+// Wellness CLI: log / wellness
+// ============================================================================
+
+/** Open the DB and ensure the (idempotent) schema, quietly. */
+async function ensureDb(): Promise<void> {
+  await initDatabase();
+  migrate(true);
+}
+
+function clampScale(value: number, label: string): number {
+  if (value < 1 || value > 5) {
+    log.error(`${label} must be between 1 and 5`);
+    process.exit(1);
+  }
+  return Math.round(value);
+}
+
+const LOG_TYPES = "water, sleep, energy, soreness, mood, weight";
+
+async function runLog(args: LogArgs): Promise<void> {
+  await ensureDb();
+  const date = flagStr(args.flags, "date") ?? localDate();
+  const note = flagStr(args.flags, "note");
+  const type = args.type.toLowerCase();
+
+  if (args.value === undefined) {
+    log.error(`log ${type} requires a value, e.g. 'log ${type} <value>'`);
+    process.exit(1);
+  }
+  const num = Number(args.value);
+  const requireNum = () => {
+    if (!Number.isFinite(num)) {
+      log.error(`'${args.value}' is not a number`);
+      process.exit(1);
+    }
+    return num;
+  };
+
+  switch (type) {
+    case "water":
+    case "hydration": {
+      const ml = Math.round(requireNum());
+      if (ml <= 0) {
+        log.error("water amount must be positive (ml)");
+        process.exit(1);
+      }
+      logHydration(ml, { date, source: flagStr(args.flags, "source") ?? "manual", note });
+      const total = hydrationTotal(date);
+      const goal = getPrefs().hydration_goal_ml;
+      log.success(`Logged ${ml} ml water — ${total}/${goal} ml today (${date}).`);
+      break;
+    }
+    case "sleep": {
+      const patch: WellnessPatch = { sleep_hours: requireNum() };
+      const score = flagNum(args.flags, "score");
+      if (score !== undefined) patch.sleep_score = Math.round(score);
+      if (note) patch.notes = note;
+      upsertWellness(date, patch);
+      log.success(
+        `Logged ${patch.sleep_hours} h sleep${score !== undefined ? ` (score ${score})` : ""} for ${date}.`
+      );
+      break;
+    }
+    case "energy":
+    case "soreness":
+    case "mood": {
+      const col = type === "energy" ? "subjective_energy" : type;
+      const v = clampScale(requireNum(), type);
+      upsertWellness(date, { [col]: v } as WellnessPatch);
+      log.success(`Logged ${type} ${v}/5 for ${date}.`);
+      break;
+    }
+    case "weight": {
+      upsertWellness(date, { weight_kg: requireNum() });
+      log.success(`Logged weight ${requireNum()} kg for ${date}.`);
+      break;
+    }
+    default:
+      log.error(`Unknown log type '${type}'. Supported: ${LOG_TYPES}.`);
+      process.exit(1);
+  }
+}
+
+async function runWellness(args: WellnessArgs): Promise<void> {
+  await ensureDb();
+  const date = flagStr(args.flags, "date") ?? localDate();
+  const prefs = getPrefs();
+  const wellness = getWellness(date);
+  const total = hydrationTotal(date);
+  const summary = {
+    date,
+    hydration: {
+      total_ml: total,
+      goal_ml: prefs.hydration_goal_ml,
+      remaining_ml: Math.max(0, prefs.hydration_goal_ml - total),
+    },
+    wellness,
+  };
+
+  if (args.flags["json"]) {
+    console.log(JSON.stringify(summary, null, 2));
+    return;
+  }
+
+  log.box(
+    [
+      `Wellness — ${date}`,
+      `  Water:     ${total}/${prefs.hydration_goal_ml} ml`,
+      `  Sleep:     ${wellness?.sleep_hours ?? "—"} h${wellness?.sleep_score != null ? ` (score ${wellness.sleep_score})` : ""}`,
+      `  Readiness: ${wellness?.readiness_score ?? "—"}`,
+      `  Energy:    ${wellness?.subjective_energy ?? "—"}/5   Soreness: ${wellness?.soreness ?? "—"}/5   Mood: ${wellness?.mood ?? "—"}/5`,
+      `  RHR:       ${wellness?.resting_hr ?? "—"}   HRV: ${wellness?.hrv_status ?? "—"}`,
+      `  Weight:    ${wellness?.weight_kg ?? "—"} kg`,
+    ].join("\n")
+  );
+}
+
+// ============================================================================
 // Main
 // ============================================================================
 
@@ -611,6 +803,12 @@ async function main() {
       break;
     case "query":
       await runQuery(args);
+      break;
+    case "log":
+      await runLog(args);
+      break;
+    case "wellness":
+      await runWellness(args);
       break;
   }
 }
