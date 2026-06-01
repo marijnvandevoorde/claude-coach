@@ -860,6 +860,9 @@ async function runConfig(args: ConfigArgs): Promise<void> {
   if (waterGoal !== undefined) patch.hydration_goal_ml = Math.round(waterGoal);
   const cadence = flagNum(args.flags, "cadence");
   if (cadence !== undefined) patch.water_cadence_minutes = Math.round(cadence);
+  const hydrationPerHour = flagNum(args.flags, "hydration-per-hour");
+  if (hydrationPerHour !== undefined)
+    patch.hydration_per_active_hour_ml = Math.round(hydrationPerHour);
   const tz = flagStr(args.flags, "timezone");
   if (tz !== undefined) patch.timezone = tz;
   if (args.flags["enable"]) patch.reminders_enabled = 1;
@@ -886,6 +889,7 @@ async function runConfig(args: ConfigArgs): Promise<void> {
       `  Wake:          ${prefs.wake_target ?? "—"}`,
       `  Water goal:    ${prefs.hydration_goal_ml} ml/day`,
       `  Water cadence: every ${prefs.water_cadence_minutes} min`,
+      `  Water +load:   +${prefs.hydration_per_active_hour_ml} ml / training hour`,
       `  Quiet hours:   ${prefs.quiet_hours_start ?? "—"}–${prefs.quiet_hours_end ?? "—"}`,
       `  Timezone:      ${prefs.timezone ?? "(host default)"}`,
       `  Notify:        ${prefs.notify_channel}${prefs.notify_webhook_url ? " (webhook set)" : ""}`,
@@ -908,6 +912,7 @@ async function runGarminSync(args: GarminSyncArgs): Promise<void> {
   };
 
   setInt("readiness", "readiness_score");
+  setInt("training-minutes", "training_minutes");
   setInt("sleep-score", "sleep_score");
   setInt("body-battery", "body_battery_morning");
   setInt("resting-hr", "resting_hr");
@@ -1125,9 +1130,30 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
 
   const reminders: Reminder[] = [];
 
+  // Today's plan + a training-load-aware hydration goal (more fluid on big days).
+  const planPath = flagStr(args.flags, "plan");
+  const workout = planPath ? findTodaysWorkout(planPath, date) : null;
+  let trainingMinutes = flagNum(args.flags, "training-minutes");
+  if (trainingMinutes === undefined && workout) {
+    trainingMinutes = (workout.workouts as Array<{ durationMinutes?: number }>).reduce(
+      (sum, w) => sum + (w.durationMinutes ?? 0),
+      0
+    );
+  }
+  if (trainingMinutes === undefined) {
+    trainingMinutes = wellness?.training_minutes ?? 0;
+  } else if (Math.round(trainingMinutes) !== (wellness?.training_minutes ?? null)) {
+    // Cache plan/flag-derived load so later (cron) hydration runs scale too.
+    upsertWellness(date, { training_minutes: Math.round(trainingMinutes) });
+  }
+  const baseGoal = prefs.hydration_goal_ml ?? 0;
+  const loadBonus = Math.round(
+    (trainingMinutes / 60) * (prefs.hydration_per_active_hour_ml ?? 500)
+  );
+  const goal = baseGoal + loadBonus;
+
   // 3. Hydration pace
   const total = hydrationTotal(date);
-  const goal = prefs.hydration_goal_ml ?? 0;
   const wake = parseHHMM(prefs.wake_target) ?? 7 * 60;
   const bed = parseHHMM(prefs.bedtime_target) ?? 23 * 60;
   let expected = 0;
@@ -1190,9 +1216,6 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
   }
 
   // 6. Today's planned workout (optional)
-  const planPath = flagStr(args.flags, "plan");
-  const workout = planPath ? findTodaysWorkout(planPath, date) : null;
-
   const payload = {
     date,
     generatedAt: new Date().toISOString(),
@@ -1213,6 +1236,9 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
     hydration: {
       totalMl: total,
       goalMl: goal,
+      baseGoalMl: baseGoal,
+      trainingLoadBonusMl: loadBonus,
+      trainingMinutes,
       expectedByNowMl: expected,
       remainingMl: Math.max(0, goal - total),
     },
@@ -1232,7 +1258,9 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
 
   log.box(`Coach check-in — ${date}`);
   console.log(`Recovery: ${recoveryLevel}${r != null ? ` (readiness ${r})` : ""}`);
-  console.log(`Hydration: ${total}/${goal} ml (expected ~${expected} by now)`);
+  console.log(
+    `Hydration: ${total}/${goal} ml (expected ~${expected} by now)${loadBonus > 0 ? ` — incl. +${loadBonus} ml for ${Math.round(trainingMinutes)} min training` : ""}`
+  );
   if (workout) {
     const names = (workout.workouts as Array<{ sport?: string; name?: string }>)
       .map((w) => `${w.sport ?? "?"}: ${w.name ?? "?"}`)

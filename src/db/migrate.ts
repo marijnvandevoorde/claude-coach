@@ -30,6 +30,8 @@ export function migrate(silent = false): void {
   // (CREATE TABLE IF NOT EXISTS won't alter an existing table).
   ensureColumn("reminder_prefs", "notify_channel", "TEXT DEFAULT 'auto'");
   ensureColumn("reminder_prefs", "notify_webhook_url", "TEXT");
+  ensureColumn("reminder_prefs", "hydration_per_active_hour_ml", "INTEGER DEFAULT 500");
+  ensureColumn("wellness_state", "training_minutes", "INTEGER");
 
   if (!silent) log.success("Database schema initialized");
 }
