@@ -2,6 +2,26 @@
 
 Professional coaches quantify training stress to manage fatigue, prevent overtraining, and peak for races.
 
+## Garmin Training Load (Preferred When Connected)
+
+If Garmin Connect is available (`mcp__garmin__*` tools — see `garmin.md`), **use Garmin's own load model directly instead of estimating TSS from Strava suffer scores.** Garmin runs the same fitness/fatigue/form concepts via FirstBeat, already calibrated to the athlete:
+
+| Concept in this doc    | Garmin source                                          | Notes                                                                                            |
+| ---------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| **CTL** (Fitness)      | `get_training_load_trend(start, end)` → chronic load   | Use the trend's chronic/long-term load value as fitness.                                         |
+| **ATL** (Fatigue)      | `get_training_load_trend(start, end)` → acute load     | 7-day acute load.                                                                                |
+| **TSB** (Form)         | `get_training_load_trend(start, end)` → CTL − ATL      | Compute form from the two, or read the chart's balance directly.                                 |
+| Overall state          | `get_training_status(today)`                           | Label: Productive / Maintaining / Peaking / Overreaching / Unproductive / Detraining / Recovery. |
+| Acute load vs. optimal | `get_training_status(today)` → load focus / load ratio | Tells you if recent load is below, in, or above the optimal range.                               |
+
+**How to use it:**
+
+- Read CTL/ATL/TSB from `get_training_load_trend` over the last 42+ days and apply the **same TSB tables below** (race-day targets, ramp guidance) — they're framework-agnostic.
+- Cross-check direction with `get_training_status`: e.g. a positive TSB plus "Peaking" confirms a good taper; "Overreaching" or "Unproductive" means back off regardless of what the raw numbers suggest.
+- Garmin's absolute load numbers are scaled differently from classic TSS — **trust the trend and the status label, not a specific TSS threshold** ported from another platform. The ramp-rate _principle_ (gradual, monitored increases) still applies; watch week-over-week change in chronic load rather than a fixed "+5–7 TSS/day".
+
+The manual TSS math below remains the model for **Strava-only / manual** athletes and for understanding what the Garmin numbers represent.
+
 ## Training Stress Score (TSS)
 
 TSS measures the physiological cost of a workout. For cycling with power:
@@ -31,6 +51,8 @@ Estimated from pace and HR. Use Strava's suffer_score as a proxy:
 
 - suffer_score ≈ rTSS for most athletes
 - Compare suffer_score per hour across sessions to gauge relative intensity
+
+> If Garmin is connected, prefer its per-activity load: `get_training_effect(activity_id)` (aerobic/anaerobic training effect) and the activity's load value, which feed Garmin's overall load trend above — no suffer_score proxy needed.
 
 ### Swim TSS (sTSS)
 
@@ -106,23 +128,27 @@ TSB = CTL - ATL
 
 ## Recovery Monitoring
 
+> **With Garmin connected**, most of this is measured for you. `get_training_readiness` already fuses sleep, HRV, recovery time, acute load, and stress into one 0–100 score — use it as the daily go/hold-back signal (see `garmin.md`). The indicators below explain what feeds that score and are the manual fallback when Garmin isn't available. The `coach checkin` CLI surfaces these each day; `coach log` captures the subjective ones.
+
 ### Heart Rate-Based Indicators
 
-**Resting Heart Rate (RHR):**
+**Resting Heart Rate (RHR):** — Garmin: `get_rhr_day(date)`
 
 - Measure every morning before getting up
 - RHR elevated 5-10+ bpm = accumulated fatigue
 - Sustained elevation over 3+ days = consider recovery day/week
 - Sudden drop below baseline = potential illness onset
 
-**Heart Rate Variability (HRV):**
+**Heart Rate Variability (HRV):** — Garmin: `get_hrv_data(date)` / `get_hrv_trend(start, end)`
 
 - Higher HRV = better recovered
 - Lower HRV = stressed/fatigued
-- HRV 10%+ below baseline = reduce intensity
+- HRV 10%+ below baseline (or Garmin status "unbalanced"/"low") = reduce intensity
 - Track 7-day rolling average, not daily swings
 
 ### Subjective Indicators (1-5 scale)
+
+Capture these with `npx claude-coach log energy|soreness|mood|sleep <value>`; they're stored in `coach.db` and surfaced by `coach checkin` alongside Garmin's objective signals.
 
 | Metric          | Questions                        |
 | --------------- | -------------------------------- |
@@ -136,6 +162,7 @@ TSB = CTL - ATL
 
 - 2+ low scores for 3+ days = back off
 - Sleep + mood both low = high burnout risk
+- Garmin readiness <50 for 2+ days, or HRV unbalanced + RHR elevated together = insert recovery
 
 ### Recovery Week Structure
 
