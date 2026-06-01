@@ -23,6 +23,7 @@ import {
   type PrefsPatch,
   type WellnessPatch,
 } from "./db/wellness.js";
+import { resolveNotify, sendNotification } from "./lib/notify.js";
 import { getValidTokens } from "./strava/oauth.js";
 import { getAllActivities, getAthlete } from "./strava/api.js";
 import type { StravaActivity, StravaTokenResponse } from "./strava/types.js";
@@ -100,6 +101,12 @@ interface CheckinArgs {
   flags: Flags;
 }
 
+interface NotifyArgs {
+  command: "notify";
+  message?: string;
+  flags: Flags;
+}
+
 interface WellnessArgs {
   command: "wellness";
   flags: Flags;
@@ -114,6 +121,7 @@ type CliArgs =
   | LogArgs
   | ConfigArgs
   | CheckinArgs
+  | NotifyArgs
   | WellnessArgs;
 
 type Flags = Record<string, string | boolean>;
@@ -244,6 +252,11 @@ function parseArgs(): CliArgs {
     return { command: "checkin", flags: parseFlags(args.slice(1)) };
   }
 
+  if (args[0] === "notify") {
+    const message = args[1] && !args[1].startsWith("--") ? args[1] : undefined;
+    return { command: "notify", message, flags: parseFlags(args.slice(1)) };
+  }
+
   if (args[0] === "wellness" || args[0] === "today") {
     return { command: "wellness", flags: parseFlags(args.slice(1)) };
   }
@@ -270,6 +283,7 @@ Commands:
   log <type> <val>  Log wellness/intake (water|sleep|energy|soreness|mood|weight)
   wellness          Show today's hydration + wellness snapshot
   config            Show/set reminder preferences (bedtime, water goal, quiet hours)
+  notify <message>  Send a push notification (webhook/Home Assistant, macOS, or stdout)
   checkin           Assemble plan + Garmin + wellness into a coaching/reminder payload
   help              Show this help message
 
@@ -317,6 +331,10 @@ Examples:
 
   # Set reminder preferences
   npx claude-coach config --bedtime=22:30 --water-goal=3000 --quiet-start=22:00 --quiet-end=07:00 --enable
+
+  # Push notifications (point at your Home Assistant webhook, then send)
+  npx claude-coach config --notify-webhook=https://homeassistant.local/api/webhook/abc123
+  npx claude-coach notify "Time to hydrate 💧"
 
   # Daily check-in (agent passes Garmin signals fetched via the garmin MCP)
   npx claude-coach checkin --plan=my-plan.json --readiness=78 --sleep-hours=7.5 --json
@@ -826,6 +844,10 @@ async function runConfig(args: ConfigArgs): Promise<void> {
   if (tz !== undefined) patch.timezone = tz;
   if (args.flags["enable"]) patch.reminders_enabled = 1;
   if (args.flags["disable"]) patch.reminders_enabled = 0;
+  const notifyWebhook = flagStr(args.flags, "notify-webhook");
+  if (notifyWebhook !== undefined) patch.notify_webhook_url = notifyWebhook;
+  const notifyChannel = flagStr(args.flags, "notify-channel");
+  if (notifyChannel !== undefined) patch.notify_channel = notifyChannel.toLowerCase();
 
   if (Object.keys(patch).length > 0) {
     updatePrefs(patch);
@@ -846,12 +868,39 @@ async function runConfig(args: ConfigArgs): Promise<void> {
       `  Water cadence: every ${prefs.water_cadence_minutes} min`,
       `  Quiet hours:   ${prefs.quiet_hours_start ?? "—"}–${prefs.quiet_hours_end ?? "—"}`,
       `  Timezone:      ${prefs.timezone ?? "(host default)"}`,
+      `  Notify:        ${prefs.notify_channel}${prefs.notify_webhook_url ? " (webhook set)" : ""}`,
     ].join("\n")
   );
   if (Object.keys(patch).length === 0) {
     log.info(
       "Update with flags, e.g. --bedtime=22:30 --water-goal=3000 --quiet-start=22:00 --quiet-end=07:00 --enable"
     );
+  }
+}
+
+async function runNotify(args: NotifyArgs): Promise<void> {
+  await ensureDb();
+  const prefs = getPrefs();
+  const message = args.message ?? flagStr(args.flags, "message");
+  if (!message) {
+    log.error('notify requires a message, e.g. coach notify "Time to hydrate"');
+    process.exit(1);
+  }
+  const title = flagStr(args.flags, "title") ?? "Claude Coach";
+  const resolved = resolveNotify({
+    channel:
+      flagStr(args.flags, "channel") ?? process.env.COACH_NOTIFY_CHANNEL ?? prefs.notify_channel,
+    webhookUrl:
+      flagStr(args.flags, "url") ??
+      process.env.COACH_NOTIFY_WEBHOOK_URL ??
+      prefs.notify_webhook_url,
+  });
+  const result = await sendNotification(message, title, resolved);
+  if (result.ok) {
+    log.success(`Notified via ${resolved.channel} (${result.detail}).`);
+  } else {
+    log.error(`Notify failed via ${resolved.channel}: ${result.detail}`);
+    process.exit(1);
   }
 }
 
@@ -1126,6 +1175,9 @@ async function main() {
       break;
     case "config":
       await runConfig(args);
+      break;
+    case "notify":
+      await runNotify(args);
       break;
     case "wellness":
       await runWellness(args);
