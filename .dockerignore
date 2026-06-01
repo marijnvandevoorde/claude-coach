@@ -1,0 +1,12 @@
+node_modules
+dist
+docker_dist
+.git
+.github
+coverage
+tests
+docs
+examples
+*.log
+.DS_Store
+templates/plan-viewer.html
