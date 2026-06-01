@@ -8,6 +8,8 @@ npx claude-coach query "YOUR_QUERY" --json
 
 This works on any Node.js version (uses built-in SQLite on Node 22.5+, falls back to CLI otherwise).
 
+> **Garmin first for readiness & load.** The SQL below queries the **Strava** activity history in `coach.db`. When Garmin Connect is connected, get _current form_ (readiness, sleep, HRV) and _training load_ (CTL/ATL/TSB, training status, VO₂max) from the **`mcp__garmin__*` tools** instead — see `garmin.md`. Use these Strava queries for athletic **foundation** (lifetime peaks, race history, training depth) and as the fallback when Garmin is unavailable.
+
 ## Current Form (Last 8 Weeks)
 
 ```sql
@@ -223,4 +225,37 @@ FROM activities
 WHERE average_heartrate IS NOT NULL
   AND start_date >= date('now', '-12 weeks')
 GROUP BY sport_type;
+```
+
+## Garmin Readiness & Load (When Connected)
+
+The live readiness/load signals come from the **`mcp__garmin__*` tools** (see `garmin.md`), not from SQL:
+
+- **Readiness today:** `get_training_readiness(today)` — score + limiting contributor.
+- **Recovery context:** `get_sleep_summary(today)`, `get_hrv_data(today)`, `get_rhr_day(today)`, `get_body_battery(today, today)`.
+- **Fitness/fatigue/form:** `get_training_load_trend(start, end)` → CTL/ATL/TSB; `get_training_status(today)` → status label + VO₂max.
+
+Claude Coach **caches** the latest readiness/sleep snapshot into `coach.db` whenever `coach checkin` runs, so you can query recent history (and athlete-logged wellness) without re-hitting Garmin:
+
+```sql
+-- Last 14 days of cached readiness / sleep / wellness
+SELECT
+  local_date,
+  readiness_score,
+  sleep_hours,
+  sleep_score,
+  resting_hr,
+  hrv_status,
+  training_status,
+  subjective_energy,
+  soreness,
+  mood
+FROM wellness_state
+ORDER BY local_date DESC
+LIMIT 14;
+
+-- Hydration totals per day (vs. goal in reminder_prefs)
+SELECT local_date, total_ml, entries
+FROM hydration_daily
+LIMIT 14;
 ```
