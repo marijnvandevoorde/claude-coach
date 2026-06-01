@@ -82,7 +82,34 @@ claude mcp add coach --transport http https://coach.example.com/mcp \
   --header "CF-Access-Client-Secret: <token-client-secret>"
 ```
 
-**Claude Desktop / claude.ai:** custom connectors expect OAuth rather than static headers, so use Claude Code for the coach MCP, or front it with an OAuth2 layer if you need Desktop/phone.
+**Claude Desktop:** the connector UI can't paste static headers, so add a small **local bridge** that injects the same service-token headers — [`mcp-remote`](https://www.npmjs.com/package/mcp-remote) in `claude_desktop_config.json` (where stdio MCP servers live):
+
+```json
+{
+  "mcpServers": {
+    "coach": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://coach.example.com/mcp",
+        "--header",
+        "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}",
+        "--header",
+        "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}"
+      ],
+      "env": {
+        "CF_ACCESS_CLIENT_ID": "<service-token-id>",
+        "CF_ACCESS_CLIENT_SECRET": "<service-token-secret>"
+      }
+    }
+  }
+}
+```
+
+This reuses the Cloudflare Access service token — no OAuth needed, and it pairs with the uploaded skill in the same conversation. **claude.ai web / mobile** can't spawn a local bridge, so they'd need real remote-MCP OAuth (e.g. Cloudflare Access's MCP OAuth, or an OAuth layer) — not covered here.
+
+> A plain `oauth2-proxy` (cookie/redirect auth) does **not** satisfy the MCP client's token flow — don't use it for this.
 
 ### Security model
 
