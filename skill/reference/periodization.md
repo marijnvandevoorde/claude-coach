@@ -173,6 +173,48 @@ Never increase the long session by more than 2-3km (running) or 15-20km (cycling
 - One medium-long run (18-22km)
 - Remaining runs easy
 
+### Trail / Ultra (progressed by vert, not just distance)
+
+**Minimum build time**: 12-20 weeks from an aerobic base, scaled to race D+ as much as distance.
+
+A trail/ultra build differs from a road build in one structural way: **vert is progressed as its own axis** (see EFD and the two-axis model in `load-management.md`). Use **EFD as the volume currency** and ramp **weekly D+ separately** from EFD — roughly **≤10–15%/week** on each axis (less for beginners/returning/masters; see the ramp-cap guidance in `load-management.md`). Two caveats on the "%": a low starting base can step a little faster in early Base, and a week _after_ a recovery deload intentionally rebuilds past it — that rebound isn't a "ramp."
+
+**Start from the athlete's actual baseline, not the template.** The block below opens at 600 m D+/wk, which already assumes a Hilly-tier athlete. Set week 1 to the athlete's _recent_ weekly D+ and ramp from there; a flatlander starting near zero needs more base weeks before this shape applies (flat-terrain substitutions are in `workouts.md`).
+
+**Four phases, vert progressed separately:**
+
+1. **Aerobic Base** — build EFD volume, mostly Z2; introduce hills as _terrain_ (climb at easy effort), not yet as intervals.
+2. **Build-Vert** — ramp **weekly D+ separately** from distance (each axis ≤10%/wk). Add uphill intervals and the first dedicated **downhill repeats**.
+3. **Mountain / Terrain Specificity** — race-like climbs, **technical descents**, **back-to-back weekend long runs**, and **stacked-climb long runs** for fatigue resistance.
+4. **Terrain-Preserving Taper** — cut volume 40–50% but **keep a little vert and descent intensity** into race week so the legs stay primed to descend.
+
+**Long-run anchor — scale to race EFD, not an arbitrary km.** The peak long run = **70–80% of race EFD**. Compute race EFD from the race profile: a 26 km race with 1200 m D+ → `26 + 12×1.0 = 38 km EFD` → peak long run ≈ **27–30 km EFD**. For true ultras (races > ~50 km / > ~6–8 h), anchor the long run by **time on feet**, not EFD % — a 70% EFD long run would be unmanageably long.
+
+**Back-to-back (B2B) weekends** — a long day, then a second long day at **50–70%** of the first on pre-fatigued legs. This is the single most effective fatigue-resistance tool for long-trail/ultra; introduce it in Build-Vert and peak it in the Specificity phase.
+
+#### Sample 12-week trail block
+
+Target archetype: a hilly/mountain race ~26 km / ~1200 m D+ (**race EFD ≈ 38 km**), for an athlete already at the Hilly tier. EFD is the volume currency; D+ is its own axis. Most week-to-week steps sit in the ~10–15% band; the larger early-Base D+ steps and the post-recovery rebuilds are deliberate (see the caveats above). 3:1 loading.
+
+| Wk  | Phase             | EFD (km)  | D+ (m/wk) | Long run (EFD) | Key sessions                                                |
+| --- | ----------------- | --------- | --------- | -------------- | ----------------------------------------------------------- |
+| 1   | Base              | 38        | 600       | 14             | Hilly Z2 long; strides; trail-strength 2×                   |
+| 2   | Base              | 42        | 700       | 16             | Uphill intervals 5×3'; easy vert; strength                  |
+| 3   | Base              | 46        | 800       | 18             | Stacked-climb long; **easy downhill primer**; strength      |
+| 4   | **Recovery**      | 28        | 450       | 12             | Deload both axes ~−40%; mobility                            |
+| 5   | Build-Vert        | 46        | 950       | 20             | Uphill intervals 6×4'; **downhill repeats 4×2'** (1st full) |
+| 6   | Build-Vert        | 50        | 1090      | 22             | Trail fartlek (effort by terrain); downhill repeats 5×2'    |
+| 7   | Build-Vert        | 54        | 1250      | 25             | **B2B**: Sat 25 EFD / Sun 14 EFD; power-hike drills         |
+| 8   | **Recovery**      | 34        | 700       | 16             | Deload; keep one short downhill set for tendon stiffness    |
+| 9   | Mountain-Specific | 54        | 1400      | 27 (≈72% race) | Race-terrain long; technical descents; downhill reps 6×2-3' |
+| 10  | Mountain-Specific | 56        | 1450      | 30 (≈79% race) | **Peak B2B**: Sat 30 / Sun 18 EFD; full race-fuel rehearsal |
+| 11  | Taper             | 38        | 900       | 18             | Keep short vert + a few downhill reps; sharpen; race-pace   |
+| 12  | Taper / Race      | 22 → race | 500       | race           | Openers (short, 2–3 descent strides); race day              |
+
+Recovery weeks deload **both** EFD and D+. Rehearse the gut/fuel protocol on ≥3 long runs (e.g. wks 6, 9, 10). See `workouts.md` for the session details and `race-day.md` for pacing and fuel.
+
+**Add an easy downhill "primer" in Base (≈wk 2–3)** — one short, gentle downhill set _before_ the first real downhill-repeat session in wk 5. The repeated-bout effect means that first exposure causes the most muscle damage, so you want it to happen early, easy, and low-stakes rather than mid-build. Thereafter keep hard downhill sessions **≥48–72 h apart** and to ~1–2/week (see `workouts.md`).
+
 ---
 
 ## Physiological Adaptations: The "Why"
