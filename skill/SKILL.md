@@ -319,6 +319,17 @@ Read these files as needed during plan creation:
 | `skill/reference/periodization.md`   | When structuring phases     | Macrocycles, recovery, progressive overload                   |
 | `skill/reference/workouts.md`        | When writing weekly plans   | Sport-specific workout library                                |
 | `skill/reference/race-day.md`        | Final section of plan       | Pacing strategy, nutrition                                    |
+| `skill/reference/trail.md`           | Trail / ultra goal events   | Trail-mode hub: EFD, two-axis load, vert periodization, fueling |
+
+---
+
+## Trail & Ultra Mode
+
+If the goal event is a **trail or ultra race**, activate trail mode: the volume currency changes from raw km to **EFD (Equivalent Flat Distance)** and vertical gain is managed as its own training axis.
+
+**Trigger:** the goal's `event_type` is trail/ultra, **or** its `event_name`/`notes` mention vert, D+, elevation gain, "mountain", "skyrace", "vertical", or "technical".
+
+**When triggered:** read `skill/reference/trail.md` first — it's the index and restates the core heuristics (EFD formula, two-axis ≤10%/wk caps, >800 m → 1.5× recovery, long-run = 70–80% race EFD, run/hike grade thresholds, 60–90 g/hr @ 1:0.8). Then apply the trail sections layered into the standard docs (`load-management.md`, `periodization.md`, `workouts.md`, `race-day.md`, `assessment.md`). Trail mode **adds** the vert dimension on top of the normal workflow; it doesn't replace zones, intensity distribution, or the Garmin readiness flow.
 
 ---
 
