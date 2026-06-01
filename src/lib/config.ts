@@ -1,6 +1,6 @@
 import { homedir } from "os";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
-import { join } from "path";
+import { dirname, join } from "path";
 import * as readline from "readline";
 
 const CONFIG_DIR = join(homedir(), ".claude-coach");
@@ -29,6 +29,11 @@ export function ensureConfigDir(): void {
   if (!existsSync(CONFIG_DIR)) {
     mkdirSync(CONFIG_DIR, { recursive: true });
   }
+  // When COACH_DB_PATH points elsewhere (e.g. a Docker volume), make sure its dir exists.
+  const dbDir = dirname(getDbPath());
+  if (!existsSync(dbDir)) {
+    mkdirSync(dbDir, { recursive: true });
+  }
 }
 
 export function getConfigPath(): string {
@@ -40,7 +45,8 @@ export function getTokensPath(): string {
 }
 
 export function getDbPath(): string {
-  return DB_FILE;
+  // Allow relocating the DB (e.g. a Docker volume) without touching HOME.
+  return process.env.COACH_DB_PATH || DB_FILE;
 }
 
 export function configExists(): boolean {
