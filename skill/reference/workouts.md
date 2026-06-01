@@ -240,6 +240,20 @@ Circuit 2 (3 rounds):
 Cool-down: 5min stretching
 ```
 
+### Trail / Ultra Strength (Durability)
+
+For trail and ultra runners the strength priority is **descending durability** — the eccentric load that protects quads, calves, and connective tissue when the legs brake downhill for hours. This complements the downhill-repeat *runs* above; do it 1–2×/week and taper to maintenance.
+
+| Focus                 | Exercises                                                   | Why                                            |
+| --------------------- | ----------------------------------------------------------- | ---------------------------------------------- |
+| Eccentric quad        | Slow (3-4s lowering) single-leg squats, step-downs          | Brakes the descent; #1 quad-blowup defense     |
+| Eccentric calf        | Slow eccentric calf raises, single-leg off a step           | Achilles / calf resilience on long descents    |
+| Posterior chain       | Single-leg Romanian deadlift                                | Climbing power; hamstring/glute durability     |
+| Lateral / multi-plane | Walking lunges, lateral lunges                              | Off-camber and uneven-terrain strength         |
+| Ankle stability       | Single-leg balance, wobble-board / BOSU work                | Ankle proprioception on technical ground       |
+
+**The eccentric tempo is the point** — the slow 3–4 s lowering is what builds braking tolerance; rushing the reps trains the wrong thing. Progress load gradually and back off into race week (maintenance only — 2 sets, light).
+
 ### Timing Considerations
 
 - **Before endurance**: Light activation only (bands, bodyweight)
