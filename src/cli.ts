@@ -20,8 +20,8 @@ import {
   getWellness,
   upsertWellness,
   localDate,
-  type WellnessPatch,
   type PrefsPatch,
+  type WellnessPatch,
 } from "./db/wellness.js";
 import { getValidTokens } from "./strava/oauth.js";
 import { getAllActivities, getAthlete } from "./strava/api.js";
@@ -95,6 +95,11 @@ interface ConfigArgs {
   flags: Flags;
 }
 
+interface CheckinArgs {
+  command: "checkin";
+  flags: Flags;
+}
+
 interface WellnessArgs {
   command: "wellness";
   flags: Flags;
@@ -108,6 +113,7 @@ type CliArgs =
   | HelpArgs
   | LogArgs
   | ConfigArgs
+  | CheckinArgs
   | WellnessArgs;
 
 type Flags = Record<string, string | boolean>;
@@ -234,6 +240,10 @@ function parseArgs(): CliArgs {
     return { command: "config", flags: parseFlags(args.slice(1)) };
   }
 
+  if (args[0] === "checkin") {
+    return { command: "checkin", flags: parseFlags(args.slice(1)) };
+  }
+
   if (args[0] === "wellness" || args[0] === "today") {
     return { command: "wellness", flags: parseFlags(args.slice(1)) };
   }
@@ -260,6 +270,7 @@ Commands:
   log <type> <val>  Log wellness/intake (water|sleep|energy|soreness|mood|weight)
   wellness          Show today's hydration + wellness snapshot
   config            Show/set reminder preferences (bedtime, water goal, quiet hours)
+  checkin           Assemble plan + Garmin + wellness into a coaching/reminder payload
   help              Show this help message
 
 Auth Options (for headless/Claude environments):
@@ -306,6 +317,9 @@ Examples:
 
   # Set reminder preferences
   npx claude-coach config --bedtime=22:30 --water-goal=3000 --quiet-start=22:00 --quiet-end=07:00 --enable
+
+  # Daily check-in (agent passes Garmin signals fetched via the garmin MCP)
+  npx claude-coach checkin --plan=my-plan.json --readiness=78 --sleep-hours=7.5 --json
 `);
 }
 
@@ -687,13 +701,18 @@ async function runQuery(args: QueryArgs): Promise<void> {
 }
 
 // ============================================================================
-// Wellness CLI: log / config / wellness
+// Wellness CLI: log / config / wellness / checkin
 // ============================================================================
 
 /** Open the DB and ensure the (idempotent) schema, quietly. */
 async function ensureDb(): Promise<void> {
   await initDatabase();
   migrate(true);
+}
+
+function nowLocalMinutes(): number {
+  const d = new Date();
+  return d.getHours() * 60 + d.getMinutes();
 }
 
 function parseHHMM(value: string | null | undefined): number | null {
@@ -870,6 +889,215 @@ async function runWellness(args: WellnessArgs): Promise<void> {
   );
 }
 
+interface PlanWorkout {
+  date: string;
+  dayOfWeek?: string;
+  weekNumber?: number;
+  phase?: string;
+  isRecoveryWeek?: boolean;
+  workouts: unknown[];
+}
+
+/** Find the day entry matching `date` in a rendered plan JSON file. */
+function findTodaysWorkout(planPath: string, date: string): PlanWorkout | null {
+  let plan: {
+    weeks?: Array<{
+      weekNumber?: number;
+      phase?: string;
+      isRecoveryWeek?: boolean;
+      days?: Array<{ date: string; dayOfWeek?: string; workouts?: unknown[] }>;
+    }>;
+  };
+  try {
+    plan = JSON.parse(readFileSync(planPath, "utf-8"));
+  } catch {
+    log.warn(`Could not read plan file: ${planPath}`);
+    return null;
+  }
+  for (const week of plan.weeks ?? []) {
+    for (const day of week.days ?? []) {
+      if (day.date === date) {
+        return {
+          date,
+          dayOfWeek: day.dayOfWeek,
+          weekNumber: week.weekNumber,
+          phase: week.phase,
+          isRecoveryWeek: week.isRecoveryWeek,
+          workouts: day.workouts ?? [],
+        };
+      }
+    }
+  }
+  return null;
+}
+
+interface Reminder {
+  type: string;
+  priority: "high" | "normal";
+  suppressed: boolean;
+  message: string;
+}
+
+async function runCheckin(args: CheckinArgs): Promise<void> {
+  await ensureDb();
+  const date = flagStr(args.flags, "date") ?? localDate();
+
+  // 1. Cache any Garmin signals passed in by the agent (fetched via mcp__garmin__*).
+  const garminPatch: WellnessPatch = {};
+  const readiness = flagNum(args.flags, "readiness");
+  if (readiness !== undefined) garminPatch.readiness_score = Math.round(readiness);
+  const sleepHours = flagNum(args.flags, "sleep-hours");
+  if (sleepHours !== undefined) garminPatch.sleep_hours = sleepHours;
+  const sleepScore = flagNum(args.flags, "sleep-score");
+  if (sleepScore !== undefined) garminPatch.sleep_score = Math.round(sleepScore);
+  const bodyBattery = flagNum(args.flags, "body-battery");
+  if (bodyBattery !== undefined) garminPatch.body_battery_morning = Math.round(bodyBattery);
+  const restingHr = flagNum(args.flags, "resting-hr");
+  if (restingHr !== undefined) garminPatch.resting_hr = Math.round(restingHr);
+  const hrvStatus = flagStr(args.flags, "hrv-status");
+  if (hrvStatus !== undefined) garminPatch.hrv_status = hrvStatus;
+  const trainingStatus = flagStr(args.flags, "training-status");
+  if (trainingStatus !== undefined) garminPatch.training_status = trainingStatus;
+  if (Object.keys(garminPatch).length > 0) upsertWellness(date, garminPatch);
+
+  const prefs = getPrefs();
+  const wellness = getWellness(date);
+  const enabled = prefs.reminders_enabled === 1;
+  const nowMin = nowLocalMinutes();
+
+  // 2. Quiet hours
+  const quietStart = parseHHMM(prefs.quiet_hours_start);
+  const quietEnd = parseHHMM(prefs.quiet_hours_end);
+  const inQuiet =
+    quietStart != null && quietEnd != null
+      ? quietStart <= quietEnd
+        ? nowMin >= quietStart && nowMin < quietEnd
+        : nowMin >= quietStart || nowMin < quietEnd
+      : false;
+
+  const reminders: Reminder[] = [];
+
+  // 3. Hydration pace
+  const total = hydrationTotal(date);
+  const goal = prefs.hydration_goal_ml ?? 0;
+  const wake = parseHHMM(prefs.wake_target) ?? 7 * 60;
+  const bed = parseHHMM(prefs.bedtime_target) ?? 23 * 60;
+  let expected = 0;
+  if (goal > 0 && bed > wake) {
+    const frac = Math.min(1, Math.max(0, (nowMin - wake) / (bed - wake)));
+    expected = Math.round(goal * frac);
+  }
+  const behind = expected - total;
+  if (enabled && goal > 0 && behind >= 250 && nowMin >= wake && nowMin < bed) {
+    reminders.push({
+      type: "hydration",
+      priority: behind >= 750 ? "high" : "normal",
+      suppressed: inQuiet,
+      message: `Drink water — about ${behind} ml behind pace (${total}/${goal} ml so far today).`,
+    });
+  }
+
+  // 4. Bedtime (intentionally ignores quiet hours — it IS the wind-down signal)
+  if (enabled && parseHHMM(prefs.bedtime_target) != null) {
+    const toBed = bed - nowMin;
+    if (toBed <= 60 && toBed > 0) {
+      reminders.push({
+        type: "bedtime",
+        priority: "normal",
+        suppressed: false,
+        message: `Start winding down — bedtime target ${prefs.bedtime_target} is in ${toBed} min.`,
+      });
+    } else if (toBed <= 0 && toBed > -180) {
+      reminders.push({
+        type: "bedtime",
+        priority: "high",
+        suppressed: false,
+        message: `You're ${-toBed} min past your ${prefs.bedtime_target} bedtime target — time to sleep.`,
+      });
+    }
+  }
+
+  // 5. Recovery assessment from cached Garmin / logged signals
+  const r = wellness?.readiness_score ?? null;
+  const recoveryLevel =
+    r == null ? "unknown" : r >= 75 ? "prime" : r >= 50 ? "moderate" : r >= 25 ? "low" : "poor";
+  const recoveryFlags: string[] = [];
+  if (r != null && r < 50)
+    recoveryFlags.push(
+      `Training readiness ${r} (${recoveryLevel}) — consider easing today's intensity.`
+    );
+  if (wellness?.sleep_hours != null && wellness.sleep_hours < 6)
+    recoveryFlags.push(`Only ${wellness.sleep_hours} h sleep — prioritise recovery today.`);
+  if (wellness?.sleep_score != null && wellness.sleep_score < 50)
+    recoveryFlags.push(`Low sleep score (${wellness.sleep_score}).`);
+  if (wellness?.hrv_status && wellness.hrv_status.toLowerCase() !== "balanced")
+    recoveryFlags.push(`HRV status: ${wellness.hrv_status} — watch for accumulating fatigue.`);
+  if (recoveryFlags.length > 0) {
+    reminders.push({
+      type: "recovery",
+      priority: recoveryLevel === "poor" ? "high" : "normal",
+      suppressed: false,
+      message: recoveryFlags.join(" "),
+    });
+  }
+
+  // 6. Today's planned workout (optional)
+  const planPath = flagStr(args.flags, "plan");
+  const workout = planPath ? findTodaysWorkout(planPath, date) : null;
+
+  const payload = {
+    date,
+    generatedAt: new Date().toISOString(),
+    remindersEnabled: enabled,
+    inQuietHours: inQuiet,
+    workout,
+    recovery: {
+      level: recoveryLevel,
+      readiness: r,
+      sleepHours: wellness?.sleep_hours ?? null,
+      sleepScore: wellness?.sleep_score ?? null,
+      bodyBattery: wellness?.body_battery_morning ?? null,
+      restingHr: wellness?.resting_hr ?? null,
+      hrvStatus: wellness?.hrv_status ?? null,
+      trainingStatus: wellness?.training_status ?? null,
+      flags: recoveryFlags,
+    },
+    hydration: {
+      totalMl: total,
+      goalMl: goal,
+      expectedByNowMl: expected,
+      remainingMl: Math.max(0, goal - total),
+    },
+    reminders,
+  };
+
+  if (args.flags["json"]) {
+    console.log(JSON.stringify(payload, null, 2));
+    return;
+  }
+
+  log.box(`Coach check-in — ${date}`);
+  console.log(`Recovery: ${recoveryLevel}${r != null ? ` (readiness ${r})` : ""}`);
+  console.log(`Hydration: ${total}/${goal} ml (expected ~${expected} by now)`);
+  if (workout) {
+    const names = (workout.workouts as Array<{ sport?: string; name?: string }>)
+      .map((w) => `${w.sport ?? "?"}: ${w.name ?? "?"}`)
+      .join("; ");
+    console.log(`Today's plan (${workout.dayOfWeek ?? ""}): ${names || "rest"}`);
+  } else if (planPath) {
+    console.log(`Today's plan: no entry found for ${date} in ${planPath}`);
+  }
+  if (reminders.length === 0) {
+    console.log("Reminders: none due right now ✅");
+  } else {
+    console.log("Reminders:");
+    for (const rem of reminders) {
+      const tag = rem.suppressed ? " (suppressed: quiet hours)" : "";
+      console.log(`  • [${rem.priority}] ${rem.message}${tag}`);
+    }
+  }
+}
+
 // ============================================================================
 // Main
 // ============================================================================
@@ -901,6 +1129,9 @@ async function main() {
       break;
     case "wellness":
       await runWellness(args);
+      break;
+    case "checkin":
+      await runCheckin(args);
       break;
   }
 }
