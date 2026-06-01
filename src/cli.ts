@@ -32,7 +32,8 @@ import type { TrainingPlan } from "./schema/training-plan.js";
 import { getValidTokens } from "./strava/oauth.js";
 import { getAllActivities, getAthlete } from "./strava/api.js";
 import type { StravaActivity, StravaTokenResponse } from "./strava/types.js";
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync, writeFileSync, existsSync } from "fs";
+import { spawnSync } from "node:child_process";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -129,6 +130,11 @@ interface GarminSyncArgs {
   flags: Flags;
 }
 
+interface GarminFetchArgs {
+  command: "garmin-fetch";
+  flags: Flags;
+}
+
 interface WellnessArgs {
   command: "wellness";
   flags: Flags;
@@ -147,6 +153,7 @@ type CliArgs =
   | CheckinArgs
   | NotifyArgs
   | GarminSyncArgs
+  | GarminFetchArgs
   | WellnessArgs;
 
 type Flags = Record<string, string | boolean>;
@@ -315,6 +322,10 @@ function parseArgs(): CliArgs {
     return { command: "garmin-sync", flags: parseFlags(args.slice(1)) };
   }
 
+  if (args[0] === "garmin-fetch") {
+    return { command: "garmin-fetch", flags: parseFlags(args.slice(1)) };
+  }
+
   if (args[0] === "wellness" || args[0] === "today") {
     return { command: "wellness", flags: parseFlags(args.slice(1)) };
   }
@@ -344,7 +355,8 @@ Commands:
   wellness          Show today's hydration + wellness snapshot
   config            Show/set reminder preferences (bedtime, water goal, quiet hours)
   notify <message>  Send a push notification (webhook/Home Assistant, macOS, or stdout)
-  garmin-sync       Cache today's Garmin metrics (readiness, sleep, HRV…) to coach.db
+  garmin-fetch      Pull live data FROM Garmin Connect (wellness + activities) into coach.db
+  garmin-sync       Cache Garmin metrics you already have (readiness, sleep, HRV…) to coach.db
   checkin           Assemble plan + Garmin + wellness into a coaching/reminder payload
   help              Show this help message
 
@@ -412,7 +424,11 @@ Examples:
   npx claude-coach checkin --notify --only=hydration
   npx claude-coach checkin --greeting   # one-line wellness context for a SessionStart hook
 
-  # Cache a Garmin snapshot (an agent fetches the values via the garmin MCP)
+  # Pull live data straight from Garmin Connect (needs $GARMINTOKENS + the python fetcher)
+  npx claude-coach garmin-fetch
+  npx claude-coach garmin-fetch --date=2026-06-01 --json
+
+  # Cache a Garmin snapshot you already have (e.g. an agent fetched it via the garmin MCP)
   npx claude-coach garmin-sync --readiness=78 --sleep-hours=7.5 --hrv-status=balanced
 `);
 }
@@ -1111,6 +1127,139 @@ async function runGarminSync(args: GarminSyncArgs): Promise<void> {
   log.success(`Cached Garmin snapshot for ${date}: ${Object.keys(patch).join(", ")}.`);
 }
 
+// ----------------------------------------------------------------------------
+// garmin-fetch: the *real* Garmin sync. Spawns the Python fetcher (which logs
+// in to Garmin Connect via $GARMINTOKENS and prints JSON), then ingests the
+// wellness snapshot + recent activities through the tested DB upsert paths.
+// ----------------------------------------------------------------------------
+
+interface GarminFetchPayload {
+  date: string;
+  wellness: Record<string, number | string | null>;
+  activities: Array<Record<string, unknown>>;
+  errors: string[];
+}
+
+/** Numeric/text wellness columns the fetcher is allowed to write. */
+const GARMIN_FETCH_NUMERIC = [
+  "readiness_score",
+  "sleep_hours",
+  "sleep_score",
+  "body_battery_morning",
+  "resting_hr",
+] as const;
+const GARMIN_FETCH_TEXT = ["hrv_status", "training_status"] as const;
+
+function resolveGarminFetcher(): { python: string; script: string } {
+  const scriptCandidates = [
+    process.env.COACH_GARMIN_FETCH_SCRIPT,
+    join(__dirname, "..", "scripts", "garmin_fetch.py"),
+    "/app/scripts/garmin_fetch.py",
+  ].filter((p): p is string => Boolean(p));
+  const script = scriptCandidates.find((p) => existsSync(p)) ?? scriptCandidates[0];
+
+  const pythonCandidates = [process.env.COACH_GARMIN_PYTHON, "/opt/garmin-venv/bin/python"].filter(
+    (p): p is string => Boolean(p)
+  );
+  const python = pythonCandidates.find((p) => existsSync(p)) ?? "python3";
+
+  return { python, script };
+}
+
+function sqlNum(value: unknown): string {
+  const n = Number(value);
+  return value == null || !Number.isFinite(n) ? "NULL" : String(n);
+}
+
+function insertGarminActivity(a: Record<string, unknown>): void {
+  const str = (v: unknown): string | null => (typeof v === "string" ? v : null);
+  execute(
+    `INSERT OR REPLACE INTO activities (
+       id, name, sport_type, start_date, elapsed_time, moving_time,
+       distance, total_elevation_gain, average_speed, max_speed,
+       average_heartrate, max_heartrate, average_cadence, calories,
+       raw_json, synced_at
+     ) VALUES (
+       ${sqlNum(a.id)}, ${escapeString(str(a.name))}, ${escapeString(str(a.sport_type))},
+       ${escapeString(str(a.start_date))}, ${sqlNum(a.elapsed_time)}, ${sqlNum(a.moving_time)},
+       ${sqlNum(a.distance)}, ${sqlNum(a.total_elevation_gain)}, ${sqlNum(a.average_speed)},
+       ${sqlNum(a.max_speed)}, ${sqlNum(a.average_heartrate)}, ${sqlNum(a.max_heartrate)},
+       ${sqlNum(a.average_cadence)}, ${sqlNum(a.calories)},
+       ${escapeString(JSON.stringify(a.raw ?? a))}, datetime('now')
+     );`
+  );
+}
+
+async function runGarminFetch(args: GarminFetchArgs): Promise<void> {
+  await ensureDb();
+  const date = flagStr(args.flags, "date") ?? localDate();
+  const { python, script } = resolveGarminFetcher();
+
+  const res = spawnSync(python, [script, date], {
+    encoding: "utf-8",
+    maxBuffer: 32 * 1024 * 1024,
+  });
+  if (res.error) {
+    log.error(`garmin-fetch: could not run ${python} ${script}: ${res.error.message}`);
+    process.exit(1);
+  }
+
+  let payload: GarminFetchPayload;
+  try {
+    payload = JSON.parse((res.stdout || "").trim());
+  } catch {
+    const detail = (res.stderr || res.stdout || "no output").trim().slice(0, 400);
+    log.error(`garmin-fetch: unexpected output from the fetcher: ${detail}`);
+    process.exit(1);
+  }
+
+  // Ingest the wellness snapshot (only the whitelisted, well-typed fields).
+  const patch: WellnessPatch = {};
+  for (const col of GARMIN_FETCH_NUMERIC) {
+    const v = payload.wellness?.[col];
+    if (typeof v === "number" && Number.isFinite(v)) (patch as Record<string, unknown>)[col] = v;
+  }
+  for (const col of GARMIN_FETCH_TEXT) {
+    const v = payload.wellness?.[col];
+    if (typeof v === "string" && v) (patch as Record<string, unknown>)[col] = v;
+  }
+  if (Object.keys(patch).length > 0) upsertWellness(payload.date, patch);
+
+  // Ingest recent activities (skip any without a usable id).
+  let stored = 0;
+  for (const a of payload.activities ?? []) {
+    if (a.id == null || !Number.isFinite(Number(a.id))) continue;
+    insertGarminActivity(a);
+    stored++;
+  }
+
+  if (args.flags["json"]) {
+    console.log(
+      JSON.stringify(
+        { date: payload.date, wellness: patch, activitiesStored: stored, errors: payload.errors },
+        null,
+        2
+      )
+    );
+    return;
+  }
+
+  const fields = Object.keys(patch);
+  if (fields.length === 0 && stored === 0) {
+    log.warn(
+      `garmin-fetch: nothing stored for ${payload.date}.${
+        payload.errors?.length ? ` (${payload.errors.join("; ")})` : ""
+      }`
+    );
+    process.exit(1);
+  }
+  log.success(
+    `Garmin fetch ${payload.date}: ${fields.length} wellness field(s) [${fields.join(", ") || "—"}], ${stored} activit${stored === 1 ? "y" : "ies"}.`
+  );
+  if (payload.errors?.length)
+    log.warn(`Partial (some metrics skipped): ${payload.errors.join("; ")}`);
+}
+
 async function runNotify(args: NotifyArgs): Promise<void> {
   await ensureDb();
   const prefs = getPrefs();
@@ -1501,6 +1650,9 @@ async function main() {
       break;
     case "garmin-sync":
       await runGarminSync(args);
+      break;
+    case "garmin-fetch":
+      await runGarminFetch(args);
       break;
     case "wellness":
       await runWellness(args);
