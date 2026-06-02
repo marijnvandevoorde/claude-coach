@@ -11,7 +11,7 @@ import {
 } from "./lib/config.js";
 import { log } from "./lib/logging.js";
 import { migrate } from "./db/migrate.js";
-import { execute, initDatabase, query, queryJson } from "./db/client.js";
+import { closeDatabase, execute, initDatabase, query, queryJson } from "./db/client.js";
 import { getDialect } from "./db/dialect.js";
 import {
   getPrefs,
@@ -2138,7 +2138,15 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  log.error(err.message);
-  process.exit(1);
-});
+main()
+  .then(async () => {
+    // Release the DB handle (the MySQL socket keeps the event loop alive otherwise)
+    // so this one-shot process exits cleanly — critical for the MCP, which spawns
+    // the CLI and waits for it to exit.
+    await closeDatabase();
+  })
+  .catch(async (err) => {
+    log.error(err.message);
+    await closeDatabase().catch(() => {});
+    process.exit(1);
+  });

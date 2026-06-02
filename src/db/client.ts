@@ -11,6 +11,8 @@ interface Store {
   query(sql: string): Promise<string>;
   queryJson<T>(sql: string): Promise<T[]>;
   execute(sql: string): Promise<void>;
+  /** Release any open handle (e.g. the MySQL socket) so a one-shot CLI process can exit. */
+  close(): Promise<void>;
 }
 
 let cachedBackend: Store | null = null;
@@ -42,6 +44,9 @@ async function makeSqliteBackend(): Promise<Store> {
       async execute(sql) {
         db.exec(sql);
       },
+      async close() {
+        db.close();
+      },
     };
   } catch {
     // fall through to the sqlite3 CLI
@@ -65,6 +70,9 @@ async function makeSqliteBackend(): Promise<Store> {
         const r = spawnSync("sqlite3", [getDbPath()], { input: sql, encoding: "utf-8" });
         if (r.error) throw r.error;
         if (r.status !== 0) throw new Error(`SQLite error: ${r.stderr}`);
+      },
+      async close() {
+        /* sqlite3 CLI holds no persistent handle */
       },
     };
   } catch {
@@ -115,6 +123,9 @@ async function makeMysqlBackend(): Promise<Store> {
     async execute(sql) {
       await conn.query(sql);
     },
+    async close() {
+      await conn.end();
+    },
   };
 }
 
@@ -128,6 +139,14 @@ export async function initDatabase(): Promise<void> {
 function getBackend(): Store {
   if (!cachedBackend) throw new Error("Database not initialized. Call initDatabase() first.");
   return cachedBackend;
+}
+
+/** Close the backend so a one-shot CLI process can exit (MySQL keeps an open socket otherwise). */
+export async function closeDatabase(): Promise<void> {
+  if (cachedBackend) {
+    await cachedBackend.close();
+    cachedBackend = null;
+  }
 }
 
 // ============================================================================
