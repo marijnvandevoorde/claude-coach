@@ -1148,8 +1148,20 @@ const GARMIN_FETCH_NUMERIC = [
   "acwr",
   "acute_load",
   "chronic_load",
+  "vo2max",
+  "total_steps",
+  "total_distance_m",
+  "floors_climbed",
+  "intensity_min_moderate",
+  "intensity_min_vigorous",
+  "active_calories",
+  "total_calories",
+  "avg_spo2",
+  "avg_waking_respiration",
+  "rhr_7day_avg",
+  "body_battery_charged",
 ] as const;
-const GARMIN_FETCH_TEXT = ["hrv_status", "training_status"] as const;
+const GARMIN_FETCH_TEXT = ["hrv_status", "training_status", "garmin_raw"] as const;
 
 function sqlNum(value: unknown): string {
   const n = Number(value);

@@ -86,6 +86,9 @@ export async function fetchGarminSnapshot(date: string): Promise<GarminFetchPayl
   }
 
   const w = out.wellness;
+  // Rich/nested/series data the scalar columns don't capture, stored as one JSON
+  // blob (garmin_raw) for the MCP to hand Claude. Reuses responses fetched below.
+  const raw: Record<string, unknown> = {};
   let displayName: string | null = null;
 
   const attempt = async (label: string, fn: () => Promise<void>): Promise<void> => {
@@ -118,11 +121,17 @@ export async function fetchGarminSnapshot(date: string): Promise<GarminFetchPayl
     if (dto.sleepTimeSeconds) w.sleep_hours = Math.round((dto.sleepTimeSeconds / 3600) * 100) / 100;
     const overall: Obj = (dto.sleepScores ?? {}).overall ?? {};
     if (overall.value != null) w.sleep_score = toInt(overall.value);
+    // Stages, bed/wake timestamps, sleep need live in the DTO (the big per-minute
+    // arrays are siblings we deliberately leave out of the blob).
+    raw.sleep = dto;
   });
 
   await attempt("hrv", async () => {
     // HRV Status is the 7-day overnight average vs. the personal baseline band.
-    const summ: Obj = ((await client.get<Obj>("/hrv-service/hrv/" + date)) ?? {}).hrvSummary ?? {};
+    // Keep the full response (incl. the nightly readings array) in the blob for SD-based analysis.
+    const hrvResp: Obj = (await client.get<Obj>("/hrv-service/hrv/" + date)) ?? {};
+    raw.hrv = hrvResp;
+    const summ: Obj = hrvResp.hrvSummary ?? {};
     if (summ.status) w.hrv_status = String(summ.status).toLowerCase();
     if (summ.weeklyAvg != null) w.hrv_weekly_avg = summ.weeklyAvg;
     const base: Obj = summ.baseline ?? {};
@@ -136,6 +145,7 @@ export async function fetchGarminSnapshot(date: string): Promise<GarminFetchPayl
       (await client.get<Obj>(
         `/usersummary-service/usersummary/daily/${displayName}?calendarDate=${date}`
       )) ?? {};
+    raw.summary = d;
     if (d.restingHeartRate != null) w.resting_hr = toInt(d.restingHeartRate);
     // Body Battery at wake time is the recovery-relevant value (not the daytime peak).
     let bb = d.bodyBatteryAtWakeTime;
@@ -143,12 +153,36 @@ export async function fetchGarminSnapshot(date: string): Promise<GarminFetchPayl
     if (bb != null && bb >= 0) w.body_battery_morning = toInt(bb);
     const stress = d.averageStressLevel;
     if (stress != null && stress >= 0) w.avg_stress = toInt(stress); // Garmin uses negatives for "no data"
+
+    // Expanded daily metrics (all from this same usersummary call).
+    if (d.totalSteps != null) w.total_steps = toInt(d.totalSteps);
+    if (d.totalDistanceMeters != null) w.total_distance_m = toInt(d.totalDistanceMeters);
+    if (d.floorsAscended != null) w.floors_climbed = toInt(d.floorsAscended);
+    if (d.moderateIntensityMinutes != null)
+      w.intensity_min_moderate = toInt(d.moderateIntensityMinutes);
+    if (d.vigorousIntensityMinutes != null)
+      w.intensity_min_vigorous = toInt(d.vigorousIntensityMinutes);
+    if (d.activeKilocalories != null) w.active_calories = toInt(d.activeKilocalories);
+    if (d.totalKilocalories != null) w.total_calories = toInt(d.totalKilocalories);
+    if (d.averageSpo2 != null && d.averageSpo2 >= 0) w.avg_spo2 = toInt(d.averageSpo2);
+    if (d.avgWakingRespirationValue != null && d.avgWakingRespirationValue >= 0)
+      w.avg_waking_respiration = toInt(d.avgWakingRespirationValue);
+    if (d.lastSevenDaysAvgRestingHeartRate != null)
+      w.rhr_7day_avg = toInt(d.lastSevenDaysAvgRestingHeartRate);
+    if (d.bodyBatteryChargedValue != null)
+      w.body_battery_charged = toInt(d.bodyBatteryChargedValue);
   });
 
   await attempt("training", async () => {
     // Training Status label + the acute/chronic load and ACWR that drive it.
     const d =
       (await client.get<Obj>("/metrics-service/metrics/trainingstatus/aggregated/" + date)) ?? {};
+    // This payload also carries VO2max, training-load balance/focus, and heat/altitude
+    // acclimation — keep the whole thing in the blob and pull VO2max as a scalar.
+    raw.trainingStatus = d;
+    const vo2 =
+      d.mostRecentVO2Max?.generic?.vo2MaxPreciseValue ?? d.mostRecentVO2Max?.generic?.vo2MaxValue;
+    if (vo2 != null) w.vo2max = vo2;
     const latest: Obj =
       (d.mostRecentTrainingStatus ?? {}).latestTrainingStatusData ??
       d.latestTrainingStatusData ??
@@ -183,5 +217,6 @@ export async function fetchGarminSnapshot(date: string): Promise<GarminFetchPayl
     }
   });
 
+  if (Object.keys(raw).length > 0) w.garmin_raw = JSON.stringify(raw);
   return out;
 }
