@@ -252,6 +252,29 @@ const TOOLS: Record<string, ToolDef> = {
     },
     stdin: (a) => (typeof a.gpx === "string" ? a.gpx : undefined),
   },
+  backfill: {
+    description:
+      "Backfill historical Garmin data into coach.db over a date range. Default uses the cheap multi-day range endpoints (steps/distance/floors/stress/resting HR/intensity/body-battery/HRV). full=true fetches a per-day COMPLETE snapshot (adds sleep, training load, VO2max, calories, SpO2, respiration, garmin_raw) — heavier but resumable (skips days already backfilled unless force=true). Rate-limited with 429 backoff; safe to run repeatedly / a chunk at a time.",
+    inputSchema: {
+      type: "object",
+      required: ["from"],
+      properties: {
+        from: { type: "string", description: "start date YYYY-MM-DD" },
+        to: { type: "string", description: "end date YYYY-MM-DD (default today)" },
+        full: {
+          type: "boolean",
+          description: "per-day complete snapshot instead of the range fast-path",
+        },
+        force: { type: "boolean", description: "re-fetch days that already have a full snapshot" },
+      },
+    },
+    toArgs: (a) => {
+      const f = ["garmin-backfill", "--json", ...flags(a, ["from", "to"])];
+      if (a.full === true) f.push("--full");
+      if (a.force === true) f.push("--force");
+      return f;
+    },
+  },
   notify: {
     description:
       "Send a push notification via the configured channel (webhook/Home Assistant, macOS, stdout).",
