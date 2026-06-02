@@ -151,6 +151,17 @@ CREATE TABLE IF NOT EXISTS wellness_state (
   updated_at TEXT DEFAULT (datetime('now'))
 );
 
+-- Garmin workouts this coach has pushed, so re-pushing a plan UPDATES them in place
+-- (by stored workoutId) instead of creating duplicates.
+CREATE TABLE IF NOT EXISTS garmin_pushed_workouts (
+  push_key TEXT PRIMARY KEY,       -- stable per plan day-workout: `${date}|${name}`
+  workout_id INTEGER NOT NULL,     -- Garmin workoutId
+  schedule_id INTEGER,             -- Garmin workoutScheduleId (when scheduled on a date)
+  name TEXT,
+  date TEXT,
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_hydration_local_date ON hydration_log(local_date);
 
 DROP VIEW IF EXISTS hydration_daily;

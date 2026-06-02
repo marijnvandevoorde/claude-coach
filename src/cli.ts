@@ -35,7 +35,8 @@ import { getAllActivities, getAthlete } from "./strava/api.js";
 import type { StravaActivity, StravaTokenResponse } from "./strava/types.js";
 import { readFileSync, writeFileSync } from "fs";
 import { fetchGarminSnapshot, type GarminFetchPayload } from "./garmin/snapshot.js";
-import { pushWorkouts, type WorkoutInput } from "./garmin/workouts.js";
+import { pushWorkouts, type WorkoutInput, type PushStore } from "./garmin/workouts.js";
+import { lookupPushedWorkout, savePushedWorkout } from "./db/garminPush.js";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -917,7 +918,13 @@ async function runGarminPush(args: GarminPushArgs): Promise<void> {
   const dryRun = Boolean(args.flags["dry-run"]);
   let results;
   try {
-    results = await pushWorkouts(inputs, { dryRun });
+    // Live pushes use coach.db to dedup (update in place instead of duplicating).
+    let store: PushStore | undefined;
+    if (!dryRun) {
+      await ensureDb();
+      store = { lookup: lookupPushedWorkout, save: savePushedWorkout };
+    }
+    results = await pushWorkouts(inputs, { dryRun, store });
   } catch (e) {
     log.error(`garmin-push: ${e instanceof Error ? e.message : String(e)}`);
     process.exit(1);

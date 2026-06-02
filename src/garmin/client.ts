@@ -117,6 +117,19 @@ export class GarminClient {
     return text ? (JSON.parse(text) as T) : null;
   }
 
+  /** PUT JSON to a connectapi path (update). Returns parsed JSON (or null). Throws on non-2xx. */
+  async put<T = unknown>(path: string, body: unknown): Promise<T | null> {
+    const res = await fetch(API + path, {
+      method: "PUT",
+      headers: this.headers({ "Content-Type": "application/json" }),
+      body: JSON.stringify(body),
+    });
+    if (!res.ok)
+      throw new Error(`PUT ${path}: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
+    const text = await res.text();
+    return text ? (JSON.parse(text) as T) : null;
+  }
+
   /** DELETE a connectapi path. Throws on non-2xx (204 No Content is fine). */
   async del(path: string): Promise<void> {
     const res = await fetch(API + path, { method: "DELETE", headers: this.headers() });

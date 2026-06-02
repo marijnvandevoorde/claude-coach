@@ -84,4 +84,34 @@ describe("pushWorkouts", () => {
     expect(out[0].workoutId).toBe(999);
     expect(out[0].scheduleId).toBe(555);
   });
+
+  it("re-push UPDATES in place via the store (no duplicate)", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: { method?: string }) => {
+        calls.push(`${init?.method ?? "GET"} ${url}`);
+        if (url.includes("diauth")) return res({ access_token: "a", refresh_token: "r2" });
+        if (url.includes("/workout-service/workouts?")) return res([]); // list: no name matches
+        if (url.includes("/workout-service/workout")) return res({ workoutId: 777 });
+        if (url.includes("/workout-service/schedule/")) return res({ workoutScheduleId: 42 });
+        return res(null);
+      })
+    );
+    const db = new Map<string, any>();
+    const store = {
+      lookup: (k: string) => db.get(k),
+      save: (rec: any) => db.set(rec.push_key, rec),
+    };
+    const input = { date: "2026-06-11", sport: "run", name: "Easy", durationMinutes: 25 };
+
+    const r1 = await pushWorkouts([input], { store });
+    expect(r1[0].replaced).toBe(false);
+    expect(r1[0].workoutId).toBe(777);
+
+    const r2 = await pushWorkouts([input], { store });
+    expect(r2[0].replaced).toBe(true); // found in store → updated in place
+    expect(r2[0].workoutId).toBe(777);
+    expect(calls.some((c) => c.startsWith("PUT "))).toBe(true); // second run PUTs, not POSTs
+  });
 });
