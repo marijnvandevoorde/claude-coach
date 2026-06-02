@@ -207,10 +207,17 @@ def main():
             w["sleep_score"] = _int(overall["value"])
 
     def _hrv():
-        d = api_get("/hrv-service/hrv/" + date) or {}
-        status = (d.get("hrvSummary") or {}).get("status")
-        if status:
-            w["hrv_status"] = str(status).lower()
+        # HRV Status is the 7-day overnight average vs. the personal baseline band.
+        summ = (api_get("/hrv-service/hrv/" + date) or {}).get("hrvSummary") or {}
+        if summ.get("status"):
+            w["hrv_status"] = str(summ["status"]).lower()
+        if summ.get("weeklyAvg") is not None:
+            w["hrv_weekly_avg"] = summ["weeklyAvg"]
+        base = summ.get("baseline") or {}
+        if base.get("balancedLow") is not None:
+            w["hrv_baseline_low"] = _int(base["balancedLow"])
+        if base.get("balancedUpper") is not None:
+            w["hrv_baseline_upper"] = _int(base["balancedUpper"])
 
     def _stats():
         if not display_name[0]:
@@ -221,13 +228,18 @@ def main():
         )
         if d.get("restingHeartRate") is not None:
             w["resting_hr"] = _int(d["restingHeartRate"])
-        bb = d.get("bodyBatteryMostRecentValue")
+        # Body Battery at wake time is the recovery-relevant value (not the daytime peak).
+        bb = d.get("bodyBatteryAtWakeTime")
         if bb is None:
-            bb = d.get("bodyBatteryHighestValue")
-        if bb is not None:
+            bb = d.get("bodyBatteryMostRecentValue")
+        if bb is not None and bb >= 0:
             w["body_battery_morning"] = _int(bb)
+        stress = d.get("averageStressLevel")
+        if stress is not None and stress >= 0:  # Garmin uses negatives when no data
+            w["avg_stress"] = _int(stress)
 
-    def _training_status():
+    def _training():
+        # Training Status label + the acute/chronic load and ACWR that drive it.
         d = api_get("/metrics-service/metrics/trainingstatus/aggregated/" + date) or {}
         latest = (
             (d.get("mostRecentTrainingStatus") or {}).get("latestTrainingStatusData")
@@ -238,9 +250,17 @@ def main():
             if not isinstance(v, dict):
                 continue
             phrase = v.get("trainingStatusFeedbackPhrase") or v.get("trainingStatus")
-            if phrase:
+            if phrase and "training_status" not in w:
                 w["training_status"] = str(phrase).replace("_", " ").title()
-                return
+            acute = v.get("acuteTrainingLoadDTO") or {}
+            if acute.get("dailyAcuteChronicWorkloadRatio") is not None:
+                w["acwr"] = acute["dailyAcuteChronicWorkloadRatio"]
+            if acute.get("dailyTrainingLoadAcute") is not None:
+                w["acute_load"] = _int(acute["dailyTrainingLoadAcute"])
+            if acute.get("dailyTrainingLoadChronic") is not None:
+                w["chronic_load"] = _int(acute["dailyTrainingLoadChronic"])
+            if "acwr" in w:
+                break
 
     def _activities():
         d = api_get("/activitylist-service/activities/search/activities?start=0&limit=15") or []
@@ -255,7 +275,7 @@ def main():
     attempt("sleep", _sleep)
     attempt("hrv", _hrv)
     attempt("stats", _stats)
-    attempt("training_status", _training_status)
+    attempt("training", _training)
     attempt("activities", _activities)
 
     print(json.dumps(out))

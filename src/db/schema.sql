@@ -117,12 +117,20 @@ CREATE TABLE IF NOT EXISTS wellness_state (
   weight_kg REAL,
   notes TEXT,
   -- cached Garmin signals (snapshot taken at last check-in)
-  readiness_score INTEGER,        -- 0-100
-  body_battery_morning INTEGER,   -- 0-100
+  readiness_score INTEGER,        -- 0-100 (Garmin Training Readiness, when the device exposes it)
+  body_battery_morning INTEGER,   -- 0-100 (Body Battery at wake time)
   resting_hr INTEGER,
   hrv_status TEXT,                -- balanced | unbalanced | low
   training_status TEXT,          -- Garmin training status label
   training_minutes INTEGER,      -- today's planned/actual training load (minutes)
+  -- raw inputs for the from-scratch readiness model (when readiness_score is null)
+  hrv_weekly_avg REAL,           -- 7-day average overnight HRV (ms)
+  hrv_baseline_low INTEGER,      -- personal HRV "balanced" band lower bound (ms)
+  hrv_baseline_upper INTEGER,    -- personal HRV "balanced" band upper bound (ms)
+  avg_stress INTEGER,            -- Garmin all-day average stress (0-100; rest <=25)
+  acwr REAL,                     -- acute:chronic workload ratio (7d/28d)
+  acute_load INTEGER,            -- acute training load (EPOC, 7-day normalized)
+  chronic_load INTEGER,          -- chronic training load (28-day)
   -- reminder bookkeeping (so nudges don't repeat)
   last_water_reminder_at TEXT,    -- UTC ISO 8601
   last_bedtime_reminder_at TEXT,  -- UTC ISO 8601

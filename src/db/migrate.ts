@@ -32,6 +32,14 @@ export function migrate(silent = false): void {
   ensureColumn("reminder_prefs", "notify_webhook_url", "TEXT");
   ensureColumn("reminder_prefs", "hydration_per_active_hour_ml", "INTEGER DEFAULT 500");
   ensureColumn("wellness_state", "training_minutes", "INTEGER");
+  // Raw inputs for the from-scratch readiness model.
+  ensureColumn("wellness_state", "hrv_weekly_avg", "REAL");
+  ensureColumn("wellness_state", "hrv_baseline_low", "INTEGER");
+  ensureColumn("wellness_state", "hrv_baseline_upper", "INTEGER");
+  ensureColumn("wellness_state", "avg_stress", "INTEGER");
+  ensureColumn("wellness_state", "acwr", "REAL");
+  ensureColumn("wellness_state", "acute_load", "INTEGER");
+  ensureColumn("wellness_state", "chronic_load", "INTEGER");
 
   if (!silent) log.success("Database schema initialized");
 }

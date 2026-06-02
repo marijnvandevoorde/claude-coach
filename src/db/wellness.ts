@@ -137,6 +137,13 @@ export interface WellnessRow {
   hrv_status: string | null;
   training_status: string | null;
   training_minutes: number | null;
+  hrv_weekly_avg: number | null;
+  hrv_baseline_low: number | null;
+  hrv_baseline_upper: number | null;
+  avg_stress: number | null;
+  acwr: number | null;
+  acute_load: number | null;
+  chronic_load: number | null;
   last_water_reminder_at: string | null;
   last_bedtime_reminder_at: string | null;
   updated_at: string | null;
