@@ -116,4 +116,10 @@ export class GarminClient {
     const text = await res.text();
     return text ? (JSON.parse(text) as T) : null;
   }
+
+  /** DELETE a connectapi path. Throws on non-2xx (204 No Content is fine). */
+  async del(path: string): Promise<void> {
+    const res = await fetch(API + path, { method: "DELETE", headers: this.headers() });
+    if (!res.ok && res.status !== 204) throw new Error(`DELETE ${path}: HTTP ${res.status}`);
+  }
 }
