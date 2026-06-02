@@ -1,119 +1,156 @@
 // ============================================================================
-// Derived recovery score
+// From-scratch Training Readiness
 //
-// Garmin's Training Readiness isn't available on every device. For athletes
-// whose watch doesn't surface it (the API returns an empty list), we derive a
-// readiness-style 0–100 recovery score from the signals we *do* have — body
-// battery, sleep score, HRV status, sleep duration, subjective energy — plus a
-// resting-HR-vs-baseline penalty when a baseline exists. Same 0–100 scale and
-// thresholds as Garmin readiness, so the check-in treats both identically.
+// Garmin's Training Readiness isn't exposed on every device (the API returns an
+// empty list). When it's missing we reconstruct it from the SAME primary sensor
+// signals Garmin documents — sleep score + recovery/load (ACWR) as the two
+// "primary drivers", then HRV-vs-baseline, stress, and sleep history as
+// "secondary influences" — weighted accordingly.
+//
+// Crucially we use the *primary* signals directly and do NOT feed in Body
+// Battery or Training Status: those are themselves composites of HRV/sleep/
+// stress, so including them would double-count. They're surfaced as context
+// elsewhere, not as inputs here.
+//
+// Garmin publishes no numeric band cut-offs (only the labels Poor/Low/Moderate/
+// High/Prime) and no factor weights, so the weights and bands below are our own
+// calibration of Garmin's stated primary/secondary structure.
 // ============================================================================
 
-export type RecoveryLevel = "prime" | "moderate" | "low" | "poor" | "unknown";
+export type RecoveryLevel = "prime" | "high" | "moderate" | "low" | "poor" | "unknown";
 
-/** Map a 0–100 readiness/recovery score to a level (matches the readiness bands). */
+/** Map a 0–100 readiness score to one of Garmin's five labels. */
 export function recoveryLevelFromScore(score: number): Exclude<RecoveryLevel, "unknown"> {
-  return score >= 75 ? "prime" : score >= 50 ? "moderate" : score >= 25 ? "low" : "poor";
+  return score >= 75
+    ? "prime"
+    : score >= 55
+      ? "high"
+      : score >= 40
+        ? "moderate"
+        : score >= 25
+          ? "low"
+          : "poor";
 }
 
-export interface RecoverySignals {
-  bodyBattery?: number | null; // Garmin Body Battery, 0–100
-  sleepScore?: number | null; // Garmin sleep score, 0–100
-  sleepHours?: number | null;
-  hrvStatus?: string | null; // balanced | unbalanced | low | poor
-  trainingStatus?: string | null; // Garmin label, e.g. "Strained 5", "Productive 8"
-  energy?: number | null; // subjective energy, 1–5
+export interface ReadinessSignals {
+  sleepScore?: number | null; // 0–100, last night (PRIMARY)
+  acwr?: number | null; // acute:chronic workload ratio — recovery/load proxy (PRIMARY)
+  hrvWeeklyAvg?: number | null; // 7-day overnight HRV avg (SECONDARY)
+  hrvBaselineLow?: number | null; // personal "balanced" band lower bound
+  hrvBaselineUpper?: number | null; // personal "balanced" band upper bound
+  hrvStatus?: string | null; // fallback when the numeric baseline is absent
+  avgStress?: number | null; // 0–100 all-day stress, rest ≤25 (SECONDARY)
+  sleepHistoryScore?: number | null; // rolling avg of recent sleep scores (SECONDARY)
   restingHr?: number | null;
   restingHrBaseline?: number | null; // rolling mean of recent resting HR
 }
 
-export interface DerivedRecovery {
-  score: number; // 0–100 proxy
+export interface ReadinessFactor {
+  name: string;
+  score: number; // 0–100 contribution (or a negative penalty for RHR)
+  weight: number;
+  detail: string;
+}
+
+export interface DerivedReadiness {
+  score: number; // 0–100
   level: Exclude<RecoveryLevel, "unknown">;
-  components: string[]; // human-readable signals that fed the score
+  factors: ReadinessFactor[];
 }
 
 const clamp = (n: number): number => Math.max(0, Math.min(100, n));
 
-const HRV_SCORE: Record<string, number> = {
-  balanced: 85,
-  unbalanced: 55,
-  low: 35,
+const HRV_STATUS_SCORE: Record<string, number> = {
+  balanced: 80,
+  unbalanced: 50,
+  low: 38,
   poor: 25,
 };
 
-// Garmin Training Status — a multi-day load/fatigue verdict. "Strained" and
-// "Unproductive" are direct fatigue/overreaching signals; the rest are neutral
-// to good. "No Status" / unknown labels yield null and are skipped.
-const TRAINING_STATUS_SCORE: Record<string, number> = {
-  peaking: 90,
-  productive: 80,
-  maintaining: 75,
-  recovery: 70,
-  detraining: 65,
-  unproductive: 40,
-  strained: 30,
-};
+/**
+ * ACWR → recovery/load readiness component. Higher recent load relative to
+ * chronic (high ACWR) means more residual recovery demand, so a lower score;
+ * a well-rested low ratio scores high. Mirrors how Garmin's Recovery Time —
+ * the metric we can't fetch — is itself adjusted by the 7d/28d load ratio.
+ */
+export function recoveryFromAcwr(acwr: number): number {
+  return clamp(115 - acwr * 38);
+}
 
-/** Score the leading word of a Garmin training-status label ("Strained 5" -> 30). */
-export function trainingStatusScore(status: string): number | null {
-  const key = status.toLowerCase().match(/[a-z]+/)?.[0];
-  return key ? (TRAINING_STATUS_SCORE[key] ?? null) : null;
+/** HRV component from the 7-day average relative to the personal balanced band. */
+function hrvComponent(s: ReadinessSignals): { score: number; detail: string } | null {
+  if (s.hrvWeeklyAvg != null && s.hrvBaselineLow != null && s.hrvBaselineUpper != null) {
+    const mid = (s.hrvBaselineLow + s.hrvBaselineUpper) / 2;
+    const score = clamp(80 + (s.hrvWeeklyAvg / mid - 1) * 180);
+    return {
+      score,
+      detail: `HRV 7d ${Math.round(s.hrvWeeklyAvg)} vs ${s.hrvBaselineLow}–${s.hrvBaselineUpper}`,
+    };
+  }
+  const hrv = s.hrvStatus?.toLowerCase();
+  if (hrv) return { score: HRV_STATUS_SCORE[hrv] ?? 55, detail: `HRV ${hrv}` };
+  return null;
 }
 
 /**
- * Derive a recovery score from whatever signals are present. Each signal is a
- * weighted 0–100 component; the score is their weighted mean, then nudged down
- * if resting HR is elevated above the athlete's baseline. Returns null when no
- * usable signal is available (so the caller can fall back to "unknown").
+ * Reconstruct a 0–100 Training Readiness from available signals. Returns null
+ * when no usable signal is present (so the caller falls back to "unknown").
  */
-export function deriveRecovery(s: RecoverySignals): DerivedRecovery | null {
-  const parts: Array<{ weight: number; value: number; label: string }> = [];
+export function computeReadiness(s: ReadinessSignals): DerivedReadiness | null {
+  const factors: ReadinessFactor[] = [];
 
-  if (s.bodyBattery != null)
-    parts.push({
-      weight: 1.0,
-      value: clamp(s.bodyBattery),
-      label: `body battery ${Math.round(s.bodyBattery)}`,
-    });
   if (s.sleepScore != null)
-    parts.push({
-      weight: 0.8,
-      value: clamp(s.sleepScore),
-      label: `sleep score ${Math.round(s.sleepScore)}`,
+    factors.push({
+      name: "sleep",
+      score: clamp(s.sleepScore),
+      weight: 2.0,
+      detail: `sleep score ${Math.round(s.sleepScore)}`,
     });
-  const hrv = s.hrvStatus?.toLowerCase();
-  if (hrv) parts.push({ weight: 0.8, value: HRV_SCORE[hrv] ?? 55, label: `HRV ${hrv}` });
-  if (s.trainingStatus) {
-    const ts = trainingStatusScore(s.trainingStatus);
-    if (ts != null)
-      parts.push({ weight: 0.9, value: ts, label: `training status ${s.trainingStatus}` });
-  }
-  if (s.sleepHours != null)
-    parts.push({
-      weight: 0.4,
-      value: clamp((s.sleepHours / 8) * 100),
-      label: `${s.sleepHours} h sleep`,
+  if (s.acwr != null)
+    factors.push({
+      name: "recovery",
+      score: recoveryFromAcwr(s.acwr),
+      weight: 2.0,
+      detail: `ACWR ${s.acwr.toFixed(2)}`,
     });
-  if (s.energy != null)
-    parts.push({ weight: 0.5, value: clamp((s.energy / 5) * 100), label: `energy ${s.energy}/5` });
+  const hrv = hrvComponent(s);
+  if (hrv) factors.push({ name: "hrv", score: hrv.score, weight: 1.2, detail: hrv.detail });
+  if (s.avgStress != null)
+    factors.push({
+      name: "stress",
+      score: clamp(100 - s.avgStress),
+      weight: 1.0,
+      detail: `stress ${Math.round(s.avgStress)}`,
+    });
+  if (s.sleepHistoryScore != null)
+    factors.push({
+      name: "sleep history",
+      score: clamp(s.sleepHistoryScore),
+      weight: 1.0,
+      detail: `recent sleep ~${Math.round(s.sleepHistoryScore)}`,
+    });
 
-  if (parts.length === 0) return null;
+  if (factors.length === 0) return null;
 
-  const totalWeight = parts.reduce((a, p) => a + p.weight, 0);
-  let score = parts.reduce((a, p) => a + p.weight * p.value, 0) / totalWeight;
-  const components = parts.map((p) => p.label);
+  const totalWeight = factors.reduce((a, f) => a + f.weight, 0);
+  let score = factors.reduce((a, f) => a + f.weight * f.score, 0) / totalWeight;
 
+  // Elevated resting HR vs personal baseline — an independent physiological
+  // strain signal applied as a small penalty (only when a baseline exists).
   if (s.restingHr != null && s.restingHrBaseline != null) {
     const delta = s.restingHr - s.restingHrBaseline;
     if (delta >= 3) {
-      score = Math.max(0, score - Math.min(25, (delta - 2) * 4));
-      components.push(
-        `resting HR ${Math.round(s.restingHr)} vs ~${Math.round(s.restingHrBaseline)} baseline`
-      );
+      const penalty = Math.min(20, (delta - 2) * 3);
+      score = Math.max(0, score - penalty);
+      factors.push({
+        name: "resting HR",
+        score: -penalty,
+        weight: 0,
+        detail: `resting HR ${Math.round(s.restingHr)} vs ~${Math.round(s.restingHrBaseline)} (−${Math.round(penalty)})`,
+      });
     }
   }
 
   score = Math.round(score);
-  return { score, level: recoveryLevelFromScore(score), components };
+  return { score, level: recoveryLevelFromScore(score), factors };
 }

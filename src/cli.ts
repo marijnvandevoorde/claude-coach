@@ -26,7 +26,7 @@ import {
   type ReminderPrefs,
 } from "./db/wellness.js";
 import { resolveNotify, sendNotification } from "./lib/notify.js";
-import { deriveRecovery, recoveryLevelFromScore, type RecoveryLevel } from "./lib/recovery.js";
+import { computeReadiness, recoveryLevelFromScore, type RecoveryLevel } from "./lib/recovery.js";
 import { generateIcs } from "./viewer/lib/export/ics.js";
 import { getSportIcon } from "./viewer/lib/utils.js";
 import type { TrainingPlan } from "./schema/training-plan.js";
@@ -1148,6 +1148,13 @@ const GARMIN_FETCH_NUMERIC = [
   "sleep_score",
   "body_battery_morning",
   "resting_hr",
+  "hrv_weekly_avg",
+  "hrv_baseline_low",
+  "hrv_baseline_upper",
+  "avg_stress",
+  "acwr",
+  "acute_load",
+  "chronic_load",
 ] as const;
 const GARMIN_FETCH_TEXT = ["hrv_status", "training_status"] as const;
 
@@ -1424,6 +1431,18 @@ function restingHrBaseline(beforeDate: string): number | null {
   return vals.reduce((a, b) => a + b, 0) / vals.length;
 }
 
+/** Rolling mean of sleep score over recent days (the "sleep history" factor). */
+function sleepScoreHistory(beforeDate: string): number | null {
+  const rows = queryJson<{ sleep_score: number }>(
+    `SELECT sleep_score FROM wellness_state
+     WHERE sleep_score IS NOT NULL AND local_date < ${escapeString(beforeDate)}
+     ORDER BY local_date DESC LIMIT 5;`
+  );
+  const vals = rows.map((row) => Number(row.sleep_score)).filter(Number.isFinite);
+  if (vals.length < 3) return null;
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+}
+
 async function runCheckin(args: CheckinArgs): Promise<void> {
   await ensureDb();
   const date = flagStr(args.flags, "date") ?? localDate();
@@ -1541,13 +1560,15 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
         `Training readiness ${r} (${recoveryLevel}) — consider easing today's intensity.`
       );
   } else {
-    const derived = deriveRecovery({
-      bodyBattery: wellness?.body_battery_morning,
+    const derived = computeReadiness({
       sleepScore: wellness?.sleep_score,
-      sleepHours: wellness?.sleep_hours,
+      acwr: wellness?.acwr,
+      hrvWeeklyAvg: wellness?.hrv_weekly_avg,
+      hrvBaselineLow: wellness?.hrv_baseline_low,
+      hrvBaselineUpper: wellness?.hrv_baseline_upper,
       hrvStatus: wellness?.hrv_status,
-      trainingStatus: wellness?.training_status,
-      energy: wellness?.subjective_energy,
+      avgStress: wellness?.avg_stress,
+      sleepHistoryScore: sleepScoreHistory(date),
       restingHr: wellness?.resting_hr,
       restingHrBaseline: restingHrBaseline(date),
     });
@@ -1555,10 +1576,10 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
       recoveryLevel = derived.level;
       recoveryScore = derived.score;
       recoveryDerived = true;
-      derivedFrom = derived.components;
+      derivedFrom = derived.factors.map((f) => f.detail);
       if (derived.score < 50)
         recoveryFlags.push(
-          `Recovery ~${derived.score} (${derived.level}, derived from ${derived.components.join(", ")}) — no Garmin readiness on this device; consider easing today's intensity.`
+          `Readiness ~${derived.score} (${derived.level}, reconstructed from ${derived.factors.map((f) => f.detail).join(", ")}) — no native Garmin readiness on this device; consider easing today's intensity.`
         );
     } else {
       recoveryLevel = "unknown";
