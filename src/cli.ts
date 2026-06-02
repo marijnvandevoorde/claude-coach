@@ -37,6 +37,7 @@ import { readFileSync, writeFileSync } from "fs";
 import { fetchGarminSnapshot, type GarminFetchPayload } from "./garmin/snapshot.js";
 import { pushWorkouts, type WorkoutInput, type PushStore } from "./garmin/workouts.js";
 import { lookupPushedWorkout, savePushedWorkout } from "./db/garminPush.js";
+import { uploadRoute, COURSE_TYPES } from "./garmin/routes.js";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -144,6 +145,12 @@ interface GarminPushArgs {
   flags: Flags;
 }
 
+interface GarminRouteArgs {
+  command: "garmin-route";
+  inputFile: string;
+  flags: Flags;
+}
+
 interface WellnessArgs {
   command: "wellness";
   flags: Flags;
@@ -164,6 +171,7 @@ type CliArgs =
   | GarminSyncArgs
   | GarminFetchArgs
   | GarminPushArgs
+  | GarminRouteArgs
   | WellnessArgs;
 
 type Flags = Record<string, string | boolean>;
@@ -277,6 +285,16 @@ function parseArgs(): CliArgs {
     return { command: "garmin-push", inputFile: args[1], flags: parseFlags(args.slice(2)) };
   }
 
+  if (args[0] === "garmin-route") {
+    if (!args[1] || args[1].startsWith("--")) {
+      log.error(
+        "garmin-route requires a GPX file (e.g. garmin-route route.gpx --name=… --type=mtb)"
+      );
+      process.exit(1);
+    }
+    return { command: "garmin-route", inputFile: args[1], flags: parseFlags(args.slice(2)) };
+  }
+
   if (args[0] === "query") {
     if (!args[1]) {
       log.error("query command requires a SQL statement");
@@ -369,6 +387,7 @@ Commands:
   export-calendar <file>  Plan → .ics (or --json events to push to Google Calendar)
   export-garmin <file>    Plan → structured workouts JSON (to create + schedule on Garmin)
   garmin-push <file>      Create + schedule a plan's workouts on Garmin (--dry-run to preview)
+  garmin-route <file.gpx> Upload a GPX as a Garmin course (--name, --type, --dry-run)
   query <sql>       Run a SQL query against the database
   log <type> <val>  Log wellness/intake (water|sleep|energy|soreness|mood|weight)
   wellness          Show today's hydration + wellness snapshot
@@ -423,6 +442,9 @@ Examples:
   # Create + schedule a plan's workouts directly on Garmin (preview first with --dry-run)
   npx claude-coach garmin-push plan.json --dry-run
   npx claude-coach garmin-push plan.json
+
+  # Upload a GPX as a Garmin course/route — kept exactly as-is, no road-snapping
+  npx claude-coach garmin-route route.gpx --name="Sunday loop" --type=mtb
 
   # Query the database
   npx claude-coach query "SELECT * FROM weekly_volume LIMIT 5"
@@ -951,6 +973,43 @@ async function runGarminPush(args: GarminPushArgs): Promise<void> {
   }
   for (const r of failed) log.error(`${r.name}: ${r.error}`);
   log.info(`Pushed ${ok.length}/${results.length} workout(s) to Garmin.`);
+}
+
+async function runGarminRoute(args: GarminRouteArgs): Promise<void> {
+  let gpx: string;
+  try {
+    gpx = readFileSync(args.inputFile, "utf-8");
+  } catch {
+    log.error(`Could not read GPX file: ${args.inputFile}`);
+    process.exit(1);
+  }
+
+  const name = flagStr(args.flags, "name");
+  const type = flagStr(args.flags, "type");
+  const dryRun = Boolean(args.flags["dry-run"]);
+
+  let result;
+  try {
+    result = await uploadRoute({ gpx, name, type, dryRun });
+  } catch (e) {
+    log.error(`garmin-route: ${e instanceof Error ? e.message : String(e)}`);
+    process.exit(1);
+  }
+
+  if (args.flags["json"] || dryRun) {
+    console.log(JSON.stringify(result, null, 2));
+    if (dryRun) {
+      log.info(
+        `Dry run — parsed ${result.points} points, uploaded nothing. (types: ${COURSE_TYPES})`
+      );
+    }
+    return;
+  }
+  log.success(
+    `Uploaded "${result.name}" (${result.points} points${
+      result.type ? `, ${result.type}` : ""
+    }) → course ${result.courseId}`
+  );
 }
 
 function runRender(args: RenderArgs): void {
@@ -1634,7 +1693,9 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
       soreness: wellness?.soreness,
       mood: wellness?.mood,
       restingHr: wellness?.resting_hr,
-      restingHrBaseline: restingHrBaseline(date),
+      // Prefer Garmin's own 7-day resting-HR average (available immediately);
+      // fall back to our rolling DB mean once enough history exists.
+      restingHrBaseline: wellness?.rhr_7day_avg ?? restingHrBaseline(date),
     });
     if (derived) {
       recoveryLevel = derived.level;
@@ -1775,6 +1836,9 @@ async function main() {
       break;
     case "export-garmin":
       runExportGarmin(args);
+      break;
+    case "garmin-route":
+      await runGarminRoute(args);
       break;
     case "garmin-push":
       await runGarminPush(args);

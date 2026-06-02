@@ -213,6 +213,31 @@ const TOOLS: Record<string, ToolDef> = {
       return f;
     },
   },
+  upload_route: {
+    description:
+      "Upload a GPX file to Garmin as a course/route, kept EXACTLY as-is (no point reduction, no snap-to-roads). Give the path to a .gpx file plus an optional name (defaults to the GPX track name) and course type. dryRun parses + builds the payload without uploading.",
+    inputSchema: {
+      type: "object",
+      required: ["file"],
+      properties: {
+        file: {
+          type: "string",
+          description: "path to a .gpx file (must be readable by the coach server)",
+        },
+        name: { type: "string", description: "course name (defaults to the GPX track name)" },
+        type: {
+          type: "string",
+          description: "course type: run, trail, road, mtb, gravel, cycling, hike, walk",
+        },
+        dryRun: { type: "boolean", description: "parse + build payload only; upload nothing" },
+      },
+    },
+    toArgs: (a) => {
+      const f = ["garmin-route", String(a.file), "--json", ...flags(a, ["name", "type"])];
+      if (a.dryRun === true) f.push("--dry-run");
+      return f;
+    },
+  },
   notify: {
     description:
       "Send a push notification via the configured channel (webhook/Home Assistant, macOS, stdout).",
