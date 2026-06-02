@@ -275,6 +275,44 @@ const TOOLS: Record<string, ToolDef> = {
       return f;
     },
   },
+  journal: {
+    description:
+      "Add a free-text journal entry in the athlete's own words (e.g. 'legs heavy, slept badly, stressful week'). Complements the structured mood/energy/soreness log; read back via summary.",
+    inputSchema: {
+      type: "object",
+      required: ["entry"],
+      properties: {
+        entry: { type: "string", description: "the free-text note" },
+        tag: { type: "string", description: "optional label, e.g. 'race' or 'niggle'" },
+        date: { type: "string", description: "YYYY-MM-DD (default today)" },
+      },
+    },
+    toArgs: (a) => ["journal", "add", String(a.entry), ...flags(a, ["tag", "date"])],
+  },
+  journal_list: {
+    description: "List journal entries (most recent first). Filter with since/until.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        since: { type: "string", description: "YYYY-MM-DD" },
+        until: { type: "string", description: "YYYY-MM-DD" },
+        limit: { type: "number" },
+      },
+    },
+    toArgs: (a) => ["journal", "list", "--json", ...flags(a, ["since", "until", "limit"])],
+  },
+  summary: {
+    description:
+      "Bundle a period's journal entries + daily wellness/training metrics as JSON so you can compose an end-of-week summary for the athlete. Defaults to the last 7 days.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        since: { type: "string", description: "YYYY-MM-DD (default 7 days ago)" },
+        to: { type: "string", description: "YYYY-MM-DD (default today)" },
+      },
+    },
+    toArgs: (a) => ["summary", ...flags(a, ["since", "to"])],
+  },
   notify: {
     description:
       "Send a push notification via the configured channel (webhook/Home Assistant, macOS, stdout).",
