@@ -2,9 +2,11 @@
 
 Garmin Connect is the **primary source for recovery, readiness, and load** in Claude Coach. Where Strava tells you _what the athlete did_, Garmin tells you _how their body is responding_ — sleep, HRV, stress, body battery, resting heart rate, training readiness, and Garmin's own training-status/load model (CTL/ATL/TSB) and VO₂max.
 
-Garmin data is read through the [`garmin_mcp`](https://github.com/Taxuspt/garmin_mcp) MCP server. When it is connected, its tools appear in the `mcp__garmin__*` namespace (e.g. `mcp__garmin__get_training_readiness`). This document refers to tools by their **bare name** (`get_training_readiness`); prefix with `mcp__garmin__` when actually calling them.
+**By default the coach reads Garmin itself** — `mcp__coach__garmin_refresh` (remote connector) or `npx claude-coach garmin-fetch` (local CLI) pull live data from Garmin Connect using the saved tokens and cache it in `coach.db`, where `checkin` / `wellness` surface it as recovery readiness. **No separate Garmin MCP is required.**
 
-> **Before relying on Garmin, confirm it's available.** See `skill/SKILL.md` → "Check for Garmin Connect (recovery & readiness)". If the `mcp__garmin__*` tools are not present, fall back to Strava/manual data and skip the Garmin-specific steps — never block plan creation on Garmin.
+The standalone [`garmin_mcp`](https://github.com/Taxuspt/garmin_mcp) server (`mcp__garmin__*` tools, e.g. `mcp__garmin__get_training_readiness`) is **optional** — useful only in a local Claude Code session for richer _live_ signals the coach doesn't yet cache (full CTL/ATL/TSB load trend, VO₂max trend, endurance/hill scores) or to push workouts to the watch. This document refers to Garmin signals by a **bare name** (`get_training_readiness`); those map to `mcp__garmin__*` tools when that server is present, but the headline signals (readiness, sleep, HRV + baseline, stress, body battery, training status, activities) also come through `garmin_refresh` → `checkin` / `wellness` without it.
+
+> **Garmin is optional — never block plan creation on it.** Prefer `mcp__coach__garmin_refresh` (or `claude-coach garmin-fetch`); use `mcp__garmin__*` only if present and you need a signal the coach doesn't cache. If no Garmin path is available at all, fall back to Strava/manual and skip the Garmin-specific steps.
 
 ## Conventions
 
@@ -110,7 +112,7 @@ Garmin can also serve activity history (useful when the athlete is Garmin-only, 
 
 ## Graceful degradation
 
-If `mcp__garmin__*` tools are unavailable, or a specific call returns "no data found" (common for metrics a given watch model doesn't record — e.g. some devices lack HRV or training readiness):
+If no Garmin path resolves a signal — `mcp__coach__garmin_refresh` / `garmin-fetch` returns nothing for it, and the optional `mcp__garmin__*` tools are absent too — or a specific call returns "no data found" (common for metrics a given watch model doesn't record — e.g. some devices lack HRV or training readiness):
 
 - Continue with whatever signals _are_ available.
 - Fall back to Strava-derived load (suffer score / duration) and HR data.
