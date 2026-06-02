@@ -19,15 +19,15 @@ describe("wellness data layer + migration", () => {
     const { migrate } = await import("../../src/db/migrate.js");
     wellness = await import("../../src/db/wellness.js");
     await client.initDatabase();
-    migrate(true);
+    await migrate(true);
   });
 
   afterAll(() => {
     rmSync(home, { recursive: true, force: true });
   });
 
-  it("seeds a single reminder_prefs row with defaults (incl. notify columns)", () => {
-    const prefs = wellness.getPrefs();
+  it("seeds a single reminder_prefs row with defaults (incl. notify columns)", async () => {
+    const prefs = await wellness.getPrefs();
     expect(prefs.id).toBe(1);
     expect(prefs.hydration_goal_ml).toBe(2500);
     expect(prefs.water_cadence_minutes).toBe(60);
@@ -37,47 +37,47 @@ describe("wellness data layer + migration", () => {
     expect(prefs.notify_webhook_url).toBeNull();
   });
 
-  it("updates prefs across text, numeric, and notify columns", () => {
-    wellness.updatePrefs({
+  it("updates prefs across text, numeric, and notify columns", async () => {
+    await wellness.updatePrefs({
       bedtime_target: "22:30",
       hydration_goal_ml: 3000,
       notify_webhook_url: "https://ha/x",
       notify_channel: "webhook",
     });
-    const p = wellness.getPrefs();
+    const p = await wellness.getPrefs();
     expect(p.bedtime_target).toBe("22:30");
     expect(p.hydration_goal_ml).toBe(3000);
     expect(p.notify_webhook_url).toBe("https://ha/x");
     expect(p.notify_channel).toBe("webhook");
   });
 
-  it("logs hydration and sums per local date", () => {
-    wellness.logHydration(500, { date: "2026-06-01" });
-    wellness.logHydration(250, { date: "2026-06-01" });
-    wellness.logHydration(999, { date: "2026-05-31" });
-    expect(wellness.hydrationTotal("2026-06-01")).toBe(750);
-    expect(wellness.hydrationTotal("2026-05-31")).toBe(999);
-    expect(wellness.hydrationTotal("2026-01-01")).toBe(0);
+  it("logs hydration and sums per local date", async () => {
+    await wellness.logHydration(500, { date: "2026-06-01" });
+    await wellness.logHydration(250, { date: "2026-06-01" });
+    await wellness.logHydration(999, { date: "2026-05-31" });
+    expect(await wellness.hydrationTotal("2026-06-01")).toBe(750);
+    expect(await wellness.hydrationTotal("2026-05-31")).toBe(999);
+    expect(await wellness.hydrationTotal("2026-01-01")).toBe(0);
   });
 
-  it("upserts wellness rows — insert then merge", () => {
-    wellness.upsertWellness("2026-06-01", { sleep_hours: 7.5, readiness_score: 80 });
-    expect(wellness.getWellness("2026-06-01")?.readiness_score).toBe(80);
+  it("upserts wellness rows — insert then merge", async () => {
+    await wellness.upsertWellness("2026-06-01", { sleep_hours: 7.5, readiness_score: 80 });
+    expect((await wellness.getWellness("2026-06-01"))?.readiness_score).toBe(80);
 
     // Second upsert updates readiness and adds hrv_status, keeps sleep_hours.
-    wellness.upsertWellness("2026-06-01", { readiness_score: 42, hrv_status: "unbalanced" });
-    const w = wellness.getWellness("2026-06-01");
+    await wellness.upsertWellness("2026-06-01", { readiness_score: 42, hrv_status: "unbalanced" });
+    const w = await wellness.getWellness("2026-06-01");
     expect(w?.readiness_score).toBe(42);
     expect(w?.sleep_hours).toBe(7.5);
     expect(w?.hrv_status).toBe("unbalanced");
   });
 
-  it("safely stores text containing single quotes", () => {
-    wellness.upsertWellness("2026-06-02", { notes: "O'Brien's plan" });
-    expect(wellness.getWellness("2026-06-02")?.notes).toBe("O'Brien's plan");
+  it("safely stores text containing single quotes", async () => {
+    await wellness.upsertWellness("2026-06-02", { notes: "O'Brien's plan" });
+    expect((await wellness.getWellness("2026-06-02"))?.notes).toBe("O'Brien's plan");
   });
 
-  it("returns null for a date with no wellness row", () => {
-    expect(wellness.getWellness("2099-01-01")).toBeNull();
+  it("returns null for a date with no wellness row", async () => {
+    expect(await wellness.getWellness("2099-01-01")).toBeNull();
   });
 });

@@ -12,6 +12,7 @@ import {
 import { log } from "./lib/logging.js";
 import { migrate } from "./db/migrate.js";
 import { execute, initDatabase, query, queryJson } from "./db/client.js";
+import { getDialect } from "./db/dialect.js";
 import {
   getPrefs,
   updatePrefs,
@@ -589,9 +590,9 @@ function escapeString(str: string | null | undefined): string {
   return `'${str.replace(/'/g, "''")}'`;
 }
 
-function insertActivity(activity: StravaActivity): void {
+async function insertActivity(activity: StravaActivity): Promise<void> {
   const sql = `
-    INSERT OR REPLACE INTO activities (
+    ${getDialect().replaceVerb()} INTO activities (
       id, name, sport_type, start_date, elapsed_time, moving_time,
       distance, total_elevation_gain, average_speed, max_speed,
       average_heartrate, max_heartrate, average_watts, max_watts,
@@ -621,22 +622,22 @@ function insertActivity(activity: StravaActivity): void {
       ${activity.workout_type ?? "NULL"},
       ${escapeString(activity.gear_id)},
       ${escapeString(JSON.stringify(activity))},
-      datetime('now')
+      ${getDialect().now()}
     );
   `;
 
-  execute(sql);
+  await execute(sql);
 }
 
-function insertAthlete(athlete: {
+async function insertAthlete(athlete: {
   id: number;
   firstname: string;
   lastname: string;
   weight?: number;
   ftp?: number;
-}): void {
+}): Promise<void> {
   const sql = `
-    INSERT OR REPLACE INTO athlete (id, firstname, lastname, weight, ftp, raw_json, updated_at)
+    ${getDialect().replaceVerb()} INTO athlete (id, firstname, lastname, weight, ftp, raw_json, updated_at)
     VALUES (
       ${athlete.id},
       ${escapeString(athlete.firstname)},
@@ -644,10 +645,10 @@ function insertAthlete(athlete: {
       ${athlete.weight ?? "NULL"},
       ${athlete.ftp ?? "NULL"},
       ${escapeString(JSON.stringify(athlete))},
-      datetime('now')
+      ${getDialect().now()}
     );
   `;
-  execute(sql);
+  await execute(sql);
 }
 
 async function runSync(args: SyncArgs): Promise<void> {
@@ -681,7 +682,7 @@ async function runSync(args: SyncArgs): Promise<void> {
     }
 
     // Initialize database
-    migrate();
+    await migrate();
 
     // Fetch athlete to get ID and validate tokens
     log.start("Validating tokens and fetching athlete profile...");
@@ -691,7 +692,7 @@ async function runSync(args: SyncArgs): Promise<void> {
     const tokens = { ...tempTokens, athlete_id: athlete.id };
     saveTokens(tokens);
 
-    insertAthlete(athlete);
+    await insertAthlete(athlete);
     log.success(`Authenticated as ${athlete.firstname} ${athlete.lastname}`);
 
     // Fetch activities
@@ -703,7 +704,7 @@ async function runSync(args: SyncArgs): Promise<void> {
     log.start("Storing activities in database...");
     let count = 0;
     for (const activity of activities) {
-      insertActivity(activity);
+      await insertActivity(activity);
       count++;
       if (count % 50 === 0) {
         log.progress(`   Stored ${count}/${activities.length}...`);
@@ -712,9 +713,9 @@ async function runSync(args: SyncArgs): Promise<void> {
     log.progressEnd();
     log.success(`Stored ${activities.length} activities`);
 
-    execute(`
+    await execute(`
       INSERT INTO sync_log (started_at, completed_at, activities_synced, status)
-      VALUES (datetime('now'), datetime('now'), ${activities.length}, 'success');
+      VALUES (${getDialect().now()}, ${getDialect().now()}, ${activities.length}, 'success');
     `);
 
     log.info(`Database: ${getDbPath()}`);
@@ -741,7 +742,7 @@ async function runSync(args: SyncArgs): Promise<void> {
   const configSyncDays = args.days || config.sync_days || 730;
 
   // Initialize database
-  migrate();
+  await migrate();
 
   // Authenticate with Strava (opens browser)
   const tokens = await getValidTokens();
@@ -749,7 +750,7 @@ async function runSync(args: SyncArgs): Promise<void> {
   // Step 4: Fetch and store athlete profile
   log.start("Fetching athlete profile...");
   const athlete = await getAthlete(tokens);
-  insertAthlete(athlete);
+  await insertAthlete(athlete);
   log.success(`Athlete: ${athlete.firstname} ${athlete.lastname}`);
 
   // Step 5: Fetch activities
@@ -762,7 +763,7 @@ async function runSync(args: SyncArgs): Promise<void> {
   log.start("Storing activities in database...");
   let count = 0;
   for (const activity of activities) {
-    insertActivity(activity);
+    await insertActivity(activity);
     count++;
     if (count % 50 === 0) {
       log.progress(`   Stored ${count}/${activities.length}...`);
@@ -772,9 +773,9 @@ async function runSync(args: SyncArgs): Promise<void> {
   log.success(`Stored ${activities.length} activities`);
 
   // Step 7: Log sync
-  execute(`
+  await execute(`
     INSERT INTO sync_log (started_at, completed_at, activities_synced, status)
-    VALUES (datetime('now'), datetime('now'), ${activities.length}, 'success');
+    VALUES (${getDialect().now()}, ${getDialect().now()}, ${activities.length}, 'success');
   `);
 
   log.info(`Database: ${getDbPath()}`);
@@ -1073,10 +1074,10 @@ async function runQuery(args: QueryArgs): Promise<void> {
   await initDatabase();
 
   if (args.json) {
-    const results = queryJson(args.sql);
+    const results = await queryJson(args.sql);
     console.log(JSON.stringify(results, null, 2));
   } else {
-    const result = query(args.sql);
+    const result = await query(args.sql);
     console.log(result);
   }
 }
@@ -1088,7 +1089,7 @@ async function runQuery(args: QueryArgs): Promise<void> {
 /** Open the DB and ensure the (idempotent) schema, quietly. */
 async function ensureDb(): Promise<void> {
   await initDatabase();
-  migrate(true);
+  await migrate(true);
 }
 
 function nowLocalMinutes(): number {
@@ -1143,9 +1144,9 @@ async function runLog(args: LogArgs): Promise<void> {
         log.error("water amount must be positive (ml)");
         process.exit(1);
       }
-      logHydration(ml, { date, source: flagStr(args.flags, "source") ?? "manual", note });
-      const total = hydrationTotal(date);
-      const goal = getPrefs().hydration_goal_ml;
+      await logHydration(ml, { date, source: flagStr(args.flags, "source") ?? "manual", note });
+      const total = await hydrationTotal(date);
+      const goal = (await getPrefs()).hydration_goal_ml;
       log.success(`Logged ${ml} ml water — ${total}/${goal} ml today (${date}).`);
       break;
     }
@@ -1154,7 +1155,7 @@ async function runLog(args: LogArgs): Promise<void> {
       const score = flagNum(args.flags, "score");
       if (score !== undefined) patch.sleep_score = Math.round(score);
       if (note) patch.notes = note;
-      upsertWellness(date, patch);
+      await upsertWellness(date, patch);
       log.success(
         `Logged ${patch.sleep_hours} h sleep${score !== undefined ? ` (score ${score})` : ""} for ${date}.`
       );
@@ -1165,12 +1166,12 @@ async function runLog(args: LogArgs): Promise<void> {
     case "mood": {
       const col = type === "energy" ? "subjective_energy" : type;
       const v = clampScale(requireNum(), type);
-      upsertWellness(date, { [col]: v } as WellnessPatch);
+      await upsertWellness(date, { [col]: v } as WellnessPatch);
       log.success(`Logged ${type} ${v}/5 for ${date}.`);
       break;
     }
     case "weight": {
-      upsertWellness(date, { weight_kg: requireNum() });
+      await upsertWellness(date, { weight_kg: requireNum() });
       log.success(`Logged weight ${requireNum()} kg for ${date}.`);
       break;
     }
@@ -1216,10 +1217,10 @@ async function runConfig(args: ConfigArgs): Promise<void> {
   if (notifyChannel !== undefined) patch.notify_channel = notifyChannel.toLowerCase();
 
   if (Object.keys(patch).length > 0) {
-    updatePrefs(patch);
+    await updatePrefs(patch);
   }
 
-  const prefs = getPrefs();
+  const prefs = await getPrefs();
   if (args.flags["json"]) {
     console.log(JSON.stringify(prefs, null, 2));
     return;
@@ -1275,8 +1276,8 @@ async function runGarminSync(args: GarminSyncArgs): Promise<void> {
     process.exit(1);
   }
 
-  upsertWellness(date, patch);
-  const snapshot = getWellness(date);
+  await upsertWellness(date, patch);
+  const snapshot = await getWellness(date);
   if (args.flags["json"]) {
     console.log(JSON.stringify(snapshot, null, 2));
     return;
@@ -1324,10 +1325,10 @@ function sqlNum(value: unknown): string {
   return value == null || !Number.isFinite(n) ? "NULL" : String(n);
 }
 
-function insertGarminActivity(a: Record<string, unknown>): void {
+async function insertGarminActivity(a: Record<string, unknown>): Promise<void> {
   const str = (v: unknown): string | null => (typeof v === "string" ? v : null);
-  execute(
-    `INSERT OR REPLACE INTO activities (
+  await execute(
+    `${getDialect().replaceVerb()} INTO activities (
        id, name, sport_type, start_date, elapsed_time, moving_time,
        distance, total_elevation_gain, average_speed, max_speed,
        average_heartrate, max_heartrate, average_cadence, calories,
@@ -1338,7 +1339,7 @@ function insertGarminActivity(a: Record<string, unknown>): void {
        ${sqlNum(a.distance)}, ${sqlNum(a.total_elevation_gain)}, ${sqlNum(a.average_speed)},
        ${sqlNum(a.max_speed)}, ${sqlNum(a.average_heartrate)}, ${sqlNum(a.max_heartrate)},
        ${sqlNum(a.average_cadence)}, ${sqlNum(a.calories)},
-       ${escapeString(JSON.stringify(a.raw ?? a))}, datetime('now')
+       ${escapeString(JSON.stringify(a.raw ?? a))}, ${getDialect().now()}
      );`
   );
 }
@@ -1365,13 +1366,13 @@ async function runGarminFetch(args: GarminFetchArgs): Promise<void> {
     const v = payload.wellness?.[col];
     if (typeof v === "string" && v) (patch as Record<string, unknown>)[col] = v;
   }
-  if (Object.keys(patch).length > 0) upsertWellness(payload.date, patch);
+  if (Object.keys(patch).length > 0) await upsertWellness(payload.date, patch);
 
   // Ingest recent activities (skip any without a usable id).
   let stored = 0;
   for (const a of payload.activities ?? []) {
     if (a.id == null || !Number.isFinite(Number(a.id))) continue;
-    insertGarminActivity(a);
+    await insertGarminActivity(a);
     stored++;
   }
 
@@ -1404,7 +1405,7 @@ async function runGarminFetch(args: GarminFetchArgs): Promise<void> {
 
 async function runNotify(args: NotifyArgs): Promise<void> {
   await ensureDb();
-  const prefs = getPrefs();
+  const prefs = await getPrefs();
   const message = args.message ?? flagStr(args.flags, "message");
   if (!message) {
     log.error('notify requires a message, e.g. coach notify "Time to hydrate"');
@@ -1431,9 +1432,9 @@ async function runNotify(args: NotifyArgs): Promise<void> {
 async function runWellness(args: WellnessArgs): Promise<void> {
   await ensureDb();
   const date = flagStr(args.flags, "date") ?? localDate();
-  const prefs = getPrefs();
-  const wellness = getWellness(date);
-  const total = hydrationTotal(date);
+  const prefs = await getPrefs();
+  const wellness = await getWellness(date);
+  const total = await hydrationTotal(date);
   const summary = {
     date,
     hydration: {
@@ -1549,13 +1550,13 @@ async function deliverReminders(
     const res = await sendNotification(rem.message, `Claude Coach — ${label}`, resolved);
     if (!res.ok) log.warn(`notify (${rem.type}) failed: ${res.detail}`);
   }
-  if (Object.keys(patch).length > 0) upsertWellness(date, patch);
+  if (Object.keys(patch).length > 0) await upsertWellness(date, patch);
 }
 
 /** Rolling mean of resting HR over recent days (excludes `beforeDate`). Needs a
  *  few samples to be meaningful — returns null until enough history exists. */
-function restingHrBaseline(beforeDate: string): number | null {
-  const rows = queryJson<{ resting_hr: number }>(
+async function restingHrBaseline(beforeDate: string): Promise<number | null> {
+  const rows = await queryJson<{ resting_hr: number }>(
     `SELECT resting_hr FROM wellness_state
      WHERE resting_hr IS NOT NULL AND local_date < ${escapeString(beforeDate)}
      ORDER BY local_date DESC LIMIT 30;`
@@ -1566,8 +1567,8 @@ function restingHrBaseline(beforeDate: string): number | null {
 }
 
 /** Rolling mean of sleep score over recent days (the "sleep history" factor). */
-function sleepScoreHistory(beforeDate: string): number | null {
-  const rows = queryJson<{ sleep_score: number }>(
+async function sleepScoreHistory(beforeDate: string): Promise<number | null> {
+  const rows = await queryJson<{ sleep_score: number }>(
     `SELECT sleep_score FROM wellness_state
      WHERE sleep_score IS NOT NULL AND local_date < ${escapeString(beforeDate)}
      ORDER BY local_date DESC LIMIT 5;`
@@ -1597,10 +1598,10 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
   if (hrvStatus !== undefined) garminPatch.hrv_status = hrvStatus;
   const trainingStatus = flagStr(args.flags, "training-status");
   if (trainingStatus !== undefined) garminPatch.training_status = trainingStatus;
-  if (Object.keys(garminPatch).length > 0) upsertWellness(date, garminPatch);
+  if (Object.keys(garminPatch).length > 0) await upsertWellness(date, garminPatch);
 
-  const prefs = getPrefs();
-  const wellness = getWellness(date);
+  const prefs = await getPrefs();
+  const wellness = await getWellness(date);
   const enabled = prefs.reminders_enabled === 1;
   const nowMin = nowLocalMinutes();
 
@@ -1630,7 +1631,7 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
     trainingMinutes = wellness?.training_minutes ?? 0;
   } else if (Math.round(trainingMinutes) !== (wellness?.training_minutes ?? null)) {
     // Cache plan/flag-derived load so later (cron) hydration runs scale too.
-    upsertWellness(date, { training_minutes: Math.round(trainingMinutes) });
+    await upsertWellness(date, { training_minutes: Math.round(trainingMinutes) });
   }
   const baseGoal = prefs.hydration_goal_ml ?? 0;
   const loadBonus = Math.round(
@@ -1639,7 +1640,7 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
   const goal = baseGoal + loadBonus;
 
   // 3. Hydration pace
-  const total = hydrationTotal(date);
+  const total = await hydrationTotal(date);
   const wake = parseHHMM(prefs.wake_target) ?? 7 * 60;
   const bed = parseHHMM(prefs.bedtime_target) ?? 23 * 60;
   let expected = 0;
@@ -1694,6 +1695,10 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
         `Training readiness ${r} (${recoveryLevel}) — consider easing today's intensity.`
       );
   } else {
+    const sleepHistoryScore = await sleepScoreHistory(date);
+    // Prefer Garmin's own 7-day resting-HR average (available immediately);
+    // fall back to our rolling DB mean once enough history exists.
+    const rhrBaseline = wellness?.rhr_7day_avg ?? (await restingHrBaseline(date));
     const derived = computeReadiness({
       sleepScore: wellness?.sleep_score,
       acwr: wellness?.acwr,
@@ -1702,14 +1707,12 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
       hrvBaselineUpper: wellness?.hrv_baseline_upper,
       hrvStatus: wellness?.hrv_status,
       avgStress: wellness?.avg_stress,
-      sleepHistoryScore: sleepScoreHistory(date),
+      sleepHistoryScore,
       energy: wellness?.subjective_energy,
       soreness: wellness?.soreness,
       mood: wellness?.mood,
       restingHr: wellness?.resting_hr,
-      // Prefer Garmin's own 7-day resting-HR average (available immediately);
-      // fall back to our rolling DB mean once enough history exists.
-      restingHrBaseline: wellness?.rhr_7day_avg ?? restingHrBaseline(date),
+      restingHrBaseline: rhrBaseline,
     });
     if (derived) {
       recoveryLevel = derived.level;

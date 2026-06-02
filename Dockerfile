@@ -12,7 +12,7 @@ COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 COPY tsconfig.json ./
 COPY src ./src
-RUN npx tsc && cp src/db/schema.sql dist/db/
+RUN npx tsc && cp src/db/schema.sql src/db/schema.mysql.sql dist/db/
 
 # ---------- runtime: prod deps + dist only ----------
 FROM node:22-alpine AS runtime

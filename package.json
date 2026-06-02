@@ -17,7 +17,7 @@
   "scripts": {
     "start": "tsx src/cli.ts",
     "build": "npm run build:ts && npm run build:viewer && npm run build:skill",
-    "build:ts": "tsc && cp src/db/schema.sql dist/db/",
+    "build:ts": "tsc && cp src/db/schema.sql src/db/schema.mysql.sql dist/db/",
     "build:viewer": "vite build --config vite.config.viewer.ts",
     "build:skill": "mkdir -p dist && cd skill && zip -r ../dist/coach-skill.zip . -x '*.DS_Store' && echo 'Skill packaged to dist/coach-skill.zip'",
     "build:website": "node scripts/build-website.js",
@@ -41,6 +41,7 @@
     "express": "^5.2.1",
     "jose": "^6.2.3",
     "jszip": "^3.10.1",
+    "mysql2": "^3.22.4",
     "open": "^10.1.0",
     "undici": "^7.16.0"
   },
