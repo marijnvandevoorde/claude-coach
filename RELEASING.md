@@ -2,6 +2,17 @@
 
 This document describes how to release a new version of Claude Coach.
 
+## Automated skill releases (GitHub Actions)
+
+The skill zip is published automatically by [`.github/workflows/release-skill.yml`](.github/workflows/release-skill.yml) — you normally don't need to attach it by hand:
+
+- **Every push to `main`** rebuilds `coach-skill.zip` and refreshes a rolling **`skill-latest`** release (marked as the latest release). That keeps the install link working:
+  `https://github.com/marijnvandevoorde/claude-coach/releases/latest/download/coach-skill.zip`
+- **Pushing a `v*` tag** (e.g. `v0.2.0`) cuts a matching **versioned** release with the same asset.
+- The workflow can also be run manually from the Actions tab (`workflow_dispatch`).
+
+So for a skill-only change, merging to `main` is enough. The steps below are for a full, versioned npm + GitHub release.
+
 ## Prerequisites
 
 - npm account with publish access to `claude-coach`
@@ -67,7 +78,7 @@ gh release create "v$VERSION" \
 
 Or manually:
 
-1. Go to https://github.com/felixrieseberg/claude-coach/releases/new
+1. Go to https://github.com/marijnvandevoorde/claude-coach/releases/new
 2. Choose the tag you just pushed (e.g., `v0.1.0`)
 3. Set the release title (e.g., `v0.1.0`)
 4. Add release notes

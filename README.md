@@ -8,6 +8,8 @@ Workouts can be exported as simple calendar events (.ics), Zwift (.zwo), Garmin 
 
 Connect **Garmin Connect** and Claude uses your real recovery and readiness data — sleep, HRV, body battery, training readiness, and training load (CTL/ATL/TSB) — to tailor each day's intensity, not just build a static plan. It can also send **proactive wellness reminders** (hydration, bedtime wind-down, recovery-aware morning check-ins) to your phone. See [Push notifications](#push-notifications-optional) and [`REMINDERS.md`](REMINDERS.md).
 
+> **This is a fork.** Claude Coach is built on the wonderful original by [**Felix Rieseberg** (`felixrieseberg/claude-coach`)](https://github.com/felixrieseberg/claude-coach) — all credit for the core training-plan engine, viewer, and skill design goes to him. This fork extends it with native **Garmin Connect** recovery/readiness, a coach **MCP server**, proactive wellness reminders, free-text journaling, and trail/ultra coaching. The Garmin side was inspired by [**`Taxuspt/garmin_mcp`** (Alexandre Domingues)](https://github.com/Taxuspt/garmin_mcp), whose `garminconnect`-based flow we still use for the one-time token mint. Thank you both. 🙏
+
 ## Examples
 
 See example training plans at [felixrieseberg.github.io/claude-coach](https://felixrieseberg.github.io/claude-coach/#demos).
@@ -20,7 +22,7 @@ Syncing all your Strava activities and creating a tailored training plan takes c
 
 ### Installing the Skill
 
-First, [download the latest skill from GitHub Releases](https://github.com/felixrieseberg/claude-coach/releases/latest/download/coach-skill.zip).
+First, [download the latest skill from GitHub Releases](https://github.com/marijnvandevoorde/claude-coach/releases/latest/download/coach-skill.zip). (Releases are built automatically from `main` — see [`RELEASING.md`](RELEASING.md).)
 
 **Claude.ai:**
 
@@ -164,3 +166,8 @@ Day-to-day usage and operational guides:
 # About
 
 Claude Coach is an independent, open-source project and is not made by, endorsed by, or affiliated with Anthropic, PBC. "Claude" is a trademark of Anthropic. This tool is a skill/plugin that works with Claude products but is developed and maintained independently. License: MIT.
+
+### Credits
+
+- **[felixrieseberg/claude-coach](https://github.com/felixrieseberg/claude-coach)** — the original Claude Coach by Felix Rieseberg, which this repository is a fork of. The training-plan engine, the interactive plan viewer, and the skill structure are his work.
+- **[Taxuspt/garmin_mcp](https://github.com/Taxuspt/garmin_mcp)** — Alexandre Domingues' Garmin Connect MCP, which inspired this fork's Garmin integration; its `garminconnect`-based `garmin-mcp-auth` tool is still used for the one-time token mint.

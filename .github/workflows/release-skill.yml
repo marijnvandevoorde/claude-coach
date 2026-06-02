@@ -1,0 +1,51 @@
+name: Release skill
+
+# Publishes coach-skill.zip to GitHub Releases so it can be installed via
+#   https://github.com/marijnvandevoorde/claude-coach/releases/latest/download/coach-skill.zip
+#
+# - Push to main   → refreshes a rolling "skill-latest" release (marked latest),
+#                    so the install link above always serves the current skill.
+# - Push a v* tag  → cuts a versioned release (e.g. v0.2.0) with the same asset.
+# - Manual run     → same as a main push (rolling release).
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build skill zip
+        run: |
+          mkdir -p dist
+          cd skill && zip -r ../dist/coach-skill.zip . -x '*.DS_Store'
+
+      - name: Determine release identity
+        id: rel
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            echo "name=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=skill-latest" >> "$GITHUB_OUTPUT"
+            echo "name=Skill (latest from main)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.rel.outputs.tag }}
+          name: ${{ steps.rel.outputs.name }}
+          make_latest: true
+          files: dist/coach-skill.zip
+          body: |
+            Auto-built `coach-skill.zip` from ${{ github.sha }}.
+
+            Install it as a Claude skill — see the README's "Installing the Skill".
