@@ -8,16 +8,27 @@ Apply this whenever you're about to confirm, prescribe, or discuss **today's** (
 
 Pull today's values (see `garmin.md` for the tools). The cached snapshot is also in `coach.db` (`wellness_state`) and surfaced by `coach checkin`.
 
-| Signal                     | Source                      | "Go"                   | "Caution"            | "Hold back"              |
-| -------------------------- | --------------------------- | ---------------------- | -------------------- | ------------------------ |
-| **Training readiness**     | `get_training_readiness`    | 75–100 (prime)         | 50–75 (moderate)     | <50 (low/poor)           |
-| **Sleep**                  | `get_sleep_summary`         | ≥7 h, score ≥70        | 6–7 h or score 50–70 | <6 h or score <50        |
-| **HRV**                    | `get_hrv_data`              | balanced               | —                    | unbalanced / low         |
-| **Body battery (morning)** | `get_body_battery`          | ≥60                    | 30–60                | <30                      |
-| **Resting HR**             | `get_rhr_day`               | ≈ baseline             | +3–5 bpm             | ≳ +7 bpm                 |
-| **Subjective** (logged)    | `coach log energy/soreness` | energy ≥4, soreness ≤2 | mid                  | energy ≤2 or soreness ≥4 |
+| Signal                     | Source                                     | "Go"                   | "Caution"            | "Hold back"              |
+| -------------------------- | ------------------------------------------ | ---------------------- | -------------------- | ------------------------ |
+| **Training readiness**     | `get_training_readiness` / coach `checkin` | ≥75 prime · 55–74 high | 40–54 moderate       | <40 low/poor             |
+| **Sleep**                  | `get_sleep_summary`                        | ≥7 h, score ≥70        | 6–7 h or score 50–70 | <6 h or score <50        |
+| **HRV**                    | `get_hrv_data`                             | balanced               | —                    | unbalanced / low         |
+| **Body battery (morning)** | `get_body_battery`                         | ≥60                    | 30–60                | <30                      |
+| **Resting HR**             | `get_rhr_day`                              | ≈ baseline             | +3–5 bpm             | ≳ +7 bpm                 |
+| **Subjective** (logged)    | `coach log energy/soreness`                | energy ≥4, soreness ≤2 | mid                  | energy ≤2 or soreness ≥4 |
 
-Weight **training readiness** highest (it already fuses sleep, HRV, recovery time, stress). The others confirm or override: e.g. a decent readiness number but **HRV unbalanced + RHR elevated together** is a real red flag — trust the body signals.
+Weight **training readiness** highest (it fuses sleep, HRV, recovery/load, stress). The others confirm or override: e.g. a decent readiness number but **HRV unbalanced + RHR elevated together** is a real red flag — trust the body signals. Map the five readiness labels onto the three columns below: **prime/high → Go**, **moderate → Caution**, **low/poor → Hold back**.
+
+### Native vs. reconstructed readiness
+
+Many watches expose Garmin's own **Training Readiness** number. Some don't (the API returns nothing) — for those, `coach checkin` **reconstructs** a readiness score from the same primary signals Garmin uses (sleep score + recovery/load via ACWR as primary drivers; HRV-vs-baseline, stress, and sleep history as secondary), on the same 0–100 / Poor→Prime scale, and reports the **factor breakdown** (e.g. _"derived ~63: sleep 54, ACWR 1.40, HRV 7d 64 vs 66–78, stress 12"_).
+
+When the score is reconstructed, **read the limiting factor — it tells you _how_ to adjust**:
+
+- **Sleep-limited** (low sleep score, short duration) → the fix is recovery/rest and sleep hygiene, not necessarily a training problem. A single bad night = trim today; a multi-night deficit = protect the week.
+- **Load/ACWR-limited** (high acute:chronic ratio) → this is training fatigue you created — ease _intensity_ and let recent load settle; it resolves with a down day.
+- **HRV-limited** (7-day avg below the balanced band) → autonomic fatigue; if paired with elevated RHR or poor sleep, treat as a possible overreaching/illness signal (see Guardrails), not just a tired day.
+- Treat **morning Body Battery as optimistic** — it recharges overnight regardless of training debt, so use it as a tie-breaker, not a lead signal.
 
 ## Step 2: Decide the adjustment
 
@@ -46,9 +57,13 @@ Cross today's **planned session** against the **overall readiness** (the worst o
 
 ## Guardrails
 
+- **Trust subjective when it disagrees.** Logged energy/soreness/mood feed the readiness score, and a clearly-bad subjective day (energy ≤2 or soreness ≥4) **caps** an otherwise-rosy objective score at "moderate" — self-report tracks training response at least as well as the sensors (Saw et al. 2016, BJSM). If the athlete says they feel wrecked, believe them over a green number.
+- **Above-the-neck rule for illness.** Symptoms **below** the neck — fever, body aches, chills, chest congestion, GI illness — mean **don't train**, regardless of what readiness says (physiology lags symptoms; training through systemic illness carries real cardiac risk). Symptoms only above the neck (mild congestion, sore throat) → easy training is usually OK; reassess.
+- **Illness/overreaching signal:** resting HR **sustained ~+5 bpm or more** over baseline + low HRV + poor sleep → recommend rest and monitoring, not training through it. One elevated morning is noise; the multi-day pattern is the signal.
 - **Two-day rule:** readiness <50 for **2+ consecutive days**, or HRV unbalanced + elevated RHR together, → insert real recovery, don't just trim.
-- **Illness signal:** RHR spiking well above baseline + low HRV + poor sleep → recommend rest and monitoring, not training through it.
+- **RED-S / under-fuelling watch:** persistently low readiness **with** suppressed RHR/HRV **and** flat-or-declining performance despite heavy load can signal **low energy availability (RED-S)**, not just fatigue — the fix is fuelling and a medical/nutrition check, not more rest. Surface the pattern; don't try to diagnose it. (2023 IOC REDs consensus.)
 - **Don't overreact to one reading:** a single low night with otherwise good trends → a small trim, not a teardown. Prefer trends (multi-day) for structural changes, single readings for _today's_ dial.
+- **Sleep mostly raises perceived effort.** A short night reliably elevates RPE more than it drops raw power/pace, so the same session will _feel_ harder — ease the top end rather than cancelling outright, unless sleep debt is stacking across nights.
 - **No Garmin data?** Fall back to subjective check-in (`coach log energy/soreness/sleep`) and RHR from Strava/manual; be a bit more conservative since you're flying with fewer instruments.
 
 > `coach checkin` already computes a recovery level + flags from the cached signals and can push a morning nudge. Use it as the trigger; use this doc to decide the actual change to the session.
