@@ -15,7 +15,7 @@ How it fits together:
 ```bash
 # Goals + windows (24h local time)
 npx claude-coach config \
-  --water-goal=3000 --water-cadence=60 \
+  --water-goal=3000 --cadence=60 \
   --wake=06:45 --bedtime=22:00 \
   --quiet-start=22:00 --quiet-end=07:00 \
   --enable
