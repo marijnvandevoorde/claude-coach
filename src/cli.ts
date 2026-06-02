@@ -40,6 +40,7 @@ import { pushWorkouts, type WorkoutInput, type PushStore } from "./garmin/workou
 import { lookupPushedWorkout, savePushedWorkout } from "./db/garminPush.js";
 import { uploadRoute, COURSE_TYPES } from "./garmin/routes.js";
 import { runBackfill, type BackfillSink } from "./garmin/backfill.js";
+import { addJournalEntry, listJournalEntries } from "./db/journal.js";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -158,6 +159,18 @@ interface GarminBackfillArgs {
   flags: Flags;
 }
 
+interface JournalArgs {
+  command: "journal";
+  sub: string;
+  text?: string;
+  flags: Flags;
+}
+
+interface SummaryArgs {
+  command: "summary";
+  flags: Flags;
+}
+
 interface WellnessArgs {
   command: "wellness";
   flags: Flags;
@@ -180,6 +193,8 @@ type CliArgs =
   | GarminPushArgs
   | GarminRouteArgs
   | GarminBackfillArgs
+  | JournalArgs
+  | SummaryArgs
   | WellnessArgs;
 
 type Flags = Record<string, string | boolean>;
@@ -312,6 +327,17 @@ function parseArgs(): CliArgs {
     return { command: "garmin-backfill", flags: parseFlags(args.slice(1)) };
   }
 
+  if (args[0] === "journal") {
+    const sub = args[1] && !args[1].startsWith("--") ? args[1] : "list";
+    const text = sub === "add" ? args[2] : undefined;
+    const rest = sub === "add" ? args.slice(3) : args.slice(2);
+    return { command: "journal", sub, text, flags: parseFlags(rest) };
+  }
+
+  if (args[0] === "summary") {
+    return { command: "summary", flags: parseFlags(args.slice(1)) };
+  }
+
   if (args[0] === "query") {
     if (!args[1]) {
       log.error("query command requires a SQL statement");
@@ -406,6 +432,9 @@ Commands:
   garmin-push <file>      Create + schedule a plan's workouts on Garmin (--dry-run to preview)
   garmin-route <file.gpx> Upload a GPX as a Garmin course (--name, --type, --dry-run)
   garmin-backfill         Backfill history into the DB (--from=|--days= --to= [--full] [--force])
+  journal add "<text>"    Add a free-text journal entry (--tag= --date=)
+  journal list            List journal entries (--since= --until= --limit= --json)
+  summary                 Bundle the week's journal + wellness as JSON (--since= --to=)
   query <sql>       Run a SQL query against the database
   log <type> <val>  Log wellness/intake (water|sleep|energy|soreness|mood|weight)
   wellness          Show today's hydration + wellness snapshot
@@ -467,6 +496,10 @@ Examples:
   # Backfill historical Garmin data (range = cheap; --full = per-day complete, resumable)
   npx claude-coach garmin-backfill --from=2026-01-01 --to=2026-06-01
   npx claude-coach garmin-backfill --from=2026-05-01 --full
+
+  # Journal free-text feedback, then bundle the week for a summary
+  npx claude-coach journal add "legs heavy, work stress" --tag=note
+  npx claude-coach summary --since=2026-05-26
 
   # Query the database
   npx claude-coach query "SELECT * FROM weekly_volume LIMIT 5"
@@ -1090,6 +1123,62 @@ async function runGarminBackfill(args: GarminBackfillArgs): Promise<void> {
   );
   if (res.errors.length)
     log.warn(`${res.errors.length} non-fatal errors (first: ${res.errors[0]})`);
+}
+
+async function runJournal(args: JournalArgs): Promise<void> {
+  await ensureDb();
+  if (args.sub === "add") {
+    if (!args.text) {
+      log.error('journal add needs text, e.g. journal add "legs felt heavy on the climb"');
+      process.exit(1);
+    }
+    await addJournalEntry(args.text, {
+      date: flagStr(args.flags, "date"),
+      tag: flagStr(args.flags, "tag"),
+    });
+    log.success("Journaled 📝");
+    return;
+  }
+  if (args.sub === "list") {
+    const entries = await listJournalEntries({
+      since: flagStr(args.flags, "since"),
+      until: flagStr(args.flags, "until"),
+      limit: flagNum(args.flags, "limit"),
+    });
+    if (args.flags["json"]) {
+      console.log(JSON.stringify(entries, null, 2));
+      return;
+    }
+    if (entries.length === 0) {
+      log.info("No journal entries.");
+      return;
+    }
+    for (const e of entries) {
+      console.log(`${e.local_date}${e.tag ? ` [${e.tag}]` : ""}: ${e.entry}`);
+    }
+    return;
+  }
+  log.error('journal: use `journal add "…"` or `journal list [--since=YYYY-MM-DD]`');
+  process.exit(1);
+}
+
+/** Data provider for a period summary: journal entries + daily wellness as JSON
+ *  (Claude composes the prose summary; this just bundles the inputs). */
+async function runSummary(args: SummaryArgs): Promise<void> {
+  await ensureDb();
+  const until = flagStr(args.flags, "to") ?? localDate();
+  let since = flagStr(args.flags, "since");
+  if (!since) {
+    const d = new Date(until + "T00:00:00Z");
+    d.setUTCDate(d.getUTCDate() - 6); // default: the last 7 days inclusive
+    since = d.toISOString().slice(0, 10);
+  }
+  const journal = await listJournalEntries({ since, until });
+  const wellness = await queryJson(
+    `SELECT * FROM wellness_state WHERE local_date >= ${escapeString(since)}
+     AND local_date <= ${escapeString(until)} ORDER BY local_date;`
+  );
+  console.log(JSON.stringify({ since, until, journal, wellness }, null, 2));
 }
 
 function runRender(args: RenderArgs): void {
@@ -1924,6 +2013,12 @@ async function main() {
       break;
     case "garmin-backfill":
       await runGarminBackfill(args);
+      break;
+    case "journal":
+      await runJournal(args);
+      break;
+    case "summary":
+      await runSummary(args);
       break;
     case "garmin-push":
       await runGarminPush(args);

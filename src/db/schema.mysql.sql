@@ -152,6 +152,15 @@ CREATE TABLE IF NOT EXISTS garmin_pushed_workouts (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS journal (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  local_date VARCHAR(10),
+  entry TEXT NOT NULL,
+  tag VARCHAR(48),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_journal_date (local_date)
+);
+
 CREATE OR REPLACE VIEW hydration_daily AS
 SELECT local_date, SUM(amount_ml) AS total_ml, COUNT(*) AS entries
 FROM hydration_log

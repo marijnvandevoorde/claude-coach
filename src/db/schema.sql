@@ -162,6 +162,17 @@ CREATE TABLE IF NOT EXISTS garmin_pushed_workouts (
   updated_at TEXT DEFAULT (datetime('now'))
 );
 
+-- Free-text journal entries (athlete feedback / notes). One row per entry; a day
+-- can have several. Complements the structured mood/energy/soreness `log`.
+CREATE TABLE IF NOT EXISTS journal (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  local_date TEXT,                          -- athlete-local 'YYYY-MM-DD'
+  entry TEXT NOT NULL,
+  tag TEXT,                                 -- optional free label (e.g. 'race', 'niggle')
+  created_at TEXT DEFAULT (datetime('now')) -- UTC ISO 8601
+);
+CREATE INDEX IF NOT EXISTS idx_journal_date ON journal(local_date);
+
 CREATE INDEX IF NOT EXISTS idx_hydration_local_date ON hydration_log(local_date);
 
 DROP VIEW IF EXISTS hydration_daily;
