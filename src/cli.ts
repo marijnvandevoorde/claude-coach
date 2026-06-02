@@ -26,6 +26,7 @@ import {
   type ReminderPrefs,
 } from "./db/wellness.js";
 import { resolveNotify, sendNotification } from "./lib/notify.js";
+import { deriveRecovery, recoveryLevelFromScore, type RecoveryLevel } from "./lib/recovery.js";
 import { generateIcs } from "./viewer/lib/export/ics.js";
 import { getSportIcon } from "./viewer/lib/utils.js";
 import type { TrainingPlan } from "./schema/training-plan.js";
@@ -1410,6 +1411,19 @@ async function deliverReminders(
   if (Object.keys(patch).length > 0) upsertWellness(date, patch);
 }
 
+/** Rolling mean of resting HR over recent days (excludes `beforeDate`). Needs a
+ *  few samples to be meaningful — returns null until enough history exists. */
+function restingHrBaseline(beforeDate: string): number | null {
+  const rows = queryJson<{ resting_hr: number }>(
+    `SELECT resting_hr FROM wellness_state
+     WHERE resting_hr IS NOT NULL AND local_date < ${escapeString(beforeDate)}
+     ORDER BY local_date DESC LIMIT 30;`
+  );
+  const vals = rows.map((row) => Number(row.resting_hr)).filter(Number.isFinite);
+  if (vals.length < 5) return null;
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+}
+
 async function runCheckin(args: CheckinArgs): Promise<void> {
   await ensureDb();
   const date = flagStr(args.flags, "date") ?? localDate();
@@ -1510,15 +1524,45 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
     }
   }
 
-  // 5. Recovery assessment from cached Garmin / logged signals
+  // 5. Recovery assessment from cached Garmin / logged signals.
+  // Prefer Garmin's Training Readiness; if the device doesn't surface it,
+  // derive a 0–100 proxy from body battery / sleep / HRV / energy / resting HR.
   const r = wellness?.readiness_score ?? null;
-  const recoveryLevel =
-    r == null ? "unknown" : r >= 75 ? "prime" : r >= 50 ? "moderate" : r >= 25 ? "low" : "poor";
+  let recoveryLevel: RecoveryLevel;
+  let recoveryScore: number | null = r;
+  let recoveryDerived = false;
+  let derivedFrom: string[] = [];
   const recoveryFlags: string[] = [];
-  if (r != null && r < 50)
-    recoveryFlags.push(
-      `Training readiness ${r} (${recoveryLevel}) — consider easing today's intensity.`
-    );
+
+  if (r != null) {
+    recoveryLevel = recoveryLevelFromScore(r);
+    if (r < 50)
+      recoveryFlags.push(
+        `Training readiness ${r} (${recoveryLevel}) — consider easing today's intensity.`
+      );
+  } else {
+    const derived = deriveRecovery({
+      bodyBattery: wellness?.body_battery_morning,
+      sleepScore: wellness?.sleep_score,
+      sleepHours: wellness?.sleep_hours,
+      hrvStatus: wellness?.hrv_status,
+      energy: wellness?.subjective_energy,
+      restingHr: wellness?.resting_hr,
+      restingHrBaseline: restingHrBaseline(date),
+    });
+    if (derived) {
+      recoveryLevel = derived.level;
+      recoveryScore = derived.score;
+      recoveryDerived = true;
+      derivedFrom = derived.components;
+      if (derived.score < 50)
+        recoveryFlags.push(
+          `Recovery ~${derived.score} (${derived.level}, derived from ${derived.components.join(", ")}) — no Garmin readiness on this device; consider easing today's intensity.`
+        );
+    } else {
+      recoveryLevel = "unknown";
+    }
+  }
   if (wellness?.sleep_hours != null && wellness.sleep_hours < 6)
     recoveryFlags.push(`Only ${wellness.sleep_hours} h sleep — prioritise recovery today.`);
   if (wellness?.sleep_score != null && wellness.sleep_score < 50)
@@ -1544,6 +1588,9 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
     recovery: {
       level: recoveryLevel,
       readiness: r,
+      score: recoveryScore,
+      derived: recoveryDerived,
+      derivedFrom,
       sleepHours: wellness?.sleep_hours ?? null,
       sleepScore: wellness?.sleep_score ?? null,
       bodyBattery: wellness?.body_battery_morning ?? null,
@@ -1587,7 +1634,13 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
   }
 
   log.box(`Coach check-in — ${date}`);
-  console.log(`Recovery: ${recoveryLevel}${r != null ? ` (readiness ${r})` : ""}`);
+  const recoveryNote =
+    r != null
+      ? ` (readiness ${r})`
+      : recoveryDerived
+        ? ` (derived ~${recoveryScore} from ${derivedFrom.join(", ")})`
+        : "";
+  console.log(`Recovery: ${recoveryLevel}${recoveryNote}`);
   console.log(
     `Hydration: ${total}/${goal} ml (expected ~${expected} by now)${loadBonus > 0 ? ` — incl. +${loadBonus} ml for ${Math.round(trainingMinutes)} min training` : ""}`
   );
