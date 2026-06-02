@@ -1,31 +1,69 @@
 # Pushing Workouts to Garmin (and your watch)
 
-When the athlete wants their plan as **structured workouts on their Garmin device** (e.g. a Fenix), create the workouts in Garmin Connect **and schedule them** — Garmin syncs _scheduled_ workouts to the paired watch. Requires the `mcp__garmin__*` tools.
+When the athlete wants their plan as **structured workouts on their Garmin device** (e.g. a
+Fenix), the coach creates the workouts in Garmin Connect **and schedules them** — Garmin syncs
+_scheduled_ workouts to the paired watch. **The coach does this natively** (using the saved Garmin
+tokens) — no `mcp__garmin__*` server required.
 
-## Steps
+## Preferred path — native coach push
 
-1. **Get the workouts** from the plan:
+One step builds, creates, and schedules every workout in the plan on its date:
 
-   ```bash
-   npx claude-coach export-garmin <plan>.json
-   ```
+```bash
+npx claude-coach garmin-push <plan>.json --dry-run   # preview the exact payloads, push nothing
+npx claude-coach garmin-push <plan>.json             # create + schedule on Garmin → syncs to the watch
+```
 
-   → per non-rest workout: `{ date, sport, type, name, durationMinutes, primaryZone, targetHR, targetPace, targetPower, structure, humanReadable }`.
+On the **coach MCP connector** (Desktop / mobile / web), use the equivalent tool:
 
-2. **Create each workout in Garmin Connect** with the matching builder (each uploads on creation):
-   - Run / walk intervals → `mcp__garmin__create_walk_run_workout` (use `structure` / `humanReadable` for the steps, `targetHR` / `targetPace` for targets).
-   - Easy steady aerobic → `mcp__garmin__create_z2_walk_workout` (or a steady run via the walk/run builder).
-   - Strength → `mcp__garmin__create_strength_workout`.
-   - **Bike / swim:** the current builders are run/walk/strength-focused. If there's no matching builder, tell the athlete those sessions stay on the calendar/plan only (or create them manually in Garmin) — don't silently skip them.
+- `mcp__coach__schedule_workouts` with `{ plan: "<path>.json" }` (add `dryRun: true` to preview).
 
-3. **Schedule them on their dates → this is what syncs to the watch.** Collect the created workouts and call `mcp__garmin__schedule_week` with the list (each item = the workout + its `date`). Scheduling is what makes Garmin Connect push the session to the Fenix on its day.
+What it does:
 
-4. **Stay idempotent.** Don't double-create: when re-running after a plan change, check existing scheduled workouts for those dates and replace rather than stack.
+- Builds Garmin's structured-workout DTO from each non-rest session (sport, end condition by
+  time/distance, interval/repeat groups, and HR / pace / power targets resolved from the plan's
+  zones).
+- Creates each workout, then **schedules it on its date** — scheduling is what makes Garmin push
+  the session to the wrist on its day.
+- **Idempotent:** re-running after a plan change updates an existing same-name workout for that
+  date (and re-schedules if the date moved) instead of stacking duplicates.
 
-5. **Confirm:** "Created and scheduled N workouts on Garmin (<start> → <end>) — they'll appear on your watch on the next sync."
+Confirm to the athlete: "Created and scheduled N workouts on Garmin (`<start>` → `<end>`) — they'll
+appear on your watch on the next sync."
+
+### Inspecting first (optional)
+
+`npx claude-coach export-garmin <plan>.json` (or `mcp__coach__export_garmin`) emits the
+structured-workout feed as JSON without pushing — handy to review the mapping before a real push.
+
+## Uploading a route/course
+
+To put a **course** on the watch (e.g. for a long trail session or a race recon), upload a GPX —
+kept **exactly as-is**, no point reduction or snap-to-roads:
+
+```bash
+npx claude-coach garmin-route <route>.gpx --name="Sunday loop" --type=trail
+```
+
+- MCP: `mcp__coach__upload_route` — pass inline GPX content as `gpx` (e.g. a file dropped into the
+  conversation) **or** a server-readable `file` path, plus optional `name` / `type` / `dryRun`.
+- Course types: `run`, `trail`, `road`, `mtb`, `gravel`, `cycling`, `hike`, `walk`.
 
 ## Mapping notes
 
-- **Intensity:** prefer `targetHR` / `targetPace` / `targetPower` when present; otherwise fall back to `primaryZone` (e.g. "Z2", "Threshold"), which the builders resolve to Garmin zones.
-- **Duration / structure:** `durationMinutes` for steady sessions; `structure` (or parse `humanReadable`) for intervals.
-- Complementary to the calendar export (`calendar.md`): the **calendar** says _when_, **Garmin** puts the _executable workout_ on the wrist.
+- **Intensity:** targets come from the plan — HR (bpm), power (`percent_ftp` × FTP → watts), and
+  pace (`targetPace` → m/s). Steps without a resolvable target are left open.
+- **Duration / structure:** time- or distance-based end conditions; interval sets become Garmin
+  repeat groups (warmup / work / recovery / rest / cooldown step types).
+- **Bike / swim:** structured push currently covers run/walk-style steps best. If a session can't
+  be expressed as structured steps, tell the athlete it stays on the calendar/plan only (or create
+  it manually in Garmin) — don't silently skip it.
+- Complementary to the calendar export (`calendar.md`): the **calendar** says _when_, **Garmin**
+  puts the _executable workout_ on the wrist.
+
+## Fallback — the standalone Garmin MCP
+
+If the native push can't express a session you need (e.g. a specialized bike/swim builder), and a
+local Claude Code session has the optional `mcp__garmin__*` server connected, you can still use its
+`create_*` / `schedule_week` tools. This is now a **fallback**, not the default — prefer
+`garmin-push` / `mcp__coach__schedule_workouts`.
