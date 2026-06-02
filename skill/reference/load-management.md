@@ -81,6 +81,8 @@ CTL is the rolling 42-day weighted average of daily TSS. It represents accumulat
 
 _A CTL ramp of 7/week means adding ~50 TSS/week to your average weekly load._
 
+> **These are planning heuristics, not injury thresholds.** The specific numbers come from the TrainingPeaks coaching tradition, not controlled evidence — systematic reviews find little support for fixed load-progression caps (incl. the "10% rule"; Damsted et al. 2018). Use them to set a sensible default ramp, but let the athlete's actual response (readiness, soreness, performance) override the table, and remember CTL/TSS is HR/power-derived **aerobic** load — it under-counts the mechanical/eccentric cost of downhill and long runs.
+
 ---
 
 ## Acute Training Load (ATL) - "Fatigue"
@@ -101,7 +103,7 @@ TSB = CTL - ATL
 | +5 to +15  | Rested       | Good for quality sessions, minor events    |
 | -10 to +5  | Neutral      | Normal training state                      |
 | -10 to -30 | Fatigued     | Building load, need recovery soon          |
-| < -30      | Overreaching | High injury/burnout risk, reduce load      |
+| < -30      | Overreaching | Deeply fatigued — schedule recovery soon   |
 
 ### Race Day TSB Targets
 

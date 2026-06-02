@@ -684,6 +684,8 @@ Confirm briefly ("logged 💧") rather than interrogating — estimate sensible 
 
 ### If the coach MCP is connected
 
-The coach is also available as **MCP tools** (`mcp__coach__*`) when the remote coach server is added as a connector — e.g. `mcp__coach__wellness`, `mcp__coach__log`, `mcp__coach__checkin`, `mcp__coach__config`, `mcp__coach__garmin_sync`, `mcp__coach__export_calendar`, `mcp__coach__export_garmin`, `mcp__coach__notify`. They mirror the CLI commands.
+The coach is also available as **MCP tools** (`mcp__coach__*`) when the remote coach server is added as a connector — e.g. `mcp__coach__wellness`, `mcp__coach__log`, `mcp__coach__checkin`, `mcp__coach__config`, `mcp__coach__garmin_refresh`, `mcp__coach__garmin_sync`, `mcp__coach__export_calendar`, `mcp__coach__export_garmin`, `mcp__coach__notify`. They mirror the CLI commands.
 
 **Prefer these tools when they're present** — they work anywhere the connector is added (e.g. Claude Desktop) without a local install or local `coach.db`. Fall back to `npx claude-coach …` only when the MCP isn't connected (e.g. a local-only Claude Code session in the repo).
+
+**`garmin_refresh` is the real Garmin pull.** It fetches live data straight from Garmin Connect on the server (sleep, HRV + baseline, stress, ACWR/load, body battery, activities) and stores it — use it before a check-in to get fresh recovery data, **even when no `mcp__garmin__*` tools are present in this client**. (`garmin_sync` only caches numbers you pass in.) After a refresh, `mcp__coach__checkin` / `mcp__coach__wellness` return a **recovery readiness** — Garmin's native Training Readiness when the device exposes it, otherwise a **reconstructed** score with a transparent factor breakdown (see `adaptive.md`). The server also refreshes Garmin every morning on a schedule, so the morning check-in is recovery-aware on its own.
