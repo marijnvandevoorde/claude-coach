@@ -144,6 +144,19 @@ export interface WellnessRow {
   acwr: number | null;
   acute_load: number | null;
   chronic_load: number | null;
+  vo2max: number | null;
+  total_steps: number | null;
+  total_distance_m: number | null;
+  floors_climbed: number | null;
+  intensity_min_moderate: number | null;
+  intensity_min_vigorous: number | null;
+  active_calories: number | null;
+  total_calories: number | null;
+  avg_spo2: number | null;
+  avg_waking_respiration: number | null;
+  rhr_7day_avg: number | null;
+  body_battery_charged: number | null;
+  garmin_raw: string | null;
   last_water_reminder_at: string | null;
   last_bedtime_reminder_at: string | null;
   updated_at: string | null;
@@ -155,6 +168,7 @@ const WELLNESS_TEXT_COLS = new Set([
   "notes",
   "hrv_status",
   "training_status",
+  "garmin_raw",
   "last_water_reminder_at",
   "last_bedtime_reminder_at",
 ]);

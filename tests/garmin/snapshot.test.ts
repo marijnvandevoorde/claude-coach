@@ -67,8 +67,20 @@ describe("fetchGarminSnapshot", () => {
         restingHeartRate: 35,
         bodyBatteryAtWakeTime: 97,
         averageStressLevel: 16,
+        totalSteps: 14405,
+        totalDistanceMeters: 17637,
+        floorsAscended: 124.49,
+        moderateIntensityMinutes: 3,
+        vigorousIntensityMinutes: 64,
+        activeKilocalories: 914,
+        totalKilocalories: 3038,
+        averageSpo2: 97,
+        avgWakingRespirationValue: 13,
+        lastSevenDaysAvgRestingHeartRate: 36,
+        bodyBatteryChargedValue: 73,
       },
       "/metrics-service/metrics/trainingstatus/aggregated/": {
+        mostRecentVO2Max: { generic: { vo2MaxPreciseValue: 59.6, vo2MaxValue: 60 } },
         latestTrainingStatusData: {
           "123": {
             trainingStatusFeedbackPhrase: "PRODUCTIVE_8",
@@ -112,7 +124,26 @@ describe("fetchGarminSnapshot", () => {
       acwr: 1.6,
       acute_load: 785,
       chronic_load: 470,
+      // expanded metrics
+      vo2max: 59.6,
+      total_steps: 14405,
+      total_distance_m: 17637,
+      floors_climbed: 124,
+      intensity_min_moderate: 3,
+      intensity_min_vigorous: 64,
+      active_calories: 914,
+      total_calories: 3038,
+      avg_spo2: 97,
+      avg_waking_respiration: 13,
+      rhr_7day_avg: 36,
+      body_battery_charged: 73,
     });
+
+    // garmin_raw blob carries the rich/nested data for the MCP to hand Claude.
+    expect(typeof out.wellness.garmin_raw).toBe("string");
+    const blob = JSON.parse(out.wellness.garmin_raw as string);
+    expect(blob.trainingStatus.mostRecentVO2Max.generic.vo2MaxPreciseValue).toBe(59.6);
+    expect(blob.summary.totalSteps).toBe(14405);
 
     expect(out.activities).toHaveLength(1);
     const a = out.activities[0];

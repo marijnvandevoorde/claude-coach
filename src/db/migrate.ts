@@ -40,6 +40,20 @@ export function migrate(silent = false): void {
   ensureColumn("wellness_state", "acwr", "REAL");
   ensureColumn("wellness_state", "acute_load", "INTEGER");
   ensureColumn("wellness_state", "chronic_load", "INTEGER");
+  // Expanded daily Garmin metrics (usersummary + training status) + a raw JSON blob.
+  ensureColumn("wellness_state", "vo2max", "REAL");
+  ensureColumn("wellness_state", "total_steps", "INTEGER");
+  ensureColumn("wellness_state", "total_distance_m", "INTEGER");
+  ensureColumn("wellness_state", "floors_climbed", "INTEGER");
+  ensureColumn("wellness_state", "intensity_min_moderate", "INTEGER");
+  ensureColumn("wellness_state", "intensity_min_vigorous", "INTEGER");
+  ensureColumn("wellness_state", "active_calories", "INTEGER");
+  ensureColumn("wellness_state", "total_calories", "INTEGER");
+  ensureColumn("wellness_state", "avg_spo2", "INTEGER");
+  ensureColumn("wellness_state", "avg_waking_respiration", "INTEGER");
+  ensureColumn("wellness_state", "rhr_7day_avg", "INTEGER");
+  ensureColumn("wellness_state", "body_battery_charged", "INTEGER");
+  ensureColumn("wellness_state", "garmin_raw", "TEXT");
 
   if (!silent) log.success("Database schema initialized");
 }

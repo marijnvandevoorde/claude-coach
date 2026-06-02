@@ -137,7 +137,7 @@ const TOOLS: Record<string, ToolDef> = {
   },
   garmin_refresh: {
     description:
-      "Pull live data directly FROM Garmin Connect (readiness, sleep, HRV, body battery, resting HR, training status + recent activities) and store it in coach.db. This is the real 'sync with Garmin' — it fetches on the server using the saved Garmin tokens. (Contrast garmin_sync, which only caches numbers you pass in.)",
+      "Pull live data directly FROM Garmin Connect and store it in coach.db: readiness, sleep (+score), HRV (status, weekly avg, baseline + nightly readings), body battery (wake + charged), resting HR (+ 7-day avg), VO2max, daily steps/distance/floors, moderate/vigorous intensity minutes, active/total calories, SpO2, waking respiration, training status + acute/chronic load + ACWR, and recent activities. Also stores a full raw JSON blob (garmin_raw: sleep stages, HRV readings, load focus, heat/altitude acclimation) for deeper reasoning. This is the real 'sync with Garmin' — it fetches on the server using the saved Garmin tokens. (Contrast garmin_sync, which only caches numbers you pass in.)",
     inputSchema: {
       type: "object",
       properties: { date: { type: "string", description: "YYYY-MM-DD (default today)" } },

@@ -131,6 +131,20 @@ CREATE TABLE IF NOT EXISTS wellness_state (
   acwr REAL,                     -- acute:chronic workload ratio (7d/28d)
   acute_load INTEGER,            -- acute training load (EPOC, 7-day normalized)
   chronic_load INTEGER,          -- chronic training load (28-day)
+  -- expanded daily Garmin metrics (from usersummary + training status)
+  vo2max REAL,                   -- current VO2max (precise value)
+  total_steps INTEGER,
+  total_distance_m INTEGER,      -- daily distance, meters
+  floors_climbed INTEGER,
+  intensity_min_moderate INTEGER,
+  intensity_min_vigorous INTEGER,
+  active_calories INTEGER,
+  total_calories INTEGER,
+  avg_spo2 INTEGER,              -- daily average SpO2 %
+  avg_waking_respiration INTEGER,-- breaths/min while awake
+  rhr_7day_avg INTEGER,          -- Garmin's 7-day average resting HR
+  body_battery_charged INTEGER,  -- body battery charged over the day (recovery proxy)
+  garmin_raw TEXT,               -- full daily payload (summary + training status + sleep + hrv) as JSON
   -- reminder bookkeeping (so nudges don't repeat)
   last_water_reminder_at TEXT,    -- UTC ISO 8601
   last_bedtime_reminder_at TEXT,  -- UTC ISO 8601
