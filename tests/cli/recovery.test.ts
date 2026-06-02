@@ -77,6 +77,51 @@ describe("computeReadiness", () => {
     expect(computeReadiness({ hrvStatus: "LOW" })!.score).toBe(38);
   });
 
+  it("scores HRV via the LnRMSSD / SWC band: ~80 inside, penalized when suppressed", () => {
+    const mean = 3.9; // ln(RMSSD) baseline
+    const sd = 0.2; // SWC = 0.1
+    const normal = computeReadiness({ hrvLnRmssd: mean, hrvLnRmssdMean: mean, hrvLnRmssdSd: sd })!;
+    const suppressed = computeReadiness({
+      hrvLnRmssd: mean - 0.2, // −2 SWC
+      hrvLnRmssdMean: mean,
+      hrvLnRmssdSd: sd,
+    })!;
+    const elevated = computeReadiness({
+      hrvLnRmssd: mean + 0.2, // +2 SWC
+      hrvLnRmssdMean: mean,
+      hrvLnRmssdSd: sd,
+    })!;
+    expect(normal.score).toBe(80); // inside the band → no meaningful change
+    expect(suppressed.score).toBe(44); // 80 − 2·18
+    expect(elevated.score).toBe(92); // 80 + 2·6 (capped)
+    expect(normal.factors[0].detail).toContain("lnRMSSD");
+  });
+
+  it("prefers the LnRMSSD/SWC path over the Garmin weekly-avg band when both exist", () => {
+    // weeklyAvg below the band would score <75; the LnRMSSD path (dev 0) wins at 80.
+    const d = computeReadiness({
+      hrvLnRmssd: 3.9,
+      hrvLnRmssdMean: 3.9,
+      hrvLnRmssdSd: 0.2,
+      hrvWeeklyAvg: 60,
+      hrvBaselineLow: 66,
+      hrvBaselineUpper: 78,
+    })!;
+    const hrv = d.factors.find((f) => f.name === "hrv")!;
+    expect(hrv.score).toBe(80);
+    expect(hrv.detail).toContain("lnRMSSD");
+  });
+
+  it("adds a sleep-regularity factor: tight timing high, irregular low", () => {
+    const tight = computeReadiness({ sleepScore: 70, sleepRegularityMinutes: 20 })!;
+    const irregular = computeReadiness({ sleepScore: 70, sleepRegularityMinutes: 120 })!;
+    const tReg = tight.factors.find((f) => f.name === "sleep regularity")!;
+    const iReg = irregular.factors.find((f) => f.name === "sleep regularity")!;
+    expect(tReg.score).toBe(100); // ≤30 min SD → fully regular
+    expect(iReg.score).toBe(30); // ±120 min SD → poor regularity
+    expect(tight.score).toBeGreaterThan(irregular.score);
+  });
+
   it("incorporates subjective wellness when logged", () => {
     const objectiveOnly = computeReadiness({ sleepScore: 70, acwr: 1.0 })!;
     const withGoodSubjective = computeReadiness({

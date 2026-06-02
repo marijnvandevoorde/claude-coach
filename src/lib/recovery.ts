@@ -18,8 +18,13 @@
 //  - ACWR is de-weighted and scored on Garmin's documented 0.8–1.3 "sweet spot"
 //    (≥1.5 danger); the ratio is statistically contested (Impellizzeri 2020,
 //    Lolli 2017), so it informs rather than dominates.
-//  - HRV is scored against the personal "balanced" baseline band (the SWC-style
-//    range Garmin computes), flat inside the band, penalised below it.
+//  - HRV is scored, when a personal history exists, on the sports-science
+//    standard: ln(RMSSD) against a rolling baseline with a smallest-worthwhile-
+//    change band of ±0.5·SD (Plews/Buchheit). A reading inside the band is "no
+//    meaningful change"; below it is penalised in proportion to how many SWC down.
+//    Falls back to Garmin's own 7-day-avg-vs-balanced-band, then the status label.
+//  - Sleep regularity (consistency of sleep timing night to night) is a secondary
+//    input: irregular sleep blunts recovery independently of duration/score.
 //  - Stress is down-weighted because Garmin stress is itself HRV-derived.
 //  - Resting-HR penalty triggers at +5 bpm over baseline (sustained-overreaching
 //    threshold), not +3 (within day-to-day noise).
@@ -47,12 +52,18 @@ export function recoveryLevelFromScore(score: number): Exclude<RecoveryLevel, "u
 export interface ReadinessSignals {
   sleepScore?: number | null; // 0–100, last night (PRIMARY)
   acwr?: number | null; // acute:chronic workload ratio — recovery/load proxy (PRIMARY)
+  // HRV — preferred path: ln(RMSSD) vs a personal rolling baseline + SWC band.
+  hrvLnRmssd?: number | null; // ln of last night's RMSSD (ms)
+  hrvLnRmssdMean?: number | null; // rolling mean of ln(RMSSD) over the baseline window
+  hrvLnRmssdSd?: number | null; // SD of ln(RMSSD) over that window (SWC = 0.5·SD)
+  // HRV — fallback path: Garmin's own 7-day avg vs the balanced band, then status.
   hrvWeeklyAvg?: number | null; // 7-day overnight HRV avg (SECONDARY)
   hrvBaselineLow?: number | null; // personal "balanced" band lower bound
   hrvBaselineUpper?: number | null; // personal "balanced" band upper bound
   hrvStatus?: string | null; // fallback when the numeric baseline is absent
   avgStress?: number | null; // 0–100 all-day stress, rest ≤25 (SECONDARY)
   sleepHistoryScore?: number | null; // rolling avg of recent sleep scores (SECONDARY)
+  sleepRegularityMinutes?: number | null; // SD of recent midsleep time-of-day, in minutes (SECONDARY)
   energy?: number | null; // subjective 1–5 (SECONDARY — self-report)
   soreness?: number | null; // subjective 1–5 (1 = none, 5 = severe)
   mood?: number | null; // subjective 1–5
@@ -95,8 +106,32 @@ export function recoveryFromAcwr(acwr: number): number {
   return clamp(90 - (acwr - 1.3) * 55); // 1.5→79, 1.8→62, 2.0→52 (load spike)
 }
 
-/** HRV component from the 7-day average relative to the personal balanced band. */
+/**
+ * HRV component. Preferred: ln(RMSSD) against a personal rolling baseline, judged
+ * by a smallest-worthwhile-change band of ±0.5·SD (the half-SD heuristic from
+ * Plews/Buchheit). Inside the band → no meaningful change (~80); below it →
+ * penalised ~18 points per SWC; above → a mild bonus (capped). Falls back to the
+ * Garmin 7-day-avg-vs-balanced-band, then to the raw status label.
+ */
 function hrvComponent(s: ReadinessSignals): { score: number; detail: string } | null {
+  if (
+    s.hrvLnRmssd != null &&
+    s.hrvLnRmssdMean != null &&
+    s.hrvLnRmssdSd != null &&
+    s.hrvLnRmssdSd > 0
+  ) {
+    const swc = 0.5 * s.hrvLnRmssdSd;
+    const dev = (s.hrvLnRmssd - s.hrvLnRmssdMean) / swc; // deviation in SWC units
+    const score =
+      dev >= 0
+        ? clamp(80 + Math.min(dev, 2) * 6) // +1 SWC → 86, ≥+2 → 92 (cap)
+        : clamp(80 + dev * 18); // −1 → 62, −2 → 44, −3 → 26
+    const tag = dev <= -1 ? "suppressed" : dev >= 1 ? "elevated" : "normal";
+    return {
+      score,
+      detail: `HRV lnRMSSD ${s.hrvLnRmssd.toFixed(2)} vs ${s.hrvLnRmssdMean.toFixed(2)}±${swc.toFixed(2)} SWC (${tag})`,
+    };
+  }
   if (s.hrvWeeklyAvg != null && s.hrvBaselineLow != null && s.hrvBaselineUpper != null) {
     const span = Math.max(1, s.hrvBaselineUpper - s.hrvBaselineLow);
     // Flat-ish inside the personal "balanced" band (Garmin's SWC-style range);
@@ -113,6 +148,18 @@ function hrvComponent(s: ReadinessSignals): { score: number; detail: string } | 
   const hrv = s.hrvStatus?.toLowerCase();
   if (hrv) return { score: HRV_STATUS_SCORE[hrv] ?? 55, detail: `HRV ${hrv}` };
   return null;
+}
+
+/**
+ * Sleep-regularity component (0–100) from the night-to-night consistency of sleep
+ * timing — the SD of recent midsleep time-of-day, in minutes. Tight timing
+ * (≤30 min SD) scores ~100; it falls off to ~30 by a very irregular ±120 min SD.
+ */
+function sleepRegularityComponent(s: ReadinessSignals): { score: number; detail: string } | null {
+  if (s.sleepRegularityMinutes == null) return null;
+  const sd = Math.max(0, s.sleepRegularityMinutes);
+  const score = clamp(100 - (Math.max(0, sd - 30) / 90) * 70);
+  return { score, detail: `sleep timing ±${Math.round(sd)} min` };
 }
 
 /** Subjective wellness component (0–100) from any logged energy/soreness/mood. */
@@ -171,6 +218,9 @@ export function computeReadiness(s: ReadinessSignals): DerivedReadiness | null {
       weight: 1.3,
       detail: `recent sleep ~${Math.round(s.sleepHistoryScore)}`,
     });
+  const reg = sleepRegularityComponent(s);
+  if (reg)
+    factors.push({ name: "sleep regularity", score: reg.score, weight: 0.8, detail: reg.detail });
   if (s.avgStress != null)
     factors.push({
       name: "stress",
