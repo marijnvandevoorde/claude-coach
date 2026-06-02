@@ -516,7 +516,7 @@ Examples:
   npx claude-coach config --notify-webhook=https://homeassistant.local/api/webhook/abc123
   npx claude-coach notify "Time to hydrate 💧"
 
-  # Daily check-in (agent passes Garmin signals fetched via the garmin MCP)
+  # Daily check-in (reads cached Garmin signals; run garmin-fetch first, or pass them in)
   npx claude-coach checkin --plan=my-plan.json --readiness=78 --sleep-hours=7.5 --json
 
   # Send due reminders as push notifications (for cron); --only filters types
@@ -528,7 +528,7 @@ Examples:
   npx claude-coach garmin-fetch
   npx claude-coach garmin-fetch --date=2026-06-01 --json
 
-  # Cache a Garmin snapshot you already have (e.g. an agent fetched it via the garmin MCP)
+  # Cache a Garmin snapshot you already have (when something else fetched it for you)
   npx claude-coach garmin-sync --readiness=78 --sleep-hours=7.5 --hrv-status=balanced
 `);
 }
@@ -1736,7 +1736,7 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
   await ensureDb();
   const date = flagStr(args.flags, "date") ?? localDate();
 
-  // 1. Cache any Garmin signals passed in by the agent (fetched via mcp__garmin__*).
+  // 1. Cache any Garmin signals passed in on the command line (already fetched elsewhere).
   const garminPatch: WellnessPatch = {};
   const readiness = flagNum(args.flags, "readiness");
   if (readiness !== undefined) garminPatch.readiness_score = Math.round(readiness);
