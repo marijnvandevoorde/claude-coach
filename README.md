@@ -50,11 +50,11 @@ They're complementary — connect both if you can. Garmin alone is enough for re
 
 #### Option 1: Connect Garmin Connect (Recommended for recovery & readiness)
 
-Garmin access is provided through the [`garmin_mcp`](https://github.com/Taxuspt/garmin_mcp) MCP server (by Alexandre Domingues), which talks to Garmin Connect via the `garminconnect` library. You authenticate **once** in a terminal; tokens are saved locally (`~/.garminconnect`) and stay valid for ~6 months. Your Garmin credentials are only ever used to mint those tokens — they're not shared with anyone.
+**Claude Coach reads Garmin Connect itself** — its built-in `garmin-fetch` (and the coach MCP's `garmin_refresh` tool) pull live recovery data using saved OAuth tokens, so the **only** required setup is a one-time token mint. You don't need to register a separate Garmin MCP server.
 
-You need [`uv`](https://docs.astral.sh/uv/) installed (`brew install uv` on macOS, or see the uv docs).
+You authenticate **once** in a terminal; tokens are saved locally (`~/.garminconnect`) and stay valid for ~6 months. Your Garmin credentials are only ever used to mint those tokens — they're not shared with anyone. You need [`uv`](https://docs.astral.sh/uv/) installed (`brew install uv` on macOS, or see the uv docs).
 
-**Step 1 — Authenticate with Garmin once:**
+**Mint the Garmin tokens (the only required step):**
 
 ```bash
 # Generates and stores OAuth tokens in ~/.garminconnect
@@ -62,11 +62,9 @@ GARMIN_EMAIL="you@example.com" GARMIN_PASSWORD="your-password" \
   uvx --python 3.12 --from git+https://github.com/Taxuspt/garmin_mcp garmin-mcp-auth
 ```
 
-If your account has MFA enabled, you'll be prompted for the code. Once this succeeds you won't need your password again until the tokens expire.
+If your account has MFA enabled, you'll be prompted for the code. Once this succeeds you won't need your password again until the tokens expire. The coach picks the tokens up automatically (via `$GARMINTOKENS`, default `~/.garminconnect`) — run `npx claude-coach garmin-fetch` to pull your data. See [CLI.md](CLI.md) for fetch, backfill, workout-push and route-upload commands.
 
-**Step 2 — Register the MCP server.**
-
-**Claude Code:**
+**Optional — the standalone Garmin MCP.** Registering [`garmin_mcp`](https://github.com/Taxuspt/garmin_mcp) (by Alexandre Domingues) as its own `mcp__garmin__*` server is **no longer required** — it's only worth adding in a local Claude Code session if you want richer _live_ signals the coach doesn't yet cache (full CTL/ATL/TSB load trend, VO₂max trend, endurance/hill scores):
 
 ```bash
 claude mcp add garmin -s project \
@@ -74,13 +72,7 @@ claude mcp add garmin -s project \
   -- uvx --python 3.12 --from git+https://github.com/Taxuspt/garmin_mcp garmin-mcp
 ```
 
-`-s project` writes a `.mcp.json` to the repo so the server is available whenever you work in this project (you'll be asked to approve it the first time you launch `claude`). Use `-s user` instead to make it available in every project. Run `claude mcp list` to confirm it shows up.
-
-**Claude Desktop:**
-
-Install the **Garmin Connect** desktop extension (`.dxt`/`.mcpb`) and enable it in **Settings → Extensions**. Leave the email/password fields blank if you already ran Step 1 — it will reuse the saved tokens. (Desktop extensions are managed separately from the "add MCP" / connectors list, so the Garmin server won't appear there to add manually — that's expected.)
-
-> First run will take a moment while `uvx` downloads and resolves the package from GitHub.
+(On Claude Desktop, install the **Garmin Connect** extension under **Settings → Extensions** instead; leave email/password blank to reuse the saved tokens.)
 
 #### Option 2: Connect to Strava (Recommended for activity history)
 
@@ -159,6 +151,15 @@ action:
 ```
 
 You can override config per-call with `--url=`, `--channel=` (`webhook`/`macos`/`stdout`), or the `COACH_NOTIFY_WEBHOOK_URL` / `COACH_NOTIFY_CHANNEL` environment variables.
+
+# Documentation
+
+Day-to-day usage and operational guides:
+
+- **[CLI.md](CLI.md)** — every `claude-coach` command, organized by task: logging water/wellness, journaling + weekly summary, configuring reminders, fetching & backfilling Garmin data, pushing workouts, uploading routes, Strava sync, and querying the database.
+- **[MCP.md](MCP.md)** — the remote coach MCP server: connecting it, and the tool-by-tool reference (`mcp__coach__*`) mirroring the CLI for Desktop / web / mobile / Code.
+- **[REMINDERS.md](REMINDERS.md)** — scheduling the proactive wellness reminders (cron / launchd) and the daily Garmin fetch + backfill.
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** — running the always-on reminder container and the remote MCP server (Docker, OAuth).
 
 # About
 
