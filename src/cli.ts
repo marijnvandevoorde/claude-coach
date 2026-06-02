@@ -908,6 +908,10 @@ async function runGarminPush(args: GarminPushArgs): Promise<void> {
     durationMinutes: w.durationMinutes,
     distanceMeters: w.distanceMeters,
     targetHR: w.targetHR,
+    targetPace: w.targetPace,
+    targetPower: w.targetPower,
+    structure: w.structure as WorkoutInput["structure"],
+    zones: plan.zones,
   }));
 
   if (inputs.length === 0) {

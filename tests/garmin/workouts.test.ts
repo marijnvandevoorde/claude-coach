@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { buildWorkoutPayload, pushWorkouts } from "../../src/garmin/workouts.js";
+import { buildWorkoutPayload, pushWorkouts, paceToMps } from "../../src/garmin/workouts.js";
 
 function res(body: unknown, ok = true, status = 200): Response {
   return {
@@ -37,6 +37,99 @@ describe("buildWorkoutPayload", () => {
     expect(step.endCondition.conditionTypeKey).toBe("distance");
     expect(step.endConditionValue).toBe(40000);
     expect(step.targetType.workoutTargetTypeKey).toBe("no.target");
+  });
+
+  it("uses a pace target (m/s) when given targetPace", () => {
+    const p = buildWorkoutPayload({
+      sport: "run",
+      name: "Tempo",
+      durationMinutes: 40,
+      targetPace: { low: "5:00/km", high: "4:40/km" },
+    }) as any;
+    const step = p.workoutSegments[0].workoutSteps[0];
+    expect(step.targetType.workoutTargetTypeKey).toBe("pace.zone");
+    expect(step.targetValueOne).toBeCloseTo(3.333, 2); // 5:00/km is the slower → lower speed
+    expect(step.targetValueTwo).toBeCloseTo(3.571, 2); // 4:40/km is the faster → higher speed
+  });
+});
+
+describe("paceToMps", () => {
+  it("parses km and mi paces, rejects junk", () => {
+    expect(paceToMps("5:00/km")).toBeCloseTo(3.333, 2);
+    expect(paceToMps("8:03/mi")).toBeCloseTo(3.332, 2);
+    expect(paceToMps("nonsense")).toBeUndefined();
+    expect(paceToMps(undefined)).toBeUndefined();
+  });
+});
+
+describe("buildWorkoutPayload (structured)", () => {
+  it("emits warmup, a repeat group, and cooldown with resolved HR/power targets", () => {
+    const p = buildWorkoutPayload({
+      sport: "run",
+      name: "Intervals",
+      zones: { bike: { power: { ftp: 250, zones: [] } } } as any,
+      structure: {
+        warmup: [
+          {
+            type: "warmup",
+            duration: { unit: "minutes", value: 10 },
+            intensity: { unit: "hr_zone", valueLow: 110, valueHigh: 130 },
+          },
+        ],
+        main: [
+          {
+            type: "interval_set",
+            repeats: 5,
+            steps: [
+              {
+                type: "work",
+                duration: { unit: "minutes", value: 3 },
+                intensity: { unit: "hr_zone", valueLow: 155, valueHigh: 170 },
+              },
+              {
+                type: "recovery",
+                duration: { unit: "minutes", value: 2 },
+                intensity: { unit: "hr_zone", valueLow: 110, valueHigh: 130 },
+              },
+            ],
+          },
+          {
+            type: "work",
+            duration: { unit: "kilometers", value: 3 },
+            intensity: { unit: "percent_ftp", valueLow: 88, valueHigh: 94 },
+          },
+        ],
+        cooldown: [
+          {
+            type: "cooldown",
+            duration: { unit: "minutes", value: 10 },
+            intensity: { unit: "rpe", value: 2 },
+          },
+        ],
+      },
+    } as any) as any;
+
+    const steps = p.workoutSegments[0].workoutSteps;
+    expect(steps).toHaveLength(4);
+    expect(steps[0].stepType.stepTypeKey).toBe("warmup");
+    expect(steps[0].endConditionValue).toBe(600);
+
+    const rg = steps[1];
+    expect(rg.type).toBe("RepeatGroupDTO");
+    expect(rg.numberOfIterations).toBe(5);
+    expect(rg.workoutSteps).toHaveLength(2);
+    expect(rg.workoutSteps[0].targetType.workoutTargetTypeKey).toBe("heart.rate.zone");
+    expect(rg.workoutSteps[0].childStepId).toBe(rg.childStepId);
+
+    const power = steps[2];
+    expect(power.endCondition.conditionTypeKey).toBe("distance");
+    expect(power.endConditionValue).toBe(3000);
+    expect(power.targetType.workoutTargetTypeKey).toBe("power.zone");
+    expect(power.targetValueOne).toBe(220); // 250 * 0.88
+    expect(power.targetValueTwo).toBe(235); // 250 * 0.94
+
+    expect(steps[3].stepType.stepTypeKey).toBe("cooldown");
+    expect(steps[3].targetType.workoutTargetTypeKey).toBe("no.target"); // rpe → open
   });
 });
 
