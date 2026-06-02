@@ -1546,6 +1546,7 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
       sleepScore: wellness?.sleep_score,
       sleepHours: wellness?.sleep_hours,
       hrvStatus: wellness?.hrv_status,
+      trainingStatus: wellness?.training_status,
       energy: wellness?.subjective_energy,
       restingHr: wellness?.resting_hr,
       restingHrBaseline: restingHrBaseline(date),

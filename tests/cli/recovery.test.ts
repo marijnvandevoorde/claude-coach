@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { deriveRecovery, recoveryLevelFromScore } from "../../src/lib/recovery.js";
+import {
+  deriveRecovery,
+  recoveryLevelFromScore,
+  trainingStatusScore,
+} from "../../src/lib/recovery.js";
 
 describe("recoveryLevelFromScore", () => {
   it("maps scores to the readiness bands", () => {
@@ -65,5 +69,40 @@ describe("deriveRecovery", () => {
   it("ignores resting HR when no baseline is available yet", () => {
     const d = deriveRecovery({ bodyBattery: 80, restingHr: 55, restingHrBaseline: null })!;
     expect(d.score).toBe(80);
+  });
+
+  it("folds Garmin training status into the score and lowers it when strained", () => {
+    const without = deriveRecovery({ bodyBattery: 89, sleepScore: 54, hrvStatus: "low" })!;
+    const strained = deriveRecovery({
+      bodyBattery: 89,
+      sleepScore: 54,
+      hrvStatus: "low",
+      trainingStatus: "Strained 5",
+    })!;
+    expect(strained.score).toBeLessThan(without.score);
+    expect(strained.components.some((c) => c.includes("training status Strained 5"))).toBe(true);
+  });
+
+  it("raises the score for a productive status and skips unknown labels", () => {
+    const productive = deriveRecovery({ bodyBattery: 60, trainingStatus: "Productive 8" })!;
+    expect(productive.score).toBeGreaterThan(60); // 80 pulls the 60 up
+    const noStatus = deriveRecovery({ bodyBattery: 60, trainingStatus: "No Status" })!;
+    expect(noStatus.score).toBe(60); // unknown -> ignored
+  });
+});
+
+describe("trainingStatusScore", () => {
+  it("scores the leading status word, ignoring the trailing number", () => {
+    expect(trainingStatusScore("Strained 5")).toBe(30);
+    expect(trainingStatusScore("Unproductive 3")).toBe(40);
+    expect(trainingStatusScore("Productive 8")).toBe(80);
+    expect(trainingStatusScore("Peaking 9")).toBe(90);
+    expect(trainingStatusScore("Recovery 2")).toBe(70);
+  });
+
+  it("returns null for unknown / empty labels", () => {
+    expect(trainingStatusScore("No Status")).toBeNull();
+    expect(trainingStatusScore("")).toBeNull();
+    expect(trainingStatusScore("12345")).toBeNull();
   });
 });

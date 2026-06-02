@@ -21,6 +21,7 @@ export interface RecoverySignals {
   sleepScore?: number | null; // Garmin sleep score, 0–100
   sleepHours?: number | null;
   hrvStatus?: string | null; // balanced | unbalanced | low | poor
+  trainingStatus?: string | null; // Garmin label, e.g. "Strained 5", "Productive 8"
   energy?: number | null; // subjective energy, 1–5
   restingHr?: number | null;
   restingHrBaseline?: number | null; // rolling mean of recent resting HR
@@ -40,6 +41,25 @@ const HRV_SCORE: Record<string, number> = {
   low: 35,
   poor: 25,
 };
+
+// Garmin Training Status — a multi-day load/fatigue verdict. "Strained" and
+// "Unproductive" are direct fatigue/overreaching signals; the rest are neutral
+// to good. "No Status" / unknown labels yield null and are skipped.
+const TRAINING_STATUS_SCORE: Record<string, number> = {
+  peaking: 90,
+  productive: 80,
+  maintaining: 75,
+  recovery: 70,
+  detraining: 65,
+  unproductive: 40,
+  strained: 30,
+};
+
+/** Score the leading word of a Garmin training-status label ("Strained 5" -> 30). */
+export function trainingStatusScore(status: string): number | null {
+  const key = status.toLowerCase().match(/[a-z]+/)?.[0];
+  return key ? (TRAINING_STATUS_SCORE[key] ?? null) : null;
+}
 
 /**
  * Derive a recovery score from whatever signals are present. Each signal is a
@@ -64,6 +84,11 @@ export function deriveRecovery(s: RecoverySignals): DerivedRecovery | null {
     });
   const hrv = s.hrvStatus?.toLowerCase();
   if (hrv) parts.push({ weight: 0.8, value: HRV_SCORE[hrv] ?? 55, label: `HRV ${hrv}` });
+  if (s.trainingStatus) {
+    const ts = trainingStatusScore(s.trainingStatus);
+    if (ts != null)
+      parts.push({ weight: 0.9, value: ts, label: `training status ${s.trainingStatus}` });
+  }
   if (s.sleepHours != null)
     parts.push({
       weight: 0.4,
