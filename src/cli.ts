@@ -286,9 +286,14 @@ function parseArgs(): CliArgs {
   }
 
   if (args[0] === "garmin-route") {
+    const rest = args.slice(1);
+    // --stdin reads the GPX from stdin (used by the MCP to pass file content); otherwise need a path.
+    if (rest.includes("--stdin")) {
+      return { command: "garmin-route", inputFile: "", flags: parseFlags(rest) };
+    }
     if (!args[1] || args[1].startsWith("--")) {
       log.error(
-        "garmin-route requires a GPX file (e.g. garmin-route route.gpx --name=… --type=mtb)"
+        "garmin-route requires a GPX file or --stdin (e.g. garmin-route route.gpx --name=… --type=mtb)"
       );
       process.exit(1);
     }
@@ -977,11 +982,20 @@ async function runGarminPush(args: GarminPushArgs): Promise<void> {
 
 async function runGarminRoute(args: GarminRouteArgs): Promise<void> {
   let gpx: string;
-  try {
-    gpx = readFileSync(args.inputFile, "utf-8");
-  } catch {
-    log.error(`Could not read GPX file: ${args.inputFile}`);
-    process.exit(1);
+  if (args.flags["stdin"]) {
+    try {
+      gpx = readFileSync(0, "utf-8"); // fd 0 = stdin (GPX content piped in, e.g. by the MCP)
+    } catch {
+      log.error("garmin-route --stdin: could not read GPX from stdin");
+      process.exit(1);
+    }
+  } else {
+    try {
+      gpx = readFileSync(args.inputFile, "utf-8");
+    } catch {
+      log.error(`Could not read GPX file: ${args.inputFile}`);
+      process.exit(1);
+    }
   }
 
   const name = flagStr(args.flags, "name");
