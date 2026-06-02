@@ -5,7 +5,7 @@
  * a reverse proxy + Cloudflare Access; an optional bearer (COACH_AUTH_SECRET) is checked too.
  */
 import express from "express";
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
@@ -13,17 +13,56 @@ import { oauthEnabled, oauthRouter, verifyAccessToken, resourceMetadataUrl } fro
 
 const CLI = process.env.COACH_CLI || "/app/dist/cli.js";
 const PORT = Number(process.env.COACH_MCP_PORT || process.env.PORT || 8080);
+const MAX_OUTPUT = 16 * 1024 * 1024; // 16 MB cap on a tool's stdout
+// Per-tool wall-clock cap. A runaway/very long tool (e.g. a huge backfill) is
+// killed rather than tying up a request forever. Override with COACH_MCP_TOOL_TIMEOUT_MS.
+const TOOL_TIMEOUT_MS = Number(process.env.COACH_MCP_TOOL_TIMEOUT_MS || 600_000);
 
-function runCli(args: string[], input?: string): { ok: boolean; text: string } {
-  const r = spawnSync("node", [CLI, ...args], {
-    encoding: "utf-8",
-    maxBuffer: 16 * 1024 * 1024,
-    ...(input != null ? { input } : {}),
+/**
+ * Run the CLI as an ASYNC child process. Critically, this does NOT block the
+ * Node event loop — `/health` and other tool calls stay responsive while a slow
+ * tool (a big backfill, a slow Garmin fetch) runs. (The old spawnSync froze the
+ * whole server for the child's entire duration.) Resolves to the captured output.
+ */
+function runCli(args: string[], input?: string): Promise<{ ok: boolean; text: string }> {
+  return new Promise((resolve) => {
+    const child = spawn("node", [CLI, ...args], { stdio: ["pipe", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    let over = false;
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGKILL");
+    }, TOOL_TIMEOUT_MS);
+
+    child.stdout.on("data", (d: Buffer) => {
+      stdout += d.toString();
+      if (stdout.length > MAX_OUTPUT && !over) {
+        over = true;
+        child.kill("SIGKILL");
+      }
+    });
+    child.stderr.on("data", (d: Buffer) => {
+      stderr += d.toString();
+    });
+    child.on("error", (e) => {
+      clearTimeout(timer);
+      resolve({ ok: false, text: e.message });
+    });
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      if (timedOut)
+        return resolve({ ok: false, text: `tool timed out after ${TOOL_TIMEOUT_MS / 1000}s` });
+      if (over) return resolve({ ok: false, text: "tool output exceeded 16 MB; aborted" });
+      if (code !== 0)
+        return resolve({ ok: false, text: (stderr || stdout || `exit ${code}`).trim() });
+      resolve({ ok: true, text: stdout.trim() });
+    });
+
+    if (input != null) child.stdin.end(input);
+    else child.stdin.end();
   });
-  if (r.error) return { ok: false, text: r.error.message };
-  if (r.status !== 0)
-    return { ok: false, text: (r.stderr || r.stdout || `exit ${r.status}`).trim() };
-  return { ok: true, text: (r.stdout || "").trim() };
 }
 
 type Args = Record<string, unknown>;
@@ -346,7 +385,7 @@ function buildServer(): Server {
       return { content: [{ type: "text", text: `Unknown tool: ${name}` }], isError: true };
     }
     const args = (req.params.arguments ?? {}) as Args;
-    const r = runCli(def.toArgs(args), def.stdin?.(args));
+    const r = await runCli(def.toArgs(args), def.stdin?.(args));
     return { content: [{ type: "text", text: r.text || "(no output)" }], isError: !r.ok };
   });
 
