@@ -39,6 +39,7 @@ import { getDataSource, type DailySnapshot } from "./datasource/index.js";
 import { pushWorkouts, type WorkoutInput, type PushStore } from "./garmin/workouts.js";
 import { lookupPushedWorkout, savePushedWorkout } from "./db/garminPush.js";
 import { uploadRoute, COURSE_TYPES } from "./garmin/routes.js";
+import { runBackfill, type BackfillSink } from "./garmin/backfill.js";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -152,6 +153,11 @@ interface GarminRouteArgs {
   flags: Flags;
 }
 
+interface GarminBackfillArgs {
+  command: "garmin-backfill";
+  flags: Flags;
+}
+
 interface WellnessArgs {
   command: "wellness";
   flags: Flags;
@@ -173,6 +179,7 @@ type CliArgs =
   | GarminFetchArgs
   | GarminPushArgs
   | GarminRouteArgs
+  | GarminBackfillArgs
   | WellnessArgs;
 
 type Flags = Record<string, string | boolean>;
@@ -301,6 +308,10 @@ function parseArgs(): CliArgs {
     return { command: "garmin-route", inputFile: args[1], flags: parseFlags(args.slice(2)) };
   }
 
+  if (args[0] === "garmin-backfill") {
+    return { command: "garmin-backfill", flags: parseFlags(args.slice(1)) };
+  }
+
   if (args[0] === "query") {
     if (!args[1]) {
       log.error("query command requires a SQL statement");
@@ -394,6 +405,7 @@ Commands:
   export-garmin <file>    Plan → structured workouts JSON (to create + schedule on Garmin)
   garmin-push <file>      Create + schedule a plan's workouts on Garmin (--dry-run to preview)
   garmin-route <file.gpx> Upload a GPX as a Garmin course (--name, --type, --dry-run)
+  garmin-backfill         Backfill history into the DB (--from= --to= [--full] [--force])
   query <sql>       Run a SQL query against the database
   log <type> <val>  Log wellness/intake (water|sleep|energy|soreness|mood|weight)
   wellness          Show today's hydration + wellness snapshot
@@ -451,6 +463,10 @@ Examples:
 
   # Upload a GPX as a Garmin course/route — kept exactly as-is, no road-snapping
   npx claude-coach garmin-route route.gpx --name="Sunday loop" --type=mtb
+
+  # Backfill historical Garmin data (range = cheap; --full = per-day complete, resumable)
+  npx claude-coach garmin-backfill --from=2026-01-01 --to=2026-06-01
+  npx claude-coach garmin-backfill --from=2026-05-01 --full
 
   # Query the database
   npx claude-coach query "SELECT * FROM weekly_volume LIMIT 5"
@@ -1025,6 +1041,47 @@ async function runGarminRoute(args: GarminRouteArgs): Promise<void> {
       result.type ? `, ${result.type}` : ""
     }) → course ${result.courseId}`
   );
+}
+
+async function runGarminBackfill(args: GarminBackfillArgs): Promise<void> {
+  await ensureDb();
+  const from = flagStr(args.flags, "from");
+  const to = flagStr(args.flags, "to") ?? localDate();
+  if (!from) {
+    log.error("garmin-backfill requires --from=YYYY-MM-DD (and optional --to, default today)");
+    process.exit(1);
+  }
+  const full = Boolean(args.flags["full"]);
+  const force = Boolean(args.flags["force"]);
+  const delayMs = flagNum(args.flags, "delay-ms");
+
+  const sink: BackfillSink = {
+    saveWellness: (date, patch) => upsertWellness(date, patch as WellnessPatch),
+    saveActivity: (a) => insertGarminActivity(a),
+    hasFullSnapshot: async (date) => Boolean((await getWellness(date))?.garmin_raw),
+  };
+
+  log.start(`Backfilling Garmin ${from} → ${to}${full ? " (--full, per-day)" : " (range)"}…`);
+  let res;
+  try {
+    res = await runBackfill({ from, to, full, force, delayMs }, sink);
+  } catch (e) {
+    log.error(`garmin-backfill: ${e instanceof Error ? e.message : String(e)}`);
+    process.exit(1);
+  }
+  if (args.flags["json"]) {
+    console.log(JSON.stringify(res, null, 2));
+    return;
+  }
+  log.success(
+    `Backfill done: ${res.activities} activities, ${
+      full
+        ? `${res.fullDays} full days (${res.skipped} already had data)`
+        : `${res.wellnessDays} wellness days`
+    }.`
+  );
+  if (res.errors.length)
+    log.warn(`${res.errors.length} non-fatal errors (first: ${res.errors[0]})`);
 }
 
 function runRender(args: RenderArgs): void {
@@ -1856,6 +1913,9 @@ async function main() {
       break;
     case "garmin-route":
       await runGarminRoute(args);
+      break;
+    case "garmin-backfill":
+      await runGarminBackfill(args);
       break;
     case "garmin-push":
       await runGarminPush(args);

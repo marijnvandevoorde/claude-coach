@@ -48,7 +48,7 @@ function titleCase(s: string): string {
   return s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function mapActivity(a: Obj): Record<string, unknown> {
+export function mapActivity(a: Obj): Record<string, unknown> {
   const typeKey = String((a.activityType ?? {}).typeKey ?? "").toLowerCase();
   const sport = SPORT[typeKey] ?? (typeKey ? titleCase(typeKey.replace(/_/g, " ")) : "Workout");
   const aid = a.activityId;
@@ -74,12 +74,15 @@ function mapActivity(a: Obj): Record<string, unknown> {
   };
 }
 
-export async function fetchGarminSnapshot(date: string): Promise<GarminFetchPayload> {
+export async function fetchGarminSnapshot(
+  date: string,
+  existingClient?: GarminClient
+): Promise<GarminFetchPayload> {
   const out: GarminFetchPayload = { date, wellness: {}, activities: [], errors: [] };
 
   let client: GarminClient;
   try {
-    client = await GarminClient.create();
+    client = existingClient ?? (await GarminClient.create());
   } catch (e) {
     out.errors.push(`tokens/refresh: ${e instanceof Error ? e.message : String(e)}`);
     return out;

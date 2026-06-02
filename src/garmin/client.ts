@@ -96,9 +96,24 @@ export class GarminClient {
     return { Authorization: `Bearer ${this.access}`, "User-Agent": API_UA, NK: "NT", ...extra };
   }
 
+  /** fetch() with exponential backoff on HTTP 429 (Garmin rate-limits bursts). */
+  private async fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
+    const maxRetries = 5;
+    for (let attempt = 0; ; attempt++) {
+      const res = await fetch(url, init);
+      if (res.status !== 429 || attempt >= maxRetries) return res;
+      const retryAfter = Number(res.headers.get("retry-after"));
+      const waitMs =
+        Number.isFinite(retryAfter) && retryAfter > 0
+          ? retryAfter * 1000
+          : Math.min(1000 * 2 ** attempt, 16000);
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
+  }
+
   /** GET a connectapi path. Returns parsed JSON, or null on an empty body. Throws on non-2xx. */
   async get<T = unknown>(path: string): Promise<T | null> {
-    const res = await fetch(API + path, { headers: this.headers() });
+    const res = await this.fetchWithRetry(API + path, { headers: this.headers() });
     if (!res.ok) throw new Error(`GET ${path}: HTTP ${res.status}`);
     const text = await res.text();
     return text ? (JSON.parse(text) as T) : null;
@@ -106,7 +121,7 @@ export class GarminClient {
 
   /** POST JSON to a connectapi path. Returns parsed JSON (or null). Throws on non-2xx. */
   async post<T = unknown>(path: string, body: unknown): Promise<T | null> {
-    const res = await fetch(API + path, {
+    const res = await this.fetchWithRetry(API + path, {
       method: "POST",
       headers: this.headers({ "Content-Type": "application/json" }),
       body: JSON.stringify(body),
@@ -119,7 +134,7 @@ export class GarminClient {
 
   /** PUT JSON to a connectapi path (update). Returns parsed JSON (or null). Throws on non-2xx. */
   async put<T = unknown>(path: string, body: unknown): Promise<T | null> {
-    const res = await fetch(API + path, {
+    const res = await this.fetchWithRetry(API + path, {
       method: "PUT",
       headers: this.headers({ "Content-Type": "application/json" }),
       body: JSON.stringify(body),
@@ -132,7 +147,10 @@ export class GarminClient {
 
   /** DELETE a connectapi path. Throws on non-2xx (204 No Content is fine). */
   async del(path: string): Promise<void> {
-    const res = await fetch(API + path, { method: "DELETE", headers: this.headers() });
+    const res = await this.fetchWithRetry(API + path, {
+      method: "DELETE",
+      headers: this.headers(),
+    });
     if (!res.ok && res.status !== 204) throw new Error(`DELETE ${path}: HTTP ${res.status}`);
   }
 }
