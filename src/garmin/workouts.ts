@@ -86,6 +86,18 @@ export async function createWorkout(client: GarminClient, input: WorkoutInput): 
   return res.workoutId;
 }
 
+/** Update an existing workout in place (keeps its id + any schedules). */
+export async function updateWorkout(
+  client: GarminClient,
+  workoutId: number,
+  input: WorkoutInput
+): Promise<void> {
+  await client.put(`/workout-service/workout/${workoutId}`, {
+    ...buildWorkoutPayload(input),
+    workoutId,
+  });
+}
+
 export async function scheduleWorkout(
   client: GarminClient,
   workoutId: number,
@@ -96,6 +108,39 @@ export async function scheduleWorkout(
     { date }
   );
   return res?.workoutScheduleId;
+}
+
+export interface WorkoutSummary {
+  workoutId: number;
+  workoutName: string;
+}
+
+/** List the athlete's own workouts (used for name-based dedup). */
+export async function listWorkouts(client: GarminClient): Promise<WorkoutSummary[]> {
+  const d = await client.get<unknown>(
+    "/workout-service/workouts?start=1&limit=100&myWorkoutsOnly=true&sharedWorkoutsOnly=false&orderBy=WORKOUT_NAME&orderSeq=ASC"
+  );
+  const arr: any[] = Array.isArray(d) ? d : ((d as any)?.workoutList ?? (d as any)?.workouts ?? []);
+  return arr.map((w) => ({ workoutId: w.workoutId, workoutName: w.workoutName }));
+}
+
+/** Stable per plan day-workout key for dedup. */
+export function pushKey(date: string | undefined, name: string): string {
+  return `${date ?? ""}|${name}`;
+}
+
+/** Persistence the CLI injects so re-pushes update in place instead of duplicating. */
+export interface PushStore {
+  lookup(
+    key: string
+  ): { workout_id: number; schedule_id: number | null; date: string | null } | undefined;
+  save(rec: {
+    push_key: string;
+    workout_id: number;
+    schedule_id: number | null;
+    name: string;
+    date: string | null;
+  }): void;
 }
 
 export async function deleteWorkout(client: GarminClient, workoutId: number): Promise<void> {
@@ -109,13 +154,18 @@ export interface PushResult {
   payload?: Record<string, unknown>;
   workoutId?: number;
   scheduleId?: number;
+  replaced?: boolean; // updated an existing workout in place rather than creating one
   error?: string;
 }
 
-/** Create (and, when dated, schedule) each workout. `dryRun` builds payloads only. */
+/**
+ * Create (and, when dated, schedule) each workout. `dryRun` builds payloads only.
+ * When a `store` is provided, re-pushes UPDATE the existing workout in place (by
+ * stored id, or by matching name as a fallback) instead of creating duplicates.
+ */
 export async function pushWorkouts(
   inputs: WorkoutInput[],
-  opts: { dryRun?: boolean } = {}
+  opts: { dryRun?: boolean; store?: PushStore } = {}
 ): Promise<PushResult[]> {
   if (opts.dryRun) {
     return inputs.map((i) => ({
@@ -127,14 +177,50 @@ export async function pushWorkouts(
   }
 
   const client = await GarminClient.create();
+
+  // Name-fallback dedup: adopt workouts created before the push store existed.
+  const byName = new Map<string, number>();
+  if (opts.store) {
+    try {
+      for (const w of await listWorkouts(client)) {
+        if (w.workoutName) byName.set(w.workoutName, w.workoutId);
+      }
+    } catch {
+      /* listing is best-effort — fall back to create */
+    }
+  }
+
   const results: PushResult[] = [];
   for (const input of inputs) {
     try {
-      const workoutId = await createWorkout(client, input);
-      const scheduleId = input.date
-        ? await scheduleWorkout(client, workoutId, input.date)
-        : undefined;
-      results.push({ name: input.name, date: input.date, workoutId, scheduleId });
+      const key = pushKey(input.date, input.name);
+      const stored = opts.store?.lookup(key);
+      const existingId = stored?.workout_id ?? byName.get(input.name);
+
+      let workoutId: number;
+      let replaced = false;
+      if (existingId) {
+        await updateWorkout(client, existingId, input);
+        workoutId = existingId;
+        replaced = true;
+      } else {
+        workoutId = await createWorkout(client, input);
+      }
+
+      // Schedule on the date unless it's already scheduled there.
+      let scheduleId = stored?.schedule_id ?? undefined;
+      if (input.date && !(scheduleId && stored?.date === input.date)) {
+        scheduleId = await scheduleWorkout(client, workoutId, input.date);
+      }
+
+      opts.store?.save({
+        push_key: key,
+        workout_id: workoutId,
+        schedule_id: scheduleId ?? null,
+        name: input.name,
+        date: input.date ?? null,
+      });
+      results.push({ name: input.name, date: input.date, workoutId, scheduleId, replaced });
     } catch (e) {
       results.push({
         name: input.name,
