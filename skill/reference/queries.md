@@ -8,7 +8,7 @@ npx claude-coach query "YOUR_QUERY" --json
 
 This works on any Node.js version (uses built-in SQLite on Node 22.5+, falls back to CLI otherwise).
 
-> **Garmin first for readiness & load.** The SQL below queries the **Strava** activity history in `coach.db`. When Garmin Connect is connected, get _current form_ (readiness, sleep, HRV) and _training load_ (CTL/ATL/TSB, training status, VO₂max) from the **`mcp__garmin__*` tools** instead — see `garmin.md`. Use these Strava queries for athletic **foundation** (lifetime peaks, race history, training depth) and as the fallback when Garmin is unavailable.
+> **Garmin first for readiness & load.** The SQL below queries the **Strava** activity history in `coach.db`. When Garmin Connect is connected, get _current form_ (readiness, sleep, HRV) and _training load_ (CTL/ATL/TSB, training status, VO₂max) from Garmin instead — the coach pulls these itself via `mcp__coach__garmin_refresh` / `garmin-fetch` (no separate Garmin MCP needed); see `garmin.md`. Use these Strava queries for athletic **foundation** (lifetime peaks, race history, training depth) and as the fallback when Garmin is unavailable.
 
 ## Current Form (Last 8 Weeks)
 
@@ -229,7 +229,7 @@ GROUP BY sport_type;
 
 ## Garmin Readiness & Load (When Connected)
 
-The live readiness/load signals come from the **`mcp__garmin__*` tools** (see `garmin.md`), not from SQL:
+The live readiness/load signals come from **Garmin**, not from SQL — the coach pulls them itself via `mcp__coach__garmin_refresh` / `npx claude-coach garmin-fetch`, then surfaces them through `checkin` / `wellness` (see `garmin.md`). The bare tool names below are the signals; they map to the optional `mcp__garmin__*` server when it's present:
 
 - **Readiness today:** `get_training_readiness(today)` — score + limiting contributor.
 - **Recovery context:** `get_sleep_summary(today)`, `get_hrv_data(today)`, `get_rhr_day(today)`, `get_body_battery(today, today)`.

@@ -45,7 +45,7 @@ GARMIN_EMAIL="you@example.com" GARMIN_PASSWORD="your-password" \
 
 That writes tokens to `~/.garminconnect` (`$GARMINTOKENS`). Then `mcp__coach__garmin_refresh` (or `npx claude-coach garmin-fetch`) can pull live recovery data.
 
-> **Optional — the standalone Garmin MCP.** Registering `Taxuspt/garmin_mcp` as its own `mcp__garmin__*` server is **no longer required** — the coach handles recovery/readiness via the tokens above. It's only worth adding in a **local Claude Code** session if you want richer _live_ signals the coach doesn't yet cache (full CTL/ATL/TSB load trend, VO₂max trend, endurance/hill scores) or to **push workouts to the watch** (until the coach gains a native push tool). To add it: `claude mcp add garmin -s project --env 'GARMINTOKENS=${HOME}/.garminconnect' -- uvx --python 3.12 --from git+https://github.com/Taxuspt/garmin_mcp garmin-mcp` (on Claude Desktop, install the "Garmin Connect" extension instead).
+> **Optional — the standalone Garmin MCP.** Registering `Taxuspt/garmin_mcp` as its own `mcp__garmin__*` server is **no longer required** — the coach handles recovery/readiness reads (`garmin_refresh`/`garmin-fetch`) **and** workout push (`schedule_workouts`/`garmin-push`) and route upload (`upload_route`/`garmin-route`) natively via the tokens above. It's only worth adding in a **local Claude Code** session if you want richer _live_ signals the coach doesn't yet cache (full CTL/ATL/TSB load trend, VO₂max trend, endurance/hill scores). To add it: `claude mcp add garmin -s project --env 'GARMINTOKENS=${HOME}/.garminconnect' -- uvx --python 3.12 --from git+https://github.com/Taxuspt/garmin_mcp garmin-mcp` (on Claude Desktop, install the "Garmin Connect" extension instead).
 
 See the README's "Connect Garmin Connect" section. If Garmin isn't set up, proceed with Strava/manual and note recovery data is unavailable.
 
@@ -340,7 +340,7 @@ If the goal event is a **trail or ultra race**, activate trail mode: the volume 
 
 **If Garmin is connected:**
 
-1. Read `skill/reference/garmin.md`, then pull current readiness/load: `get_training_readiness`, `get_training_status`, `get_training_load_trend`, `get_sleep_summary`, `get_hrv_data`. Use these as the primary signal for current form and fatigue.
+1. Read `skill/reference/garmin.md`. Pull current recovery/load with the coach itself — `mcp__coach__garmin_refresh` (or `npx claude-coach garmin-fetch`), then read it back via `mcp__coach__checkin` / `mcp__coach__wellness`. This caches readiness, sleep, HRV + baseline, stress, body battery, training status + ACWR/load, and recent activities. Use these as the primary signal for current form and fatigue. (Only if the optional `mcp__garmin__*` server is present and you need a richer live signal the coach doesn't cache — e.g. the full CTL/ATL/TSB trend or VO₂max trend — call those tools directly; see `garmin.md`.)
 
 **If using Strava:**
 
@@ -613,7 +613,7 @@ After both files are created, tell the user:
 2. The HTML file path (for viewing)
 3. Suggest opening the HTML file in a browser
 4. **Offer to put it on their calendar** — push the workouts straight into their Google Calendar (via the Google Calendar MCP) or export an `.ics`. See `skill/reference/calendar.md`.
-5. **Offer to push workouts to their Garmin/watch** — `export-garmin` / `mcp__coach__export_garmin` builds the structured workout feed; today an agent then creates + schedules them via the **`mcp__garmin__*`** tools so they sync to the device (e.g. a Fenix). This is the one path that still needs the standalone Garmin MCP (a native coach push tool is planned). See `skill/reference/garmin-workouts.md`.
+5. **Offer to push workouts to their Garmin/watch** — the coach does this **natively**: `npx claude-coach garmin-push <plan>.json` (or `mcp__coach__schedule_workouts`) creates **and** schedules each session on Garmin so it syncs to the device (e.g. a Fenix); add `--dry-run` / `dryRun:true` to preview first. You can also upload a route/course from a GPX with `garmin-route` / `mcp__coach__upload_route`. No standalone Garmin MCP needed. See `skill/reference/garmin-workouts.md`.
 
 ---
 
@@ -674,9 +674,27 @@ When the athlete mentions wellness or intake in passing, capture it with the `lo
 
 Confirm briefly ("logged 💧") rather than interrogating — estimate sensible values when they're vague, and only ask back if it actually changes a decision. For "did my run / finished the session," acknowledge it and mark it complete in the plan if you're tracking one; the activity's volume/load itself comes from the Strava/Garmin sync, not a manual log.
 
+### Journaling free-text feedback + the weekly summary
+
+The structured `log` captures numbers; **journaling captures the athlete's own words.** When they share qualitative feedback that isn't a 1–5 value — "work's been brutal this week", "legs felt amazing on the climb", "nervous about the race" — capture it with `journal add`:
+
+```bash
+npx claude-coach journal add "work stress, legs heavy" --tag=note    # mcp__coach__journal
+npx claude-coach journal add "raced a local 10k, PB!" --tag=race
+```
+
+Then, **at the end of a week** (or when they ask "how did my week go?"), read it back: pull `npx claude-coach summary --since=<7 days ago>` (or `mcp__coach__summary`), which bundles the week's journal entries **plus** the wellness/training metrics as JSON, and compose a short narrative summary — what they did, how they felt, trends in sleep/readiness/load, and what it suggests for next week. Use `journal list --since=` / `mcp__coach__journal_list` to pull entries for a specific window on demand.
+
 ### If the coach MCP is connected
 
-The coach is also available as **MCP tools** (`mcp__coach__*`) when the remote coach server is added as a connector — e.g. `mcp__coach__wellness`, `mcp__coach__log`, `mcp__coach__checkin`, `mcp__coach__config`, `mcp__coach__garmin_refresh`, `mcp__coach__garmin_sync`, `mcp__coach__export_calendar`, `mcp__coach__export_garmin`, `mcp__coach__notify`. They mirror the CLI commands.
+The coach is also available as **MCP tools** (`mcp__coach__*`) when the remote coach server is added as a connector. They mirror the CLI commands one-to-one:
+
+- **Wellness & journaling:** `mcp__coach__wellness`, `mcp__coach__log`, `mcp__coach__journal`, `mcp__coach__journal_list`, `mcp__coach__summary`
+- **Reminders:** `mcp__coach__config`, `mcp__coach__checkin`, `mcp__coach__notify`
+- **Garmin:** `mcp__coach__garmin_refresh` (live pull), `mcp__coach__garmin_sync` (cache values you pass), `mcp__coach__backfill` (historical), `mcp__coach__schedule_workouts` (push workouts), `mcp__coach__upload_route` (GPX course)
+- **Plans:** `mcp__coach__export_calendar`, `mcp__coach__export_garmin`
+
+A full tool-by-tool reference lives in [`MCP.md`](../MCP.md); the CLI equivalents are in [`CLI.md`](../CLI.md).
 
 **Prefer these tools when they're present** — they work anywhere the connector is added (e.g. Claude Desktop) without a local install or local `coach.db`. Fall back to `npx claude-coach …` only when the MCP isn't connected (e.g. a local-only Claude Code session in the repo).
 
