@@ -1569,6 +1569,9 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
       hrvStatus: wellness?.hrv_status,
       avgStress: wellness?.avg_stress,
       sleepHistoryScore: sleepScoreHistory(date),
+      energy: wellness?.subjective_energy,
+      soreness: wellness?.soreness,
+      mood: wellness?.mood,
       restingHr: wellness?.resting_hr,
       restingHrBaseline: restingHrBaseline(date),
     });
@@ -1577,9 +1580,10 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
       recoveryScore = derived.score;
       recoveryDerived = true;
       derivedFrom = derived.factors.map((f) => f.detail);
-      if (derived.score < 50)
+      const capNote = derived.cappedBySubjective ? " — capped by how you reported feeling" : "";
+      if (derived.score < 50 || derived.cappedBySubjective)
         recoveryFlags.push(
-          `Readiness ~${derived.score} (${derived.level}, reconstructed from ${derived.factors.map((f) => f.detail).join(", ")}) — no native Garmin readiness on this device; consider easing today's intensity.`
+          `Readiness ~${derived.score} (${derived.level}, reconstructed from ${derived.factors.map((f) => f.detail).join(", ")})${capNote} — no native Garmin readiness on this device; consider easing today's intensity.`
         );
     } else {
       recoveryLevel = "unknown";

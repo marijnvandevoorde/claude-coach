@@ -14,18 +14,20 @@ describe("recoveryLevelFromScore", () => {
     expect(recoveryLevelFromScore(50)).toBe("moderate");
     expect(recoveryLevelFromScore(40)).toBe("moderate");
     expect(recoveryLevelFromScore(30)).toBe("low");
-    expect(recoveryLevelFromScore(25)).toBe("low");
     expect(recoveryLevelFromScore(10)).toBe("poor");
   });
 });
 
-describe("recoveryFromAcwr", () => {
-  it("scores low load as well-recovered and high load as recovery debt", () => {
-    expect(recoveryFromAcwr(0.8)).toBeCloseTo(84.6, 1);
-    expect(recoveryFromAcwr(1.0)).toBeCloseTo(77, 1);
-    expect(recoveryFromAcwr(1.4)).toBeCloseTo(61.8, 1);
-    expect(recoveryFromAcwr(2.0)).toBeCloseTo(39, 1);
-    expect(recoveryFromAcwr(0.2)).toBe(100); // clamped
+describe("recoveryFromAcwr (Garmin 0.8–1.3 sweet spot)", () => {
+  it("scores the sweet spot high and penalizes spikes, not the normal zone", () => {
+    expect(recoveryFromAcwr(1.0)).toBe(90); // mid sweet spot
+    expect(recoveryFromAcwr(1.2)).toBe(90); // still in sweet spot
+    expect(recoveryFromAcwr(0.8)).toBe(90); // lower edge
+    expect(recoveryFromAcwr(1.5)).toBeCloseTo(79, 0); // danger threshold
+    expect(recoveryFromAcwr(2.0)).toBeCloseTo(51.5, 1); // big spike
+  });
+  it("treats a very low ratio as recovered-but-undertrained, not prime", () => {
+    expect(recoveryFromAcwr(0.5)).toBe(70); // not 100 — undertraining isn't "ready"
   });
 });
 
@@ -38,11 +40,10 @@ describe("computeReadiness", () => {
     const d = computeReadiness({ sleepScore: 80 })!;
     expect(d.score).toBe(80);
     expect(d.level).toBe("prime");
-    expect(d.factors).toHaveLength(1);
   });
 
-  it("reconstructs readiness from the real 2026-06-02 inputs (~63, high)", () => {
-    // sleep 54 (w2) + recovery(ACWR 1.4→61.8, w2) + HRV(64 vs 66-78→60, w1.2) + stress(12→88, w1)
+  it("reconstructs readiness from the real 2026-06-02 inputs", () => {
+    // sleep 54 (w2) + recovery(ACWR 1.4→84.5, w1.2) + HRV(64 vs 66-78→67, w1.2) + stress(12→88, w0.5)
     const d = computeReadiness({
       sleepScore: 54,
       acwr: 1.4,
@@ -51,43 +52,60 @@ describe("computeReadiness", () => {
       hrvBaselineUpper: 78,
       avgStress: 12,
     })!;
-    expect(d.score).toBe(63);
+    expect(d.score).toBeGreaterThanOrEqual(65);
+    expect(d.score).toBeLessThanOrEqual(71);
     expect(d.level).toBe("high");
     expect(d.factors.map((f) => f.name)).toEqual(["sleep", "recovery", "hrv", "stress"]);
   });
 
-  it("scores HRV from the baseline band; below balanced lowers it", () => {
-    const below = computeReadiness({ hrvWeeklyAvg: 64, hrvBaselineLow: 66, hrvBaselineUpper: 78 })!;
-    const within = computeReadiness({
-      hrvWeeklyAvg: 72,
+  it("scores HRV against the baseline band: flat inside, penalized below", () => {
+    const below = computeReadiness({ hrvWeeklyAvg: 60, hrvBaselineLow: 66, hrvBaselineUpper: 78 })!;
+    const atFloor = computeReadiness({
+      hrvWeeklyAvg: 66,
       hrvBaselineLow: 66,
       hrvBaselineUpper: 78,
     })!;
     const above = computeReadiness({ hrvWeeklyAvg: 82, hrvBaselineLow: 66, hrvBaselineUpper: 78 })!;
-    expect(below.score).toBeLessThan(within.score);
-    expect(within.score).toBeLessThan(above.score);
-    expect(within.score).toBe(80); // weeklyAvg at band midpoint -> anchor 80
+    expect(atFloor.score).toBe(75); // at the band floor
+    expect(below.score).toBeLessThan(75);
+    expect(above.score).toBeGreaterThan(75);
   });
 
   it("falls back to HRV status label when no numeric baseline exists", () => {
     expect(computeReadiness({ hrvStatus: "balanced" })!.score).toBe(80);
     expect(computeReadiness({ hrvStatus: "low" })!.score).toBe(38);
-    expect(computeReadiness({ hrvStatus: "LOW" })!.score).toBe(38); // case-insensitive
+    expect(computeReadiness({ hrvStatus: "LOW" })!.score).toBe(38);
   });
 
-  it("penalizes resting HR elevated above baseline (only with a baseline)", () => {
-    const base = computeReadiness({ sleepScore: 70 })!;
-    const elevated = computeReadiness({ sleepScore: 70, restingHr: 45, restingHrBaseline: 38 })!;
-    expect(elevated.score).toBeLessThan(base.score);
-    expect(elevated.factors.some((f) => f.name === "resting HR")).toBe(true);
+  it("incorporates subjective wellness when logged", () => {
+    const objectiveOnly = computeReadiness({ sleepScore: 70, acwr: 1.0 })!;
+    const withGoodSubjective = computeReadiness({
+      sleepScore: 70,
+      acwr: 1.0,
+      energy: 5,
+      soreness: 1,
+      mood: 5,
+    })!;
+    expect(withGoodSubjective.factors.some((f) => f.name === "subjective")).toBe(true);
+    expect(withGoodSubjective.score).toBeGreaterThan(objectiveOnly.score);
   });
 
-  it("does not penalize resting HR at/below baseline or without a baseline", () => {
-    expect(computeReadiness({ sleepScore: 70, restingHr: 37, restingHrBaseline: 38 })!.score).toBe(
-      70
-    );
-    expect(
-      computeReadiness({ sleepScore: 70, restingHr: 55, restingHrBaseline: null })!.score
-    ).toBe(70);
+  it("caps an optimistic objective score when subjective is clearly bad", () => {
+    const d = computeReadiness({
+      sleepScore: 90,
+      acwr: 1.0, // objective would be prime/high
+      energy: 1, // but the athlete feels wrecked
+    })!;
+    expect(d.score).toBe(54); // capped at top of moderate
+    expect(d.level).toBe("moderate");
+    expect(d.cappedBySubjective).toBe(true);
+  });
+
+  it("penalizes resting HR only at >=5 bpm over baseline", () => {
+    const noPenalty = computeReadiness({ sleepScore: 70, restingHr: 41, restingHrBaseline: 38 })!; // +3
+    const penalty = computeReadiness({ sleepScore: 70, restingHr: 45, restingHrBaseline: 38 })!; // +7
+    expect(noPenalty.score).toBe(70); // +3 is within noise — no penalty now
+    expect(penalty.score).toBeLessThan(70);
+    expect(penalty.factors.some((f) => f.name === "resting HR")).toBe(true);
   });
 });

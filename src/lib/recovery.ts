@@ -4,17 +4,29 @@
 // Garmin's Training Readiness isn't exposed on every device (the API returns an
 // empty list). When it's missing we reconstruct it from the SAME primary sensor
 // signals Garmin documents — sleep score + recovery/load (ACWR) as the two
-// "primary drivers", then HRV-vs-baseline, stress, and sleep history as
-// "secondary influences" — weighted accordingly.
+// "primary drivers", then HRV-vs-baseline, subjective wellness, sleep history
+// and stress as secondary influences — weighted accordingly.
 //
-// Crucially we use the *primary* signals directly and do NOT feed in Body
-// Battery or Training Status: those are themselves composites of HRV/sleep/
-// stress, so including them would double-count. They're surfaced as context
-// elsewhere, not as inputs here.
+// We use the *primary* signals directly and do NOT feed in Body Battery or
+// Training Status: those are composites of HRV/sleep/stress, so including them
+// would double-count. They're surfaced as context elsewhere, not as inputs.
 //
-// Garmin publishes no numeric band cut-offs (only the labels Poor/Low/Moderate/
-// High/Prime) and no factor weights, so the weights and bands below are our own
-// calibration of Garmin's stated primary/secondary structure.
+// Calibrated against an endurance-coaching evidence review (2024–2026):
+//  - Subjective wellness (energy/soreness/mood) IS an input — self-report tracks
+//    training response at least as well as objective measures (Saw et al. 2016,
+//    BJSM), and a clearly-bad subjective day caps an optimistic objective score.
+//  - ACWR is de-weighted and scored on Garmin's documented 0.8–1.3 "sweet spot"
+//    (≥1.5 danger); the ratio is statistically contested (Impellizzeri 2020,
+//    Lolli 2017), so it informs rather than dominates.
+//  - HRV is scored against the personal "balanced" baseline band (the SWC-style
+//    range Garmin computes), flat inside the band, penalised below it.
+//  - Stress is down-weighted because Garmin stress is itself HRV-derived.
+//  - Resting-HR penalty triggers at +5 bpm over baseline (sustained-overreaching
+//    threshold), not +3 (within day-to-day noise).
+//
+// Garmin publishes no numeric band cut-offs (only Poor/Low/Moderate/High/Prime)
+// and no factor weights, so the weights and bands below are our calibration of
+// Garmin's stated primary/secondary structure plus the evidence review.
 // ============================================================================
 
 export type RecoveryLevel = "prime" | "high" | "moderate" | "low" | "poor" | "unknown";
@@ -41,6 +53,9 @@ export interface ReadinessSignals {
   hrvStatus?: string | null; // fallback when the numeric baseline is absent
   avgStress?: number | null; // 0–100 all-day stress, rest ≤25 (SECONDARY)
   sleepHistoryScore?: number | null; // rolling avg of recent sleep scores (SECONDARY)
+  energy?: number | null; // subjective 1–5 (SECONDARY — self-report)
+  soreness?: number | null; // subjective 1–5 (1 = none, 5 = severe)
+  mood?: number | null; // subjective 1–5
   restingHr?: number | null;
   restingHrBaseline?: number | null; // rolling mean of recent resting HR
 }
@@ -56,6 +71,7 @@ export interface DerivedReadiness {
   score: number; // 0–100
   level: Exclude<RecoveryLevel, "unknown">;
   factors: ReadinessFactor[];
+  cappedBySubjective?: boolean; // true if a bad subjective day capped an optimistic score
 }
 
 const clamp = (n: number): number => Math.max(0, Math.min(100, n));
@@ -68,20 +84,27 @@ const HRV_STATUS_SCORE: Record<string, number> = {
 };
 
 /**
- * ACWR → recovery/load readiness component. Higher recent load relative to
- * chronic (high ACWR) means more residual recovery demand, so a lower score;
- * a well-rested low ratio scores high. Mirrors how Garmin's Recovery Time —
- * the metric we can't fetch — is itself adjusted by the 7d/28d load ratio.
+ * ACWR → recovery/load readiness component, anchored on Garmin's documented
+ * Load Ratio "sweet spot" of 0.8–1.3 (≥1.5 danger zone). Inside the sweet spot
+ * scores high; genuine spikes above it are penalised; a very low ratio is
+ * well-recovered but undertrained, so it scores good-not-prime (not "100").
  */
 export function recoveryFromAcwr(acwr: number): number {
-  return clamp(115 - acwr * 38);
+  if (acwr < 0.8) return clamp(70 + (acwr - 0.5) * 67); // 0.5→70 … 0.8→90 (recovered but undertrained)
+  if (acwr <= 1.3) return 90; // sweet spot
+  return clamp(90 - (acwr - 1.3) * 55); // 1.5→79, 1.8→62, 2.0→52 (load spike)
 }
 
 /** HRV component from the 7-day average relative to the personal balanced band. */
 function hrvComponent(s: ReadinessSignals): { score: number; detail: string } | null {
   if (s.hrvWeeklyAvg != null && s.hrvBaselineLow != null && s.hrvBaselineUpper != null) {
-    const mid = (s.hrvBaselineLow + s.hrvBaselineUpper) / 2;
-    const score = clamp(80 + (s.hrvWeeklyAvg / mid - 1) * 180);
+    const span = Math.max(1, s.hrvBaselineUpper - s.hrvBaselineLow);
+    // Flat-ish inside the personal "balanced" band (Garmin's SWC-style range);
+    // penalise below the floor, reward above the ceiling.
+    const score =
+      s.hrvWeeklyAvg >= s.hrvBaselineLow
+        ? clamp(75 + ((s.hrvWeeklyAvg - s.hrvBaselineLow) / span) * 13)
+        : clamp(75 - ((s.hrvBaselineLow - s.hrvWeeklyAvg) / span) * 50);
     return {
       score,
       detail: `HRV 7d ${Math.round(s.hrvWeeklyAvg)} vs ${s.hrvBaselineLow}–${s.hrvBaselineUpper}`,
@@ -90,6 +113,29 @@ function hrvComponent(s: ReadinessSignals): { score: number; detail: string } | 
   const hrv = s.hrvStatus?.toLowerCase();
   if (hrv) return { score: HRV_STATUS_SCORE[hrv] ?? 55, detail: `HRV ${hrv}` };
   return null;
+}
+
+/** Subjective wellness component (0–100) from any logged energy/soreness/mood. */
+function subjectiveComponent(s: ReadinessSignals): { score: number; detail: string } | null {
+  const parts: number[] = [];
+  const labels: string[] = [];
+  if (s.energy != null) {
+    parts.push((s.energy / 5) * 100);
+    labels.push(`energy ${s.energy}`);
+  }
+  if (s.soreness != null) {
+    parts.push(((6 - s.soreness) / 5) * 100); // 1 (none) → 100, 5 (severe) → 20
+    labels.push(`soreness ${s.soreness}`);
+  }
+  if (s.mood != null) {
+    parts.push((s.mood / 5) * 100);
+    labels.push(`mood ${s.mood}`);
+  }
+  if (parts.length === 0) return null;
+  return {
+    score: clamp(parts.reduce((a, b) => a + b, 0) / parts.length),
+    detail: labels.join(", "),
+  };
 }
 
 /**
@@ -110,24 +156,27 @@ export function computeReadiness(s: ReadinessSignals): DerivedReadiness | null {
     factors.push({
       name: "recovery",
       score: recoveryFromAcwr(s.acwr),
-      weight: 2.0,
+      weight: 1.2,
       detail: `ACWR ${s.acwr.toFixed(2)}`,
     });
+  const subj = subjectiveComponent(s);
+  if (subj)
+    factors.push({ name: "subjective", score: subj.score, weight: 1.5, detail: subj.detail });
   const hrv = hrvComponent(s);
   if (hrv) factors.push({ name: "hrv", score: hrv.score, weight: 1.2, detail: hrv.detail });
-  if (s.avgStress != null)
-    factors.push({
-      name: "stress",
-      score: clamp(100 - s.avgStress),
-      weight: 1.0,
-      detail: `stress ${Math.round(s.avgStress)}`,
-    });
   if (s.sleepHistoryScore != null)
     factors.push({
       name: "sleep history",
       score: clamp(s.sleepHistoryScore),
-      weight: 1.0,
+      weight: 1.3,
       detail: `recent sleep ~${Math.round(s.sleepHistoryScore)}`,
+    });
+  if (s.avgStress != null)
+    factors.push({
+      name: "stress",
+      score: clamp(100 - s.avgStress),
+      weight: 0.5,
+      detail: `stress ${Math.round(s.avgStress)}`,
     });
 
   if (factors.length === 0) return null;
@@ -135,12 +184,12 @@ export function computeReadiness(s: ReadinessSignals): DerivedReadiness | null {
   const totalWeight = factors.reduce((a, f) => a + f.weight, 0);
   let score = factors.reduce((a, f) => a + f.weight * f.score, 0) / totalWeight;
 
-  // Elevated resting HR vs personal baseline — an independent physiological
-  // strain signal applied as a small penalty (only when a baseline exists).
+  // Elevated resting HR vs personal baseline — an independent strain signal.
+  // Triggers at +5 bpm (the sustained-overreaching threshold), not noise.
   if (s.restingHr != null && s.restingHrBaseline != null) {
     const delta = s.restingHr - s.restingHrBaseline;
-    if (delta >= 3) {
-      const penalty = Math.min(20, (delta - 2) * 3);
+    if (delta >= 5) {
+      const penalty = Math.min(20, (delta - 4) * 3);
       score = Math.max(0, score - penalty);
       factors.push({
         name: "resting HR",
@@ -151,6 +200,17 @@ export function computeReadiness(s: ReadinessSignals): DerivedReadiness | null {
     }
   }
 
+  // A clearly-bad subjective day overrides an optimistic objective score:
+  // self-report often catches fatigue the sensors miss (Saw et al. 2016).
+  let cappedBySubjective = false;
+  if (
+    ((s.energy != null && s.energy <= 2) || (s.soreness != null && s.soreness >= 4)) &&
+    score > 54
+  ) {
+    score = 54; // cap at the top of "moderate"
+    cappedBySubjective = true;
+  }
+
   score = Math.round(score);
-  return { score, level: recoveryLevelFromScore(score), factors };
+  return { score, level: recoveryLevelFromScore(score), factors, cappedBySubjective };
 }
