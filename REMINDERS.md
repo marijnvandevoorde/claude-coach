@@ -75,15 +75,26 @@ launchctl load ~/Library/LaunchAgents/com.claude-coach.morning.plist
 
 Clone it for bedtime (`Hour 22`, add `--only=bedtime` to `ProgramArguments`) and hydration (`Minute 0` only → hourly, `--only=hydration`).
 
-## 5. Optional: Garmin-aware morning check-in
+## 5. Daily Garmin fetch (keeps the DB complete)
 
-The plain cron job uses whatever Garmin data is **cached** in `coach.db`. To make the 07:30 check-in reflect **last night's** readiness/sleep/HRV, it needs a live Garmin MCP call — which only a Claude agent can do, not the bare CLI. Run this as a scheduled Claude agent (or any morning Claude session):
+The `garmin-fetch` command pulls **last night's** readiness/sleep/HRV/load + the full daily metric set straight from Garmin (native TypeScript client, using your `$GARMINTOKENS`) and caches it in `coach.db` — no Claude agent or Garmin MCP needed. The container runs it at **07:15**, just before the 07:30 check-in, so the morning nudge is recovery-aware:
 
-> Using the **coach** skill and the **garmin** MCP, run my morning check-in. Fetch today's `get_training_readiness`, `get_sleep_summary`, and `get_hrv_data` from Garmin, then run:
-> `coach checkin --plan=<my-plan>.json --readiness=<n> --sleep-hours=<n> --sleep-score=<n> --hrv-status=<status> --notify`
-> Then tell me in one line how I slept and whether to adjust today's session.
+```cron
+15 7 * * * /path/to/coach-remind.sh garmin-fetch       # local CLI equivalent
+```
 
-This caches the fresh Garmin snapshot into `coach.db` (so later cron runs see it) **and** pushes the recovery-aware reminder. If you can't run an agent, the cron job still handles hydration and bedtime perfectly from local data.
+(Local launchd users: clone the morning plist with `garmin-fetch` as the argument and an earlier time.) Then the 07:30 `checkin --notify` reads the fresh data from `coach.db`.
+
+### Slowly backfill history
+
+`garmin-fetch` keeps _today_ current; to fill in the **past**, use `garmin-backfill` (rate-limited, resumable):
+
+```bash
+coach garmin-backfill --from=2026-01-01 --to=2026-06-01   # range fast-path (cheap)
+coach garmin-backfill --days=35 --full                    # last 35 days, complete per-day
+```
+
+In the container, set `COACH_BACKFILL_CRON` (e.g. `45 3 * * *`) to backfill a rolling window each night (`COACH_BACKFILL_DAYS`, default 35; `COACH_BACKFILL_FULL=1` for per-day). Run a big historical `--full` once by hand; the nightly job then keeps recent days complete.
 
 ## Reminder design (framing)
 

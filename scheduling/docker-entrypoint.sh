@@ -37,5 +37,12 @@ ${COACH_HYDRATION_CRON:-0 9-21 * * *} node /app/dist/cli.js checkin --notify --o
 ${COACH_BEDTIME_CRON:-0 22 * * *} node /app/dist/cli.js checkin --notify --only=bedtime >> /proc/1/fd/1 2>&1
 EOF
 
+# Optional: keep the local DB complete by backfilling a rolling window each night.
+# Off unless COACH_BACKFILL_CRON is set (e.g. "45 3 * * *"). Range path by default;
+# set COACH_BACKFILL_FULL=1 for the per-day complete snapshot. COACH_BACKFILL_DAYS=35.
+if [ -n "$COACH_BACKFILL_CRON" ]; then
+  echo "$COACH_BACKFILL_CRON node /app/dist/cli.js garmin-backfill --days=${COACH_BACKFILL_DAYS:-35}${COACH_BACKFILL_FULL:+ --full} >> /proc/1/fd/1 2>&1" >> "$CRONTAB"
+fi
+
 echo "coach: reminders scheduled (TZ=${TZ:-UTC}); webhook=${COACH_NOTIFY_WEBHOOK_URL:+configured}"
 exec crond -f -l 8

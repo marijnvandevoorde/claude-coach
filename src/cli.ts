@@ -405,7 +405,7 @@ Commands:
   export-garmin <file>    Plan → structured workouts JSON (to create + schedule on Garmin)
   garmin-push <file>      Create + schedule a plan's workouts on Garmin (--dry-run to preview)
   garmin-route <file.gpx> Upload a GPX as a Garmin course (--name, --type, --dry-run)
-  garmin-backfill         Backfill history into the DB (--from= --to= [--full] [--force])
+  garmin-backfill         Backfill history into the DB (--from=|--days= --to= [--full] [--force])
   query <sql>       Run a SQL query against the database
   log <type> <val>  Log wellness/intake (water|sleep|energy|soreness|mood|weight)
   wellness          Show today's hydration + wellness snapshot
@@ -1045,10 +1045,18 @@ async function runGarminRoute(args: GarminRouteArgs): Promise<void> {
 
 async function runGarminBackfill(args: GarminBackfillArgs): Promise<void> {
   await ensureDb();
-  const from = flagStr(args.flags, "from");
   const to = flagStr(args.flags, "to") ?? localDate();
+  let from = flagStr(args.flags, "from");
+  const days = flagNum(args.flags, "days");
+  if (!from && days) {
+    const d = new Date(to + "T00:00:00Z");
+    d.setUTCDate(d.getUTCDate() - Math.round(days));
+    from = d.toISOString().slice(0, 10);
+  }
   if (!from) {
-    log.error("garmin-backfill requires --from=YYYY-MM-DD (and optional --to, default today)");
+    log.error(
+      "garmin-backfill requires --from=YYYY-MM-DD or --days=N (and optional --to, default today)"
+    );
     process.exit(1);
   }
   const full = Boolean(args.flags["full"]);
