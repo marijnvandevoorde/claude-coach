@@ -35,7 +35,7 @@ import { getValidTokens } from "./strava/oauth.js";
 import { getAllActivities, getAthlete } from "./strava/api.js";
 import type { StravaActivity, StravaTokenResponse } from "./strava/types.js";
 import { readFileSync, writeFileSync } from "fs";
-import { fetchGarminSnapshot, type GarminFetchPayload } from "./garmin/snapshot.js";
+import { getDataSource, type DailySnapshot } from "./datasource/index.js";
 import { pushWorkouts, type WorkoutInput, type PushStore } from "./garmin/workouts.js";
 import { lookupPushedWorkout, savePushedWorkout } from "./db/garminPush.js";
 import { uploadRoute, COURSE_TYPES } from "./garmin/routes.js";
@@ -1348,9 +1348,9 @@ async function runGarminFetch(args: GarminFetchArgs): Promise<void> {
   await ensureDb();
   const date = flagStr(args.flags, "date") ?? localDate();
 
-  let payload: GarminFetchPayload;
+  let payload: DailySnapshot;
   try {
-    payload = await fetchGarminSnapshot(date);
+    payload = await getDataSource().fetchDailySnapshot(date);
   } catch (e) {
     log.error(`garmin-fetch: ${e instanceof Error ? e.message : String(e)}`);
     process.exit(1);
