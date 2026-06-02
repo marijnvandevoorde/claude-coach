@@ -35,6 +35,7 @@ import { getAllActivities, getAthlete } from "./strava/api.js";
 import type { StravaActivity, StravaTokenResponse } from "./strava/types.js";
 import { readFileSync, writeFileSync } from "fs";
 import { fetchGarminSnapshot, type GarminFetchPayload } from "./garmin/snapshot.js";
+import { pushWorkouts, type WorkoutInput } from "./garmin/workouts.js";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -136,6 +137,12 @@ interface GarminFetchArgs {
   flags: Flags;
 }
 
+interface GarminPushArgs {
+  command: "garmin-push";
+  inputFile: string;
+  flags: Flags;
+}
+
 interface WellnessArgs {
   command: "wellness";
   flags: Flags;
@@ -155,6 +162,7 @@ type CliArgs =
   | NotifyArgs
   | GarminSyncArgs
   | GarminFetchArgs
+  | GarminPushArgs
   | WellnessArgs;
 
 type Flags = Record<string, string | boolean>;
@@ -260,6 +268,14 @@ function parseArgs(): CliArgs {
     return { command: "export-garmin", inputFile: args[1] };
   }
 
+  if (args[0] === "garmin-push") {
+    if (!args[1] || args[1].startsWith("--")) {
+      log.error("garmin-push requires a plan JSON file (e.g. garmin-push plan.json --dry-run)");
+      process.exit(1);
+    }
+    return { command: "garmin-push", inputFile: args[1], flags: parseFlags(args.slice(2)) };
+  }
+
   if (args[0] === "query") {
     if (!args[1]) {
       log.error("query command requires a SQL statement");
@@ -351,6 +367,7 @@ Commands:
   render <file>     Render a training plan JSON to HTML
   export-calendar <file>  Plan → .ics (or --json events to push to Google Calendar)
   export-garmin <file>    Plan → structured workouts JSON (to create + schedule on Garmin)
+  garmin-push <file>      Create + schedule a plan's workouts on Garmin (--dry-run to preview)
   query <sql>       Run a SQL query against the database
   log <type> <val>  Log wellness/intake (water|sleep|energy|soreness|mood|weight)
   wellness          Show today's hydration + wellness snapshot
@@ -401,6 +418,10 @@ Examples:
 
   # Export structured workouts to create + schedule on Garmin (syncs to your watch)
   npx claude-coach export-garmin plan.json
+
+  # Create + schedule a plan's workouts directly on Garmin (preview first with --dry-run)
+  npx claude-coach garmin-push plan.json --dry-run
+  npx claude-coach garmin-push plan.json
 
   # Query the database
   npx claude-coach query "SELECT * FROM weekly_volume LIMIT 5"
@@ -865,9 +886,60 @@ function runExportGarmin(args: ExportGarminArgs): void {
     log.error(`Could not read/parse plan JSON: ${args.inputFile}`);
     process.exit(1);
   }
-  // A structured workout feed for an agent to create + schedule on Garmin Connect
-  // (via the garmin MCP), which then syncs scheduled workouts to the watch.
+  // A structured workout feed (also consumed by `garmin-push` to create + schedule
+  // these on Garmin Connect natively, which then syncs them to the watch).
   console.log(JSON.stringify(planToGarminWorkouts(plan), null, 2));
+}
+
+async function runGarminPush(args: GarminPushArgs): Promise<void> {
+  let plan: TrainingPlan;
+  try {
+    plan = JSON.parse(readFileSync(args.inputFile, "utf-8"));
+  } catch {
+    log.error(`Could not read/parse plan JSON: ${args.inputFile}`);
+    process.exit(1);
+  }
+
+  const inputs: WorkoutInput[] = planToGarminWorkouts(plan).map((w) => ({
+    date: w.date,
+    sport: w.sport,
+    name: w.name,
+    durationMinutes: w.durationMinutes,
+    distanceMeters: w.distanceMeters,
+    targetHR: w.targetHR,
+  }));
+
+  if (inputs.length === 0) {
+    log.warn("No workouts in the plan to push.");
+    return;
+  }
+
+  const dryRun = Boolean(args.flags["dry-run"]);
+  let results;
+  try {
+    results = await pushWorkouts(inputs, { dryRun });
+  } catch (e) {
+    log.error(`garmin-push: ${e instanceof Error ? e.message : String(e)}`);
+    process.exit(1);
+  }
+
+  if (args.flags["json"] || dryRun) {
+    console.log(JSON.stringify(results, null, 2));
+    if (dryRun) log.info(`Dry run — built ${results.length} workout payload(s), pushed nothing.`);
+    return;
+  }
+
+  const ok = results.filter((r) => !r.error);
+  const failed = results.filter((r) => r.error);
+  for (const r of ok) {
+    log.success(
+      `${r.name}${r.date ? ` (${r.date})` : ""} → workout ${r.workoutId}${
+        r.scheduleId ? `, scheduled` : ""
+      }`
+    );
+  }
+  for (const r of failed) log.error(`${r.name}: ${r.error}`);
+  log.info(`Pushed ${ok.length}/${results.length} workout(s) to Garmin.`);
 }
 
 function runRender(args: RenderArgs): void {
@@ -1692,6 +1764,9 @@ async function main() {
       break;
     case "export-garmin":
       runExportGarmin(args);
+      break;
+    case "garmin-push":
+      await runGarminPush(args);
       break;
     case "query":
       await runQuery(args);

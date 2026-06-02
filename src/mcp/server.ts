@@ -196,6 +196,23 @@ const TOOLS: Record<string, ToolDef> = {
     },
     toArgs: (a) => ["export-garmin", String(a.plan)],
   },
+  schedule_workouts: {
+    description:
+      "Create + schedule a training plan's workouts directly on Garmin Connect (they sync to the athlete's watch). Builds each workout, creates it, and schedules it on its date. Pass dryRun:true to preview the exact workout payloads without pushing anything.",
+    inputSchema: {
+      type: "object",
+      required: ["plan"],
+      properties: {
+        plan: { type: "string", description: "path to a plan JSON file" },
+        dryRun: { type: "boolean", description: "build payloads only; push nothing" },
+      },
+    },
+    toArgs: (a) => {
+      const f = ["garmin-push", String(a.plan), "--json"];
+      if (a.dryRun === true) f.push("--dry-run");
+      return f;
+    },
+  },
   notify: {
     description:
       "Send a push notification via the configured channel (webhook/Home Assistant, macOS, stdout).",
