@@ -20,7 +20,7 @@ Their plan should focus on **rebuilding** (faster progression possible) rather t
 
 ## Reading Current Form: Garmin First
 
-When Garmin Connect is available (`mcp__garmin__*` tools — see `garmin.md`), it is the **primary source for current form**, because it measures recovery and readiness directly instead of inferring them from activity history:
+When Garmin data is available (via the coach's `garmin_refresh` / `garmin-fetch`, or the optional `mcp__garmin__*` tools — see `garmin.md`), it is the **primary source for current form**, because it measures recovery and readiness directly instead of inferring them from activity history:
 
 | Current-form question                | Primary (Garmin)                                                  | Fallback (Strava / `coach.db`)                |
 | ------------------------------------ | ----------------------------------------------------------------- | --------------------------------------------- |

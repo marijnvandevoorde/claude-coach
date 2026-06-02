@@ -4,7 +4,7 @@ Professional coaches quantify training stress to manage fatigue, prevent overtra
 
 ## Garmin Training Load (Preferred When Connected)
 
-If Garmin Connect is available (`mcp__garmin__*` tools — see `garmin.md`), **use Garmin's own load model directly instead of estimating TSS from Strava suffer scores.** Garmin runs the same fitness/fatigue/form concepts via FirstBeat, already calibrated to the athlete:
+If Garmin data is available (via the coach's `garmin_refresh` / `garmin-fetch`, or the optional `mcp__garmin__*` tools — see `garmin.md`), **use Garmin's own load model directly instead of estimating TSS from Strava suffer scores.** Garmin runs the same fitness/fatigue/form concepts via FirstBeat, already calibrated to the athlete:
 
 | Concept in this doc    | Garmin source                                          | Notes                                                                                            |
 | ---------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |

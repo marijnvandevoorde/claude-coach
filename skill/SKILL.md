@@ -16,46 +16,38 @@ Before creating a training plan, you need to understand the athlete's current fi
 
 They're complementary. Garmin is optional but strongly preferred for recovery-aware coaching; you still need an activity-history source (Strava or manual) to build the plan.
 
-### Step 1: Check for Garmin Connect (recovery & readiness)
+### Step 1: Connect Garmin (recovery & readiness)
 
-Check whether the Garmin MCP tools are available to you — look for tools in the **`mcp__garmin__*`** namespace (e.g. `mcp__garmin__get_training_readiness`, `mcp__garmin__get_training_status`).
+Garmin is the **primary source for recovery and readiness**, and **the coach reads it itself — you don't need a separate Garmin MCP.** There are two ways the coach reaches Garmin, in order of preference:
 
-- **If they are available:** Garmin is connected. You'll use it as the **primary** source for readiness and load. Read `skill/reference/garmin.md` for the tool → coaching-signal map. Continue to Step 2 to also set up activity history.
-- **If they are NOT available:** don't block — Garmin is optional. Briefly offer to set it up, then continue regardless. Use **AskUserQuestion**:
+1. **Coach MCP connector** (Desktop / mobile / any client with the coach added): **`mcp__coach__garmin_refresh`** pulls live Garmin data on the server and stores it; `mcp__coach__checkin` / `mcp__coach__wellness` then return recovery readiness. This is the default path — see "If the coach MCP is connected" below.
+2. **Local CLI** (Claude Code in the repo): `npx claude-coach garmin-fetch` does the same pull locally.
+
+Both read the saved Garmin OAuth tokens in `$GARMINTOKENS`, so the **only** Garmin setup needed is a one-time token mint. Check what's reachable: if the coach MCP connector or the `claude-coach` CLI is available, Garmin is covered. If neither path can reach Garmin (no tokens minted), briefly offer setup, then continue regardless — Garmin is optional. Use **AskUserQuestion**:
 
 ```
 questions:
-  - question: "Garmin Connect isn't connected. It gives me your sleep, HRV, recovery and training-load data so I can tailor intensity to how you're actually recovering. Want to set it up?"
+  - question: "Garmin isn't connected yet. It gives me your sleep, HRV, recovery and training-load data so I can tailor intensity to how you're actually recovering. Want to set it up?"
     header: "Garmin"
     options:
       - label: "Set up Garmin (Recommended)"
-        description: "One-time terminal auth, then register the MCP server (~2 min)"
+        description: "One-time terminal token auth (~1 min) — no MCP install needed"
       - label: "Skip for now"
         description: "Use Strava/manual data only — you can add Garmin later"
 ```
 
-If they want to set it up, give these instructions (they need [`uv`](https://docs.astral.sh/uv/) installed — `brew install uv`):
+If they want it, the only required step is to **mint the Garmin tokens** (valid ~6 months); both `garmin-fetch` and the server's `garmin_refresh` read them (needs [`uv`](https://docs.astral.sh/uv/) — `brew install uv`):
 
-1. **Authenticate once** (stores tokens in `~/.garminconnect`, valid ~6 months):
+```bash
+GARMIN_EMAIL="you@example.com" GARMIN_PASSWORD="your-password" \
+  uvx --python 3.12 --from git+https://github.com/Taxuspt/garmin_mcp garmin-mcp-auth
+```
 
-   ```bash
-   GARMIN_EMAIL="you@example.com" GARMIN_PASSWORD="your-password" \
-     uvx --python 3.12 --from git+https://github.com/Taxuspt/garmin_mcp garmin-mcp-auth
-   ```
+That writes tokens to `~/.garminconnect` (`$GARMINTOKENS`). Then `mcp__coach__garmin_refresh` (or `npx claude-coach garmin-fetch`) can pull live recovery data.
 
-2. **Register the server** (Claude Code):
+> **Optional — the standalone Garmin MCP.** Registering `Taxuspt/garmin_mcp` as its own `mcp__garmin__*` server is **no longer required** — the coach handles recovery/readiness via the tokens above. It's only worth adding in a **local Claude Code** session if you want richer _live_ signals the coach doesn't yet cache (full CTL/ATL/TSB load trend, VO₂max trend, endurance/hill scores) or to **push workouts to the watch** (until the coach gains a native push tool). To add it: `claude mcp add garmin -s project --env 'GARMINTOKENS=${HOME}/.garminconnect' -- uvx --python 3.12 --from git+https://github.com/Taxuspt/garmin_mcp garmin-mcp` (on Claude Desktop, install the "Garmin Connect" extension instead).
 
-   ```bash
-   claude mcp add garmin -s project \
-     --env 'GARMINTOKENS=${HOME}/.garminconnect' \
-     -- uvx --python 3.12 --from git+https://github.com/Taxuspt/garmin_mcp garmin-mcp
-   ```
-
-   On **Claude Desktop**, install the "Garmin Connect" extension instead and enable it in Settings → Extensions (leave email/password blank if Step 1 was done).
-
-3. Restart the session / approve the server so the `mcp__garmin__*` tools load, then re-check availability.
-
-See the README's "Connect Garmin Connect" section for the full walkthrough. If setup isn't possible right now, proceed with Strava/manual and note that recovery data is unavailable.
+See the README's "Connect Garmin Connect" section. If Garmin isn't set up, proceed with Strava/manual and note recovery data is unavailable.
 
 ### Step 2: Check for Existing Strava Data
 
@@ -117,7 +109,7 @@ If yes:
 
 3. Schedule the daily jobs — 07:30 check-in, hourly hydration, 22:00 bedtime — each running `claude-coach checkin --notify [--only=…]`. Point them to **`REMINDERS.md`** in the repo for ready-to-paste cron and launchd entries.
 
-The reminders read Garmin readiness/sleep cached in `coach.db`. For a recovery-aware **morning** check-in, a scheduled Claude agent can fetch fresh Garmin data via the `mcp__garmin__*` tools and run `claude-coach garmin-sync …` (then `checkin --notify`) — see `REMINDERS.md`.
+The reminders read Garmin readiness/sleep cached in `coach.db`. For a recovery-aware **morning** check-in, the coach pulls fresh Garmin data itself — the server runs `garmin_refresh`/`garmin-fetch` on a morning schedule (no agent or `mcp__garmin__*` needed), or locally run `claude-coach garmin-fetch` then `checkin --notify` — see `REMINDERS.md`.
 
 ---
 
@@ -339,7 +331,7 @@ If the goal event is a **trail or ultra race**, activate trail mode: the volume 
 
 ### Phase 0: Setup
 
-1. **Check for Garmin Connect** (`mcp__garmin__*` tools); offer setup if missing. If connected, it's the primary readiness/load source.
+1. **Connect Garmin** via the coach (`mcp__coach__garmin_refresh` or `claude-coach garmin-fetch`, using the saved tokens); offer the one-time token mint if missing. The standalone `mcp__garmin__*` server is optional. Garmin is the primary readiness/load source when available.
 2. Ask how athlete wants to provide activity history (Strava or manual)
 3. **If Strava:** Check for existing database, gather credentials if needed, run sync
 4. **If Manual:** Gather fitness information through conversation
@@ -621,7 +613,7 @@ After both files are created, tell the user:
 2. The HTML file path (for viewing)
 3. Suggest opening the HTML file in a browser
 4. **Offer to put it on their calendar** — push the workouts straight into their Google Calendar (via the Google Calendar MCP) or export an `.ics`. See `skill/reference/calendar.md`.
-5. **Offer to push workouts to their Garmin/watch** — create + schedule structured workouts via the garmin MCP so they sync to the device (e.g. a Fenix). See `skill/reference/garmin-workouts.md`.
+5. **Offer to push workouts to their Garmin/watch** — `export-garmin` / `mcp__coach__export_garmin` builds the structured workout feed; today an agent then creates + schedules them via the **`mcp__garmin__*`** tools so they sync to the device (e.g. a Fenix). This is the one path that still needs the standalone Garmin MCP (a native coach push tool is planned). See `skill/reference/garmin-workouts.md`.
 
 ---
 
