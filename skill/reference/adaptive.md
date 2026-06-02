@@ -21,13 +21,16 @@ Weight **training readiness** highest (it fuses sleep, HRV, recovery/load, stres
 
 ### Native vs. reconstructed readiness
 
-Many watches expose Garmin's own **Training Readiness** number. Some don't (the API returns nothing) — for those, `coach checkin` **reconstructs** a readiness score from the same primary signals Garmin uses (sleep score + recovery/load via ACWR as primary drivers; HRV-vs-baseline, stress, and sleep history as secondary), on the same 0–100 / Poor→Prime scale, and reports the **factor breakdown** (e.g. _"derived ~63: sleep 54, ACWR 1.40, HRV 7d 64 vs 66–78, stress 12"_).
+Many watches expose Garmin's own **Training Readiness** number. Some don't (the API returns nothing) — for those, `coach checkin` **reconstructs** a readiness score from the same primary signals Garmin uses (sleep score + recovery/load via ACWR as primary drivers; HRV, sleep history, sleep regularity, and stress as secondary), on the same 0–100 / Poor→Prime scale, and reports the **factor breakdown** (e.g. _"derived ~72: sleep 54, ACWR 1.40, HRV lnRMSSD 4.11 vs 4.15±0.04 SWC (suppressed), recent sleep ~77, sleep timing ±38 min, stress 15"_).
+
+The **HRV factor** uses the sports-science standard when a personal history exists: **ln(RMSSD) of last night vs a rolling baseline**, judged by a **smallest-worthwhile-change band of ±0.5·SD** (Plews/Buchheit) — the detail reads `HRV lnRMSSD <today> vs <mean>±<swc> SWC (suppressed | normal | elevated)`. Without enough history it falls back to Garmin's 7-day-avg-vs-balanced-band (`HRV 7d …`), then the status label. **Sleep regularity** (`sleep timing ±N min` — the SD of recent midsleep times) is a secondary factor: erratic sleep timing blunts recovery even when duration/score look fine. Both are derived from the already-stored Garmin history; no extra fetch.
 
 When the score is reconstructed, **read the limiting factor — it tells you _how_ to adjust**:
 
 - **Sleep-limited** (low sleep score, short duration) → the fix is recovery/rest and sleep hygiene, not necessarily a training problem. A single bad night = trim today; a multi-night deficit = protect the week.
 - **Load/ACWR-limited** (high acute:chronic ratio) → this is training fatigue you created — ease _intensity_ and let recent load settle; it resolves with a down day.
-- **HRV-limited** (7-day avg below the balanced band) → autonomic fatigue; if paired with elevated RHR or poor sleep, treat as a possible overreaching/illness signal (see Guardrails), not just a tired day.
+- **HRV-limited** (`suppressed` — last night's ln(RMSSD) more than ~1 SWC below baseline, or the 7-day avg below the balanced band) → autonomic fatigue; if paired with elevated RHR or poor sleep, treat as a possible overreaching/illness signal (see Guardrails), not just a tired day.
+- **Regularity-limited** (`sleep timing ±N min` wide, i.e. erratic bed/wake times) → circadian disruption; the fix is a consistent sleep schedule, not just more hours on one night.
 - Treat **morning Body Battery as optimistic** — it recharges overnight regardless of training debt, so use it as a tie-breaker, not a lead signal.
 
 ## Step 2: Decide the adjustment
