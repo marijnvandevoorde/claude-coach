@@ -5,6 +5,7 @@
  * src/garmin/workouts.ts expects (keeping that module DB-agnostic).
  */
 import { execute, queryJson } from "./client.js";
+import { getDialect } from "./dialect.js";
 
 function esc(value: string | null | undefined): string {
   if (value == null) return "NULL";
@@ -22,22 +23,26 @@ export interface PushedWorkout {
   date: string | null;
 }
 
-export function lookupPushedWorkout(key: string): PushedWorkout | undefined {
-  return queryJson<PushedWorkout>(
-    `SELECT push_key, workout_id, schedule_id, name, date
-     FROM garmin_pushed_workouts WHERE push_key = ${esc(key)};`
+export async function lookupPushedWorkout(key: string): Promise<PushedWorkout | undefined> {
+  return (
+    await queryJson<PushedWorkout>(
+      `SELECT push_key, workout_id, schedule_id, name, date
+       FROM garmin_pushed_workouts WHERE push_key = ${esc(key)};`
+    )
   )[0];
 }
 
-export function savePushedWorkout(p: PushedWorkout): void {
-  execute(
-    `INSERT INTO garmin_pushed_workouts (push_key, workout_id, schedule_id, name, date, updated_at)
-     VALUES (${esc(p.push_key)}, ${num(p.workout_id)}, ${num(p.schedule_id)}, ${esc(p.name)}, ${esc(p.date)}, datetime('now'))
-     ON CONFLICT(push_key) DO UPDATE SET
-       workout_id = excluded.workout_id,
-       schedule_id = excluded.schedule_id,
-       name = excluded.name,
-       date = excluded.date,
-       updated_at = datetime('now');`
+export async function savePushedWorkout(p: PushedWorkout): Promise<void> {
+  const dialect = getDialect();
+  const cols = ["push_key", "workout_id", "schedule_id", "name", "date", "updated_at"];
+  const vals = `(${esc(p.push_key)}, ${num(p.workout_id)}, ${num(p.schedule_id)}, ${esc(p.name)}, ${esc(p.date)}, ${dialect.now()})`;
+  await execute(
+    dialect.upsert("garmin_pushed_workouts", cols, vals, "push_key", [
+      "workout_id",
+      "schedule_id",
+      "name",
+      "date",
+      "updated_at",
+    ])
   );
 }

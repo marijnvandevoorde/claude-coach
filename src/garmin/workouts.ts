@@ -324,17 +324,19 @@ export function pushKey(date: string | undefined, name: string): string {
 }
 
 /** Persistence the CLI injects so re-pushes update in place instead of duplicating. */
+type PushRecord = {
+  push_key: string;
+  workout_id: number;
+  schedule_id: number | null;
+  name: string;
+  date: string | null;
+};
+type StoredWorkout = { workout_id: number; schedule_id: number | null; date: string | null };
+
+/** The store can be sync (test fake) or async (the real coach.db-backed store). */
 export interface PushStore {
-  lookup(
-    key: string
-  ): { workout_id: number; schedule_id: number | null; date: string | null } | undefined;
-  save(rec: {
-    push_key: string;
-    workout_id: number;
-    schedule_id: number | null;
-    name: string;
-    date: string | null;
-  }): void;
+  lookup(key: string): StoredWorkout | undefined | Promise<StoredWorkout | undefined>;
+  save(rec: PushRecord): void | Promise<void>;
 }
 
 export async function deleteWorkout(client: GarminClient, workoutId: number): Promise<void> {
@@ -388,7 +390,7 @@ export async function pushWorkouts(
   for (const input of inputs) {
     try {
       const key = pushKey(input.date, input.name);
-      const stored = opts.store?.lookup(key);
+      const stored = opts.store ? await opts.store.lookup(key) : undefined;
       const existingId = stored?.workout_id ?? byName.get(input.name);
 
       let workoutId: number;
@@ -407,7 +409,7 @@ export async function pushWorkouts(
         scheduleId = await scheduleWorkout(client, workoutId, input.date);
       }
 
-      opts.store?.save({
+      await opts.store?.save({
         push_key: key,
         workout_id: workoutId,
         schedule_id: scheduleId ?? null,

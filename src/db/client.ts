@@ -1,132 +1,151 @@
 import { execSync, spawnSync } from "child_process";
 import { getDbPath } from "../lib/config.js";
+import { getDriver } from "./dialect.js";
 
 // ============================================================================
-// SQLite Backend Abstraction
+// Storage backend abstraction — SQLite (default) or MySQL.
+// The public API is async (MySQL is inherently async; SQLite resolves immediately).
 // ============================================================================
 
-interface SqliteBackend {
-  query(sql: string): string;
-  queryJson<T>(sql: string): T[];
-  execute(sql: string): void;
+interface Store {
+  query(sql: string): Promise<string>;
+  queryJson<T>(sql: string): Promise<T[]>;
+  execute(sql: string): Promise<void>;
 }
 
-let cachedBackend: SqliteBackend | null = null;
+let cachedBackend: Store | null = null;
 
-/**
- * Try to use Node's built-in SQLite module (Node 22.5+).
- * Falls back to shelling out to sqlite3 CLI if not available.
- */
-async function detectBackend(): Promise<SqliteBackend> {
-  // Try Node.js built-in SQLite first (Node 22.5+)
+/** Pipe-join row values into the simple text format the CLI's non-JSON output expects. */
+function formatRows(rows: unknown[]): string {
+  if (rows.length === 0) return "";
+  return rows
+    .map((row) =>
+      Object.values(row as Record<string, unknown>)
+        .map((v) => (v === null || v === undefined ? "" : String(v)))
+        .join("|")
+    )
+    .join("\n");
+}
+
+async function makeSqliteBackend(): Promise<Store> {
+  // Node's built-in SQLite (Node 22.5+).
   try {
-    // Dynamic import to avoid syntax errors on older Node versions
     const sqlite = await import("node:sqlite");
-    const dbPath = getDbPath();
-    const db = new sqlite.DatabaseSync(dbPath);
-
+    const db = new sqlite.DatabaseSync(getDbPath());
     return {
-      query(sql: string): string {
-        const stmt = db.prepare(sql);
-        const rows = stmt.all();
-        if (rows.length === 0) return "";
-        // Format as simple text output (column values separated by |)
-        return rows
-          .map((row) =>
-            Object.values(row as Record<string, unknown>)
-              .map((v) => (v === null ? "" : String(v)))
-              .join("|")
-          )
-          .join("\n");
+      async query(sql) {
+        return formatRows(db.prepare(sql).all() as unknown[]);
       },
-      queryJson<T>(sql: string): T[] {
-        const stmt = db.prepare(sql);
-        return stmt.all() as T[];
+      async queryJson<T>(sql: string) {
+        return db.prepare(sql).all() as T[];
       },
-      execute(sql: string): void {
+      async execute(sql) {
         db.exec(sql);
       },
     };
   } catch {
-    // Node.js built-in SQLite not available, try CLI
+    // fall through to the sqlite3 CLI
   }
 
-  // Fallback: Use sqlite3 CLI
   try {
-    // Check if sqlite3 is available
     execSync("sqlite3 --version", { stdio: "ignore" });
-
     return {
-      query(sql: string): string {
-        const dbPath = getDbPath();
-        return execSync(`sqlite3 "${dbPath}" "${sql.replace(/"/g, '\\"')}"`, {
+      async query(sql) {
+        return execSync(`sqlite3 "${getDbPath()}" "${sql.replace(/"/g, '\\"')}"`, {
           encoding: "utf-8",
         });
       },
-      queryJson<T>(sql: string): T[] {
-        const dbPath = getDbPath();
-        const result = execSync(`sqlite3 -json "${dbPath}" "${sql.replace(/"/g, '\\"')}"`, {
+      async queryJson<T>(sql: string) {
+        const out = execSync(`sqlite3 -json "${getDbPath()}" "${sql.replace(/"/g, '\\"')}"`, {
           encoding: "utf-8",
         });
-        if (!result.trim()) return [];
-        return JSON.parse(result);
+        return out.trim() ? (JSON.parse(out) as T[]) : [];
       },
-      execute(sql: string): void {
-        const dbPath = getDbPath();
-        const result = spawnSync("sqlite3", [dbPath], {
-          input: sql,
-          encoding: "utf-8",
-        });
-        if (result.error) throw result.error;
-        if (result.status !== 0) {
-          throw new Error(`SQLite error: ${result.stderr}`);
-        }
+      async execute(sql) {
+        const r = spawnSync("sqlite3", [getDbPath()], { input: sql, encoding: "utf-8" });
+        if (r.error) throw r.error;
+        if (r.status !== 0) throw new Error(`SQLite error: ${r.stderr}`);
       },
     };
   } catch {
     throw new Error(
-      "SQLite is not available. Please either:\n" +
-        "  1. Use Node.js 22.5+ (has built-in SQLite)\n" +
-        "  2. Install sqlite3 CLI (brew install sqlite3 / apt install sqlite3)"
+      "SQLite is not available. Use Node.js 22.5+ (built-in SQLite) or install the sqlite3 CLI."
     );
   }
 }
 
-/**
- * Initialize the SQLite backend. Must be called before using other functions.
- */
+function mysqlConfig(): Record<string, unknown> {
+  const url = process.env.COACH_DB_URL;
+  if (url) {
+    const u = new URL(url);
+    return {
+      host: u.hostname,
+      port: u.port ? Number(u.port) : 3306,
+      user: decodeURIComponent(u.username),
+      password: decodeURIComponent(u.password),
+      database: u.pathname.replace(/^\//, ""),
+      multipleStatements: true,
+    };
+  }
+  return {
+    host: process.env.COACH_DB_HOST || "127.0.0.1",
+    port: Number(process.env.COACH_DB_PORT || 3306),
+    user: process.env.COACH_DB_USER || "root",
+    password: process.env.COACH_DB_PASSWORD || "",
+    database: process.env.COACH_DB_NAME || "coach",
+    multipleStatements: true, // runScript runs the whole schema in one go
+  };
+}
+
+async function makeMysqlBackend(): Promise<Store> {
+  const mysql = await import("mysql2/promise");
+  const conn = await mysql.createConnection(mysqlConfig());
+  // Match SQLite's string handling: only '' escapes a quote; backslashes are literal
+  // (so JSON blobs like garmin_raw store verbatim through our esc() helper).
+  await conn.query("SET SESSION sql_mode = CONCAT(@@SESSION.sql_mode, ',NO_BACKSLASH_ESCAPES')");
+  return {
+    async query(sql) {
+      const [rows] = await conn.query(sql);
+      return formatRows(rows as unknown[]);
+    },
+    async queryJson<T>(sql: string) {
+      const [rows] = await conn.query(sql);
+      return rows as T[];
+    },
+    async execute(sql) {
+      await conn.query(sql);
+    },
+  };
+}
+
+/** Initialize the storage backend. Must be called (awaited) before other functions. */
 export async function initDatabase(): Promise<void> {
   if (!cachedBackend) {
-    cachedBackend = await detectBackend();
+    cachedBackend = getDriver() === "mysql" ? await makeMysqlBackend() : await makeSqliteBackend();
   }
 }
 
-/**
- * Get the backend, throwing if not initialized.
- */
-function getBackend(): SqliteBackend {
-  if (!cachedBackend) {
-    throw new Error("Database not initialized. Call initDatabase() first.");
-  }
+function getBackend(): Store {
+  if (!cachedBackend) throw new Error("Database not initialized. Call initDatabase() first.");
   return cachedBackend;
 }
 
 // ============================================================================
-// Public API (synchronous after initialization)
+// Public API (async)
 // ============================================================================
 
-export function query(sql: string): string {
+export function query(sql: string): Promise<string> {
   return getBackend().query(sql);
 }
 
-export function queryJson<T>(sql: string): T[] {
+export function queryJson<T>(sql: string): Promise<T[]> {
   return getBackend().queryJson<T>(sql);
 }
 
-export function execute(sql: string): void {
-  getBackend().execute(sql);
+export function execute(sql: string): Promise<void> {
+  return getBackend().execute(sql);
 }
 
-export function runScript(script: string): void {
-  execute(script);
+export function runScript(script: string): Promise<void> {
+  return execute(script);
 }

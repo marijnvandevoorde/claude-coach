@@ -1,4 +1,5 @@
 import { execute, queryJson } from "./client.js";
+import { getDialect } from "./dialect.js";
 
 // ============================================================================
 // Wellness & reminder state access
@@ -43,12 +44,12 @@ export interface ReminderPrefs {
   updated_at: string | null;
 }
 
-export function getPrefs(): ReminderPrefs {
-  const rows = queryJson<ReminderPrefs>("SELECT * FROM reminder_prefs WHERE id = 1;");
+export async function getPrefs(): Promise<ReminderPrefs> {
+  const rows = await queryJson<ReminderPrefs>("SELECT * FROM reminder_prefs WHERE id = 1;");
   if (rows.length > 0) return rows[0];
   // Schema seeds this row, but be defensive if it's somehow missing.
-  execute("INSERT OR IGNORE INTO reminder_prefs (id) VALUES (1);");
-  return queryJson<ReminderPrefs>("SELECT * FROM reminder_prefs WHERE id = 1;")[0];
+  await execute(`${getDialect().insertIgnoreVerb()} INTO reminder_prefs (id) VALUES (1);`);
+  return (await queryJson<ReminderPrefs>("SELECT * FROM reminder_prefs WHERE id = 1;"))[0];
 }
 
 export type PrefsPatch = Partial<{
@@ -75,7 +76,7 @@ const PREFS_TEXT_COLS = new Set([
   "notify_webhook_url",
 ]);
 
-export function updatePrefs(patch: PrefsPatch): void {
+export async function updatePrefs(patch: PrefsPatch): Promise<void> {
   const sets: string[] = [];
   for (const [col, value] of Object.entries(patch)) {
     if (value === undefined) continue;
@@ -86,31 +87,31 @@ export function updatePrefs(patch: PrefsPatch): void {
     }
   }
   if (sets.length === 0) return;
-  sets.push("updated_at = datetime('now')");
-  execute(`UPDATE reminder_prefs SET ${sets.join(", ")} WHERE id = 1;`);
+  sets.push(`updated_at = ${getDialect().now()}`);
+  await execute(`UPDATE reminder_prefs SET ${sets.join(", ")} WHERE id = 1;`);
 }
 
 // ----------------------------------------------------------------------------
 // Hydration log
 // ----------------------------------------------------------------------------
 
-export function logHydration(
+export async function logHydration(
   amountMl: number,
   opts: { date?: string; source?: string; note?: string } = {}
-): void {
+): Promise<void> {
   const date = localDate(opts.date);
-  execute(
+  await execute(
     `INSERT INTO hydration_log (logged_at, local_date, amount_ml, source, note)
-     VALUES (datetime('now'), ${esc(date)}, ${Math.round(amountMl)}, ${esc(
+     VALUES (${getDialect().now()}, ${esc(date)}, ${Math.round(amountMl)}, ${esc(
        opts.source ?? "manual"
      )}, ${esc(opts.note)});`
   );
 }
 
 /** Total ml logged for a given local date. */
-export function hydrationTotal(date?: string): number {
+export async function hydrationTotal(date?: string): Promise<number> {
   const d = localDate(date);
-  const rows = queryJson<{ total_ml: number | null }>(
+  const rows = await queryJson<{ total_ml: number | null }>(
     `SELECT COALESCE(SUM(amount_ml), 0) AS total_ml FROM hydration_log WHERE local_date = ${esc(
       d
     )};`
@@ -173,14 +174,19 @@ const WELLNESS_TEXT_COLS = new Set([
   "last_bedtime_reminder_at",
 ]);
 
-export function getWellness(date?: string): WellnessRow | null {
+export async function getWellness(date?: string): Promise<WellnessRow | null> {
   const d = localDate(date);
-  const rows = queryJson<WellnessRow>(`SELECT * FROM wellness_state WHERE local_date = ${esc(d)};`);
+  const rows = await queryJson<WellnessRow>(
+    `SELECT * FROM wellness_state WHERE local_date = ${esc(d)};`
+  );
   return rows[0] ?? null;
 }
 
 /** Insert-or-update the wellness row for a local date with the given fields. */
-export function upsertWellness(date: string | undefined, patch: WellnessPatch): void {
+export async function upsertWellness(
+  date: string | undefined,
+  patch: WellnessPatch
+): Promise<void> {
   const d = localDate(date);
   const entries = Object.entries(patch).filter(([, v]) => v !== undefined);
   if (entries.length === 0) return;
@@ -192,14 +198,18 @@ export function upsertWellness(date: string | undefined, patch: WellnessPatch): 
     return String(Number(value));
   };
 
-  const insertCols = ["local_date", ...cols];
-  const insertVals = [esc(d), ...entries.map(([col, v]) => formatVal(col, v))];
-  const updates = entries.map(([col]) => `${col} = excluded.${col}`);
-  updates.push("updated_at = datetime('now')");
+  const dialect = getDialect();
+  const insertCols = ["local_date", ...cols, "updated_at"];
+  const insertVals = [esc(d), ...entries.map(([col, v]) => formatVal(col, v)), dialect.now()];
+  const updateCols = [...cols, "updated_at"]; // everything except the conflict key (local_date)
 
-  execute(
-    `INSERT INTO wellness_state (${insertCols.join(", ")})
-     VALUES (${insertVals.join(", ")})
-     ON CONFLICT(local_date) DO UPDATE SET ${updates.join(", ")};`
+  await execute(
+    dialect.upsert(
+      "wellness_state",
+      insertCols,
+      `(${insertVals.join(", ")})`,
+      "local_date",
+      updateCols
+    )
   );
 }
