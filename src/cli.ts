@@ -33,8 +33,8 @@ import type { TrainingPlan } from "./schema/training-plan.js";
 import { getValidTokens } from "./strava/oauth.js";
 import { getAllActivities, getAthlete } from "./strava/api.js";
 import type { StravaActivity, StravaTokenResponse } from "./strava/types.js";
-import { readFileSync, writeFileSync, existsSync } from "fs";
-import { spawnSync } from "node:child_process";
+import { readFileSync, writeFileSync } from "fs";
+import { fetchGarminSnapshot, type GarminFetchPayload } from "./garmin/snapshot.js";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -425,7 +425,7 @@ Examples:
   npx claude-coach checkin --notify --only=hydration
   npx claude-coach checkin --greeting   # one-line wellness context for a SessionStart hook
 
-  # Pull live data straight from Garmin Connect (needs $GARMINTOKENS + the python fetcher)
+  # Pull live data straight from Garmin Connect (native TS client; needs $GARMINTOKENS)
   npx claude-coach garmin-fetch
   npx claude-coach garmin-fetch --date=2026-06-01 --json
 
@@ -1129,17 +1129,10 @@ async function runGarminSync(args: GarminSyncArgs): Promise<void> {
 }
 
 // ----------------------------------------------------------------------------
-// garmin-fetch: the *real* Garmin sync. Spawns the Python fetcher (which logs
-// in to Garmin Connect via $GARMINTOKENS and prints JSON), then ingests the
-// wellness snapshot + recent activities through the tested DB upsert paths.
+// garmin-fetch: the *real* Garmin sync. Pulls a day's snapshot straight from
+// Garmin Connect (src/garmin, using $GARMINTOKENS), then ingests the wellness
+// snapshot + recent activities through the tested DB upsert paths.
 // ----------------------------------------------------------------------------
-
-interface GarminFetchPayload {
-  date: string;
-  wellness: Record<string, number | string | null>;
-  activities: Array<Record<string, unknown>>;
-  errors: string[];
-}
 
 /** Numeric/text wellness columns the fetcher is allowed to write. */
 const GARMIN_FETCH_NUMERIC = [
@@ -1157,22 +1150,6 @@ const GARMIN_FETCH_NUMERIC = [
   "chronic_load",
 ] as const;
 const GARMIN_FETCH_TEXT = ["hrv_status", "training_status"] as const;
-
-function resolveGarminFetcher(): { python: string; script: string } {
-  const scriptCandidates = [
-    process.env.COACH_GARMIN_FETCH_SCRIPT,
-    join(__dirname, "..", "scripts", "garmin_fetch.py"),
-    "/app/scripts/garmin_fetch.py",
-  ].filter((p): p is string => Boolean(p));
-  const script = scriptCandidates.find((p) => existsSync(p)) ?? scriptCandidates[0];
-
-  const pythonCandidates = [process.env.COACH_GARMIN_PYTHON, "/opt/garmin-venv/bin/python"].filter(
-    (p): p is string => Boolean(p)
-  );
-  const python = pythonCandidates.find((p) => existsSync(p)) ?? "python3";
-
-  return { python, script };
-}
 
 function sqlNum(value: unknown): string {
   const n = Number(value);
@@ -1201,23 +1178,12 @@ function insertGarminActivity(a: Record<string, unknown>): void {
 async function runGarminFetch(args: GarminFetchArgs): Promise<void> {
   await ensureDb();
   const date = flagStr(args.flags, "date") ?? localDate();
-  const { python, script } = resolveGarminFetcher();
-
-  const res = spawnSync(python, [script, date], {
-    encoding: "utf-8",
-    maxBuffer: 32 * 1024 * 1024,
-  });
-  if (res.error) {
-    log.error(`garmin-fetch: could not run ${python} ${script}: ${res.error.message}`);
-    process.exit(1);
-  }
 
   let payload: GarminFetchPayload;
   try {
-    payload = JSON.parse((res.stdout || "").trim());
-  } catch {
-    const detail = (res.stderr || res.stdout || "no output").trim().slice(0, 400);
-    log.error(`garmin-fetch: unexpected output from the fetcher: ${detail}`);
+    payload = await fetchGarminSnapshot(date);
+  } catch (e) {
+    log.error(`garmin-fetch: ${e instanceof Error ? e.message : String(e)}`);
     process.exit(1);
   }
 

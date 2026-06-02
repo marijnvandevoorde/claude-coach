@@ -16,22 +16,18 @@ RUN npx tsc && cp src/db/schema.sql dist/db/
 
 # ---------- runtime: prod deps + dist only ----------
 FROM node:22-alpine AS runtime
-# tzdata = local-time cron; sqlite = CLI fallback if node:sqlite is flagged off;
-# python3 = the server-side Garmin fetcher (`garmin-fetch`). The fetcher uses
-# only the stdlib (urllib) — it refreshes the Garmin OAuth token and reads the
-# Connect API directly — so there's nothing to pip-install.
-RUN apk add --no-cache tzdata sqlite python3
+# tzdata = local-time cron; sqlite = CLI fallback if node:sqlite is flagged off.
+# The Garmin fetcher is native TypeScript (src/garmin) — no Python, nothing to pip-install.
+RUN apk add --no-cache tzdata sqlite
 WORKDIR /app
 ENV NODE_ENV=production \
     COACH_DB_PATH=/data/coach.db \
     GARMINTOKENS=/data/garminconnect \
-    COACH_NOTIFY_CHANNEL=webhook \
-    COACH_GARMIN_PYTHON=python3
+    COACH_NOTIFY_CHANNEL=webhook
 
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 COPY --from=builder /app/dist ./dist
-COPY scripts ./scripts
 COPY scheduling/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
  && printf '#!/bin/sh\nexec node /app/dist/cli.js "$@"\n' > /usr/local/bin/coach \
