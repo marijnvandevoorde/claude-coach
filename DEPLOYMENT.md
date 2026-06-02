@@ -29,7 +29,8 @@ GitHub → **Actions → "Build Docker image" → Run workflow** (or `gh workflo
 ### Step 2 — run it
 
 ```bash
-docker login ghcr.io                     # once: GitHub PAT with read:packages (or make the package public)
+# Public package (recommended): no login needed — pull anonymously.
+# Private package: docker login ghcr.io  (GitHub PAT with read:packages)
 docker compose pull
 docker compose up -d
 docker compose run --rm coach config --enable          # enable reminders in the db
@@ -38,6 +39,8 @@ docker compose logs -f
 ```
 
 Drop `coach.db` + `garmin_tokens.json` into `./data/` and `cp .env.example .env` first.
+
+> **`denied: denied` on `docker compose pull`?** It's almost never egress — an HTTP `denied` means ghcr was _reached_ and refused. The usual cause is a **stale `docker login ghcr.io`** sending an expired token instead of pulling anonymously. If the package is **public**, run `docker logout ghcr.io` (as the _same user that runs compose_ — often `root`, with its own `/root/.docker/config.json`) and pull again. A genuine egress block looks different: a TCP timeout / TLS error, not `denied`.
 
 ### Config knobs (env)
 
