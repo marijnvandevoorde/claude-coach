@@ -14,8 +14,12 @@ import { oauthEnabled, oauthRouter, verifyAccessToken, resourceMetadataUrl } fro
 const CLI = process.env.COACH_CLI || "/app/dist/cli.js";
 const PORT = Number(process.env.COACH_MCP_PORT || process.env.PORT || 8080);
 
-function runCli(args: string[]): { ok: boolean; text: string } {
-  const r = spawnSync("node", [CLI, ...args], { encoding: "utf-8", maxBuffer: 16 * 1024 * 1024 });
+function runCli(args: string[], input?: string): { ok: boolean; text: string } {
+  const r = spawnSync("node", [CLI, ...args], {
+    encoding: "utf-8",
+    maxBuffer: 16 * 1024 * 1024,
+    ...(input != null ? { input } : {}),
+  });
   if (r.error) return { ok: false, text: r.error.message };
   if (r.status !== 0)
     return { ok: false, text: (r.stderr || r.stdout || `exit ${r.status}`).trim() };
@@ -27,6 +31,8 @@ interface ToolDef {
   description: string;
   inputSchema: { type: "object"; properties?: Record<string, unknown>; required?: string[] };
   toArgs: (a: Args) => string[];
+  /** Optional: content to pipe to the CLI's stdin (e.g. large file bodies). */
+  stdin?: (a: Args) => string | undefined;
 }
 
 /** Append `--key=value` for each present key. */
@@ -215,14 +221,17 @@ const TOOLS: Record<string, ToolDef> = {
   },
   upload_route: {
     description:
-      "Upload a GPX file to Garmin as a course/route, kept EXACTLY as-is (no point reduction, no snap-to-roads). Give the path to a .gpx file plus an optional name (defaults to the GPX track name) and course type. dryRun parses + builds the payload without uploading.",
+      "Upload a GPX route to Garmin as a course, kept EXACTLY as-is (no point reduction, no snap-to-roads). Pass the GPX either as inline `gpx` content (e.g. a file dropped into the conversation) or as a server-readable `file` path, plus an optional name (defaults to the GPX track name) and course type. dryRun parses + builds the payload without uploading.",
     inputSchema: {
       type: "object",
-      required: ["file"],
       properties: {
+        gpx: {
+          type: "string",
+          description: "inline GPX file content (preferred for files in chat)",
+        },
         file: {
           type: "string",
-          description: "path to a .gpx file (must be readable by the coach server)",
+          description: "path to a .gpx file readable by the coach server (alternative to gpx)",
         },
         name: { type: "string", description: "course name (defaults to the GPX track name)" },
         type: {
@@ -233,10 +242,15 @@ const TOOLS: Record<string, ToolDef> = {
       },
     },
     toArgs: (a) => {
-      const f = ["garmin-route", String(a.file), "--json", ...flags(a, ["name", "type"])];
+      // Inline content goes via stdin (--stdin); a path is passed positionally.
+      const f =
+        typeof a.gpx === "string"
+          ? ["garmin-route", "--stdin", "--json", ...flags(a, ["name", "type"])]
+          : ["garmin-route", String(a.file), "--json", ...flags(a, ["name", "type"])];
       if (a.dryRun === true) f.push("--dry-run");
       return f;
     },
+    stdin: (a) => (typeof a.gpx === "string" ? a.gpx : undefined),
   },
   notify: {
     description:
@@ -270,7 +284,8 @@ function buildServer(): Server {
     if (!def) {
       return { content: [{ type: "text", text: `Unknown tool: ${name}` }], isError: true };
     }
-    const r = runCli(def.toArgs((req.params.arguments ?? {}) as Args));
+    const args = (req.params.arguments ?? {}) as Args;
+    const r = runCli(def.toArgs(args), def.stdin?.(args));
     return { content: [{ type: "text", text: r.text || "(no output)" }], isError: !r.ok };
   });
 
