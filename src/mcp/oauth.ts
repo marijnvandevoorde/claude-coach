@@ -256,15 +256,19 @@ export function oauthRouter(): Router {
       res.status(400).json({ error: "invalid_grant" });
       return;
     }
+    // Long-lived by default (1 year): this is a single-user, email-allowlisted,
+    // Cloudflare-fronted MCP, and we issue no refresh token — a 1h token forced a
+    // full Google re-login every hour. Override with COACH_OAUTH_TOKEN_TTL_SECONDS.
+    const ttl = Number(process.env.COACH_OAUTH_TOKEN_TTL_SECONDS || 31_536_000);
     const access_token = await new SignJWT({ scope: "mcp", email: entry.email })
       .setProtectedHeader({ alg: "HS256" })
       .setSubject(entry.email)
       .setIssuer(ISSUER)
       .setAudience(ISSUER)
       .setIssuedAt()
-      .setExpirationTime("1h")
+      .setExpirationTime(Math.floor(Date.now() / 1000) + ttl)
       .sign(key());
-    res.json({ access_token, token_type: "Bearer", expires_in: 3600, scope: "mcp" });
+    res.json({ access_token, token_type: "Bearer", expires_in: ttl, scope: "mcp" });
   });
 
   return r;
