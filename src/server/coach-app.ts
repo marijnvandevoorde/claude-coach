@@ -28,6 +28,8 @@ import {
 } from "../lib/recovery.js";
 import { accessMiddleware, accessEnabled } from "./access.js";
 import { log } from "../lib/logging.js";
+import { uploadRoute } from "../garmin/routes.js";
+import { courseTypeFromSport, trackToGpx } from "./course-gpx.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.COACH_APP_PORT || process.env.PORT || 8081);
@@ -367,6 +369,55 @@ function api(): express.Router {
         `SELECT id, local_date, entry, tag, created_at FROM journal WHERE local_date = ${escD} ORDER BY id DESC;`
       );
       res.json({ date: d, entries: rows });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // Create a Garmin course (route) from an activity's stored GPS track.
+  // Real write: synthesizes a GPX from gps_track and uploads via uploadRoute.
+  r.post("/course-from-activity", async (req, res, next) => {
+    try {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const id = Math.trunc(Number(body.activityId));
+      if (!Number.isInteger(id) || id <= 0) {
+        res.status(400).json({ error: "activityId must be a positive integer" });
+        return;
+      }
+      if (body.name !== undefined && typeof body.name !== "string") {
+        res.status(400).json({ error: "name must be a string" });
+        return;
+      }
+      if (body.type !== undefined && typeof body.type !== "string") {
+        res.status(400).json({ error: "type must be a string" });
+        return;
+      }
+      const rows = await queryJson<Record<string, unknown>>(
+        `SELECT name, sport_type, gps_track FROM activities WHERE id = ${id} LIMIT 1;`
+      );
+      const a = rows[0];
+      if (!a) {
+        res.status(404).json({ error: "activity not found" });
+        return;
+      }
+      const track = parseTrack(a.gps_track);
+      if (!track || track.length < 2) {
+        res.status(400).json({ error: "no GPS track" });
+        return;
+      }
+      const activityName = typeof a.name === "string" && a.name ? a.name : "Activity";
+      const name =
+        (typeof body.name === "string" && body.name.trim()) || `${activityName} (from activity)`;
+      const type =
+        (typeof body.type === "string" && body.type.trim()) ||
+        courseTypeFromSport(a.sport_type as string | null);
+      const gpx = trackToGpx(track, name);
+      try {
+        const result = await uploadRoute({ gpx, name, type });
+        res.json({ courseId: result.courseId, name: result.name });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+      }
     } catch (e) {
       next(e);
     }

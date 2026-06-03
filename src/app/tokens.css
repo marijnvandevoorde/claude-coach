@@ -5,8 +5,9 @@
 
 :root {
   /* ---- type ---- */
-  /* System stack for now; keep the named families first so a later ticket can
-     self-host Space Grotesk + IBM Plex Mono with zero markup changes. */
+  /* Space Grotesk (display/headings) + IBM Plex Mono (numerics/labels) load via
+     a Google Fonts <link> in index.html; system stack is the fallback. Body text
+     stays on the system stack. (Self-hosting woff2 is a possible later step.) */
   --font-display: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;

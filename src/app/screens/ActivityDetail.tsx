@@ -78,10 +78,24 @@ function RouteCard({ a }: { a: ActivityDetailView }) {
     () => (a.track && a.track.length > 1 ? a.track : genTrack(trackSeed(a.date + a.name))),
     [a]
   );
-  const [status, setStatus] = useState<"idle" | "creating" | "done">("idle");
-  const create = () => {
+  const hasTrack = !!(a.track && a.track.length > 1);
+  const [status, setStatus] = useState<"idle" | "creating" | "done" | "error">("idle");
+  const [errMsg, setErrMsg] = useState<string | null>(null);
+  const create = async () => {
+    if (!hasTrack) {
+      setStatus("error");
+      setErrMsg("No GPS track on this activity.");
+      return;
+    }
     setStatus("creating");
-    setTimeout(() => setStatus("done"), 1100);
+    setErrMsg(null);
+    try {
+      await api.courseFromActivity(a.id, { name: `${a.name} (from activity)` });
+      setStatus("done");
+    } catch (e) {
+      setStatus("error");
+      setErrMsg(e instanceof Error ? e.message : "Couldn't create route.");
+    }
   };
   return (
     <>
@@ -110,9 +124,11 @@ function RouteCard({ a }: { a: ActivityDetailView }) {
           borderColor:
             status === "done"
               ? "color-mix(in oklch, var(--go) 45%, transparent)"
-              : status === "idle"
-                ? "var(--accent-line)"
-                : "var(--hairline-2)",
+              : status === "error"
+                ? "color-mix(in oklch, var(--back) 45%, transparent)"
+                : status === "idle"
+                  ? "var(--accent-line)"
+                  : "var(--hairline-2)",
         }}
       >
         {status === "idle" && (
@@ -140,7 +156,7 @@ function RouteCard({ a }: { a: ActivityDetailView }) {
               <Icon name="hike" size={18} />
             </div>
             <div style={{ flex: 1, fontWeight: 500, fontSize: 14.5, color: "var(--text-2)" }}>
-              Building course…
+              Creating…
             </div>
           </div>
         )}
@@ -150,12 +166,32 @@ function RouteCard({ a }: { a: ActivityDetailView }) {
               <Icon name="check" size={18} />
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 600, fontSize: 14.5, color: "var(--go)" }}>Route created</div>
+              <div style={{ fontWeight: 600, fontSize: 14.5, color: "var(--go)" }}>
+                ✓ Route created — syncs to your watch
+              </div>
               <div className="ctx-note" style={{ marginTop: 2 }}>
-                “{a.name}” · queued to sync to your watch
+                “{a.name}”
               </div>
             </div>
           </div>
+        )}
+        {status === "error" && (
+          <button
+            onClick={create}
+            style={{ all: "unset", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, width: "100%" }}
+          >
+            <div className="sport-chip" style={{ background: "var(--back-dim)", color: "var(--back)" }}>
+              <Icon name="info" size={18} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, fontSize: 14.5, color: "var(--back)" }}>
+                Couldn't create route
+              </div>
+              <div className="ctx-note" style={{ marginTop: 2 }}>
+                {errMsg ?? "Something went wrong."} · tap to retry
+              </div>
+            </div>
+          </button>
         )}
       </div>
     </>
