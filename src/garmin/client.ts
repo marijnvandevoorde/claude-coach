@@ -14,6 +14,8 @@
 import { existsSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { execute, queryJson } from "../db/client.js";
+import { getDialect } from "../db/dialect.js";
 
 const DIAUTH = "https://diauth.garmin.com/di-oauth2-service/oauth/token";
 const API = "https://connectapi.garmin.com";
@@ -30,6 +32,7 @@ export interface GarminTokens {
 interface RefreshResponse {
   access_token?: string;
   refresh_token?: string;
+  expires_in?: number; // access-token lifetime in seconds (Garmin ~ 3600)
 }
 
 /** Resolve the token file: $GARMINTOKENS may be a dir (→ garmin_tokens.json) or the file itself. */
@@ -53,14 +56,14 @@ export function loadTokens(path = tokenPath()): GarminTokens {
   return tokens;
 }
 
-async function refreshAccess(tokens: GarminTokens): Promise<RefreshResponse> {
+async function refreshAccess(refreshToken: string, clientId: string): Promise<RefreshResponse> {
   const res = await fetch(DIAUTH, {
     method: "POST",
     headers: { "User-Agent": APP_UA, "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       grant_type: "refresh_token",
-      refresh_token: tokens.di_refresh_token,
-      client_id: tokens.di_client_id,
+      refresh_token: refreshToken,
+      client_id: clientId,
     }),
   });
   if (!res.ok) throw new Error(`refresh: HTTP ${res.status} ${(await res.text()).slice(0, 120)}`);
@@ -82,32 +85,189 @@ function persist(path: string, tokens: GarminTokens, refreshed: RefreshResponse)
   }
 }
 
+// ============================================================================
+// Shared OAuth token store (DB-backed) — fixes the multi-process refresh race.
+//
+// Garmin rotates the refresh token on every refresh (single-use). The cron, MCP,
+// web app, and backfills all run this client, so two near-simultaneous refreshes
+// race and the loser gets `invalid_grant` — and a poisoned token then breaks
+// every later refresh. Fix: keep the live access/refresh token in ONE DB row
+// shared by all processes, refresh only when the access token is actually
+// expired (≈hourly, not per call), and serialize that rare refresh with a
+// lease-lock row (atomic `UPDATE … WHERE locked_until < now` — works across
+// containers and pooled connections, unlike per-connection MySQL GET_LOCK). The
+// token file is now only a seed: di_client_id + first-run / re-auth bootstrap.
+// ============================================================================
+
+const SKEW_MS = 120_000; // treat the access token as stale 2 min before expiry
+const LEASE_MS = 25_000; // max time one process may hold the refresh lock
+let refreshCounter = 0;
+
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+function sqlStr(v: string | null): string {
+  return v == null ? "NULL" : `'${v.replace(/'/g, "''")}'`;
+}
+
+interface OAuthState {
+  access_token: string | null;
+  refresh_token: string | null;
+  expires_at: number | null;
+}
+
+/** True if the DB + the token table are reachable (else we fall back to the file). */
+async function dbReady(): Promise<boolean> {
+  try {
+    await queryJson(`SELECT id FROM garmin_oauth LIMIT 1;`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function readOAuth(): Promise<OAuthState | null> {
+  const rows = await queryJson<OAuthState>(
+    `SELECT access_token, refresh_token, expires_at FROM garmin_oauth WHERE id = 1 LIMIT 1;`
+  );
+  const r = rows[0];
+  if (!r) return null;
+  return {
+    access_token: r.access_token ?? null,
+    refresh_token: r.refresh_token ?? null,
+    expires_at: r.expires_at != null ? Number(r.expires_at) : null,
+  };
+}
+
+/** Seed the single token row from the file when missing/empty (first run). */
+async function seedOAuth(file: GarminTokens): Promise<void> {
+  if ((await readOAuth())?.refresh_token) return;
+  await execute(
+    `${getDialect().replaceVerb()} INTO garmin_oauth (id, access_token, refresh_token, expires_at) ` +
+      `VALUES (1, ${sqlStr(file.di_token ?? null)}, ${sqlStr(file.di_refresh_token)}, 0);`
+  );
+}
+
+async function writeOAuth(access: string, refresh: string, expiresAt: number): Promise<void> {
+  await execute(
+    `UPDATE garmin_oauth SET access_token = ${sqlStr(access)}, refresh_token = ${sqlStr(refresh)}, ` +
+      `expires_at = ${Math.round(expiresAt)}, updated_at = ${getDialect().now()} WHERE id = 1;`
+  );
+}
+
+/** The cached access token if it's still comfortably valid, else null. */
+function fresh(s: OAuthState | null): string | null {
+  return s?.access_token && (s.expires_at ?? 0) > Date.now() + SKEW_MS ? s.access_token : null;
+}
+
+/** Atomically claim the refresh lease. Returns true if we now own it. */
+async function acquireLease(owner: string): Promise<boolean> {
+  const now = Date.now();
+  await execute(
+    `UPDATE garmin_oauth SET lock_owner = ${sqlStr(owner)}, locked_until = ${now + LEASE_MS} ` +
+      `WHERE id = 1 AND (locked_until IS NULL OR locked_until < ${now});`
+  );
+  const rows = await queryJson<{ lock_owner: string | null }>(
+    `SELECT lock_owner FROM garmin_oauth WHERE id = 1 LIMIT 1;`
+  );
+  return rows[0]?.lock_owner === owner;
+}
+
+async function releaseLease(owner: string): Promise<void> {
+  try {
+    await execute(
+      `UPDATE garmin_oauth SET lock_owner = NULL, locked_until = NULL WHERE id = 1 AND lock_owner = ${sqlStr(owner)};`
+    );
+  } catch {
+    /* the lease expires on its own */
+  }
+}
+
+/** Refresh once and persist. On invalid_grant, if the file holds a *different*
+ *  refresh token (the user re-minted tokens), retry with it to self-recover. */
+async function refreshAndStore(refreshToken: string, file: GarminTokens): Promise<string> {
+  const store = async (r: RefreshResponse, used: string): Promise<string> => {
+    if (!r.access_token) throw new Error("refresh: no access_token in response");
+    await writeOAuth(
+      r.access_token,
+      r.refresh_token ?? used,
+      Date.now() + (r.expires_in ?? 3600) * 1000
+    );
+    return r.access_token;
+  };
+  try {
+    return await store(await refreshAccess(refreshToken, file.di_client_id), refreshToken);
+  } catch (e) {
+    const reauth = file.di_refresh_token && file.di_refresh_token !== refreshToken;
+    if (reauth && /invalid_grant|invalid refresh|HTTP 400/i.test(String(e))) {
+      return store(
+        await refreshAccess(file.di_refresh_token, file.di_client_id),
+        file.di_refresh_token
+      );
+    }
+    throw e;
+  }
+}
+
+/** A valid access token from the shared DB store — refresh only when expired,
+ *  serialized across processes by the lease lock. */
+async function dbAccessToken(file: GarminTokens): Promise<string> {
+  await seedOAuth(file);
+  const cached = fresh(await readOAuth());
+  if (cached) return cached;
+
+  const owner = `${process.pid}-${Date.now()}-${refreshCounter++}`;
+  for (let attempt = 0; attempt < 8; attempt++) {
+    if (await acquireLease(owner)) {
+      try {
+        const cur = await readOAuth(); // double-check: someone may have just refreshed
+        return (
+          fresh(cur) ?? (await refreshAndStore(cur?.refresh_token || file.di_refresh_token, file))
+        );
+      } finally {
+        await releaseLease(owner);
+      }
+    }
+    // Another process holds the lease — wait, then see if it published a fresh token.
+    await sleep(350 + attempt * 250);
+    const ok = fresh(await readOAuth());
+    if (ok) return ok;
+  }
+  // Lease never freed and no fresh token appeared — refresh anyway (best effort).
+  const cur = await readOAuth();
+  return refreshAndStore(cur?.refresh_token || file.di_refresh_token, file);
+}
+
+/** File-only fallback when the DB is unreachable: the legacy load→refresh→persist
+ *  with a small retry for the shared-file race. */
+async function fileAccessToken(file: GarminTokens, path: string): Promise<string> {
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const tokens = attempt === 0 ? file : loadTokens(path);
+    try {
+      const refreshed = await refreshAccess(tokens.di_refresh_token, tokens.di_client_id);
+      if (!refreshed.access_token) throw new Error("refresh: no access_token in response");
+      persist(path, tokens, refreshed);
+      return refreshed.access_token;
+    } catch (e) {
+      lastErr = e;
+      if (attempt === 2 || !/invalid_grant|invalid refresh|HTTP 400/i.test(String(e))) throw e;
+      await sleep(500 + attempt * 750);
+    }
+  }
+  throw lastErr;
+}
+
+async function getValidAccessToken(): Promise<string> {
+  const path = tokenPath();
+  const file = loadTokens(path);
+  return (await dbReady()) ? dbAccessToken(file) : fileAccessToken(file, path);
+}
+
 /** An authenticated Garmin Connect client. Build with `GarminClient.create()`. */
 export class GarminClient {
   private constructor(private readonly access: string) {}
 
   static async create(): Promise<GarminClient> {
-    const path = tokenPath();
-    // Garmin rotates the refresh token on every refresh (single-use). Several
-    // processes share one token file, so two near-simultaneous refreshes race —
-    // the loser gets `invalid_grant`. Re-read the file (the winner has by then
-    // persisted the new token) and retry a few times before giving up.
-    let lastErr: unknown;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const tokens = loadTokens(path);
-      try {
-        const refreshed = await refreshAccess(tokens);
-        if (!refreshed.access_token) throw new Error("refresh: no access_token in response");
-        persist(path, tokens, refreshed);
-        return new GarminClient(refreshed.access_token);
-      } catch (e) {
-        lastErr = e;
-        const raced = /invalid_grant|invalid refresh|HTTP 400/i.test(String(e));
-        if (!raced || attempt === 2) throw e;
-        await new Promise((r) => setTimeout(r, 500 + attempt * 750));
-      }
-    }
-    throw lastErr;
+    return new GarminClient(await getValidAccessToken());
   }
 
   private headers(extra?: Record<string, string>): Record<string, string> {

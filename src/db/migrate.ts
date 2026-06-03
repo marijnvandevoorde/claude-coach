@@ -42,6 +42,20 @@ export async function migrate(silent = false): Promise<void> {
     dialect.driver === "mysql" ? "LONGTEXT" : "TEXT"
   );
 
+  // Single-row shared Garmin OAuth token + lease lock (one row, id=1). Portable
+  // across both backends. See src/garmin/client.ts for why it lives in the DB.
+  await execute(
+    `CREATE TABLE IF NOT EXISTS garmin_oauth (
+       id INTEGER PRIMARY KEY,
+       access_token TEXT,
+       refresh_token TEXT,
+       expires_at BIGINT,
+       lock_owner TEXT,
+       locked_until BIGINT,
+       updated_at TEXT
+     );`
+  );
+
   if (!silent) log.success("Database schema initialized");
 }
 
