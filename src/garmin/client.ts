@@ -119,6 +119,13 @@ export class GarminClient {
     return text ? (JSON.parse(text) as T) : null;
   }
 
+  /** GET a connectapi path expecting a non-JSON body (e.g. a GPX/XML export). Returns raw text. */
+  async getText(path: string): Promise<string> {
+    const res = await this.fetchWithRetry(API + path, { headers: this.headers() });
+    if (!res.ok) throw new Error(`GET ${path}: HTTP ${res.status}`);
+    return await res.text();
+  }
+
   /** POST JSON to a connectapi path. Returns parsed JSON (or null). Throws on non-2xx. */
   async post<T = unknown>(path: string, body: unknown): Promise<T | null> {
     const res = await this.fetchWithRetry(API + path, {

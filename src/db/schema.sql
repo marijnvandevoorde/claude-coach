@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS activities (
   workout_type INTEGER,             -- 0=default, 1=race, 2=workout, 3=long run
   gear_id TEXT,
   raw_json TEXT,                    -- full Strava response as JSON
+  gps_track TEXT,                   -- compact GPS track [[lat,lon,ele?],…]; '[]' = fetched, no track
   synced_at TEXT DEFAULT (datetime('now'))
 );
 

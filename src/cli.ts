@@ -40,6 +40,8 @@ import { pushWorkouts, type WorkoutInput, type PushStore } from "./garmin/workou
 import { lookupPushedWorkout, savePushedWorkout } from "./db/garminPush.js";
 import { uploadRoute, COURSE_TYPES } from "./garmin/routes.js";
 import { runBackfill, type BackfillSink } from "./garmin/backfill.js";
+import { GarminClient } from "./garmin/client.js";
+import { fetchActivityTrack, decimate, toCompactTrack } from "./garmin/tracks.js";
 import { addJournalEntry, listJournalEntries } from "./db/journal.js";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
@@ -159,6 +161,11 @@ interface GarminBackfillArgs {
   flags: Flags;
 }
 
+interface GarminTracksArgs {
+  command: "garmin-tracks";
+  flags: Flags;
+}
+
 interface JournalArgs {
   command: "journal";
   sub: string;
@@ -193,6 +200,7 @@ type CliArgs =
   | GarminPushArgs
   | GarminRouteArgs
   | GarminBackfillArgs
+  | GarminTracksArgs
   | JournalArgs
   | SummaryArgs
   | WellnessArgs;
@@ -326,6 +334,9 @@ function parseArgs(): CliArgs {
   if (args[0] === "garmin-backfill") {
     return { command: "garmin-backfill", flags: parseFlags(args.slice(1)) };
   }
+  if (args[0] === "garmin-tracks") {
+    return { command: "garmin-tracks", flags: parseFlags(args.slice(1)) };
+  }
 
   if (args[0] === "journal") {
     const sub = args[1] && !args[1].startsWith("--") ? args[1] : "list";
@@ -432,6 +443,7 @@ Commands:
   garmin-push <file>      Create + schedule a plan's workouts on Garmin (--dry-run to preview)
   garmin-route <file.gpx> Upload a GPX as a Garmin course (--name, --type, --dry-run)
   garmin-backfill         Backfill history into the DB (--from=|--days= --to= [--full] [--force])
+  garmin-tracks           Download + store each activity's GPS track ([--limit=] [--id=] [--force])
   journal add "<text>"    Add a free-text journal entry (--tag= --date=)
   journal list            List journal entries (--since= --until= --limit= --json)
   summary                 Bundle the week's journal + wellness as JSON (--since= --to=)
@@ -1123,6 +1135,56 @@ async function runGarminBackfill(args: GarminBackfillArgs): Promise<void> {
   );
   if (res.errors.length)
     log.warn(`${res.errors.length} non-fatal errors (first: ${res.errors[0]})`);
+}
+
+/**
+ * Download + store each activity's GPS track (one compact polyline per activity),
+ * for the map + "create a course from this activity" features. Resumable (skips
+ * activities that already have a track unless --force), throttled with 429 backoff.
+ */
+async function runGarminTracks(args: GarminTracksArgs): Promise<void> {
+  await ensureDb();
+  const force = Boolean(args.flags["force"]);
+  const limit = flagNum(args.flags, "limit");
+  const onlyId = flagStr(args.flags, "id");
+  const delayMs = flagNum(args.flags, "delay-ms") ?? 600;
+
+  const where = onlyId ? `id = ${Math.trunc(Number(onlyId))}` : force ? "1=1" : "gps_track IS NULL";
+  const rows = await queryJson<{ id: number }>(
+    `SELECT id FROM activities WHERE ${where} ORDER BY start_date DESC${limit ? ` LIMIT ${Math.round(limit)}` : ""};`
+  );
+  if (rows.length === 0) {
+    log.success("No activities need a GPS track.");
+    return;
+  }
+
+  const client = await GarminClient.create();
+  const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+  let withTrack = 0;
+  let empty = 0;
+  let errors = 0;
+  log.start(`Fetching GPS tracks for ${rows.length} activities…`);
+  for (const r of rows) {
+    try {
+      const points = decimate(await fetchActivityTrack(client, r.id));
+      await execute(
+        `UPDATE activities SET gps_track = ${escapeString(toCompactTrack(points))} WHERE id = ${Math.trunc(Number(r.id))};`
+      );
+      if (points.length >= 2) withTrack++;
+      else empty++;
+    } catch {
+      errors++;
+    }
+    await sleep(delayMs);
+  }
+  const result = { processed: rows.length, withTrack, empty, errors };
+  if (args.flags["json"]) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+  log.success(
+    `GPS tracks: ${withTrack} with a route, ${empty} without (indoor/no-GPS), ${errors} errors.`
+  );
 }
 
 async function runJournal(args: JournalArgs): Promise<void> {
@@ -2101,6 +2163,9 @@ async function main() {
       break;
     case "garmin-backfill":
       await runGarminBackfill(args);
+      break;
+    case "garmin-tracks":
+      await runGarminTracks(args);
       break;
     case "journal":
       await runJournal(args);
