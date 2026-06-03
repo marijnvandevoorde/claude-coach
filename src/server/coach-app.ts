@@ -18,6 +18,7 @@ import {
   upsertWellness,
   getPrefs,
   getWellness,
+  recentNotifyLog,
 } from "../db/wellness.js";
 import { addJournalEntry } from "../db/journal.js";
 import { assembleReadinessSignals } from "../lib/readiness.js";
@@ -31,6 +32,7 @@ import { log } from "../lib/logging.js";
 import { uploadRoute } from "../garmin/routes.js";
 import { GarminClient } from "../garmin/client.js";
 import { fetchActivityStreams, toCompactStreams, type ActivityStreams } from "../garmin/streams.js";
+import { fetchActivityTrack, decimate, toCompactTrack } from "../garmin/tracks.js";
 import { courseTypeFromSport, trackToGpx } from "./course-gpx.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -207,22 +209,32 @@ function api(): express.Router {
         res.status(404).json({ error: "not found" });
         return;
       }
-      const track = parseTrack(a.gps_track);
+      let track = parseTrack(a.gps_track);
 
-      // Lazy-populate the real splits + HR/pace streams on first view. Best effort:
-      // if Garmin is unreachable, fall through with empty streams (don't store a
-      // sentinel, so a later view can retry).
+      // Lazy-populate the GPS track + splits/HR streams on first view, so the map
+      // and charts self-heal if the daily fetch didn't capture them. Best effort:
+      // if Garmin is unreachable, fall through with what we have and retry on a
+      // later view. One client serves both fetches.
       let streams = parseStreams(a.activity_streams);
-      if (a.activity_streams == null) {
+      const needTrack = a.gps_track == null;
+      const needStreams = a.activity_streams == null;
+      if (needTrack || needStreams) {
         try {
           const client = await GarminClient.create();
-          const fetched = await fetchActivityStreams(client, id);
-          await execute(
-            `UPDATE activities SET activity_streams = ${esc(toCompactStreams(fetched))} WHERE id = ${id};`
-          );
-          streams = fetched;
+          if (needTrack) {
+            const compact = toCompactTrack(decimate(await fetchActivityTrack(client, id)));
+            await execute(`UPDATE activities SET gps_track = ${esc(compact)} WHERE id = ${id};`);
+            track = parseTrack(compact) ?? track;
+          }
+          if (needStreams) {
+            const fetched = await fetchActivityStreams(client, id);
+            await execute(
+              `UPDATE activities SET activity_streams = ${esc(toCompactStreams(fetched))} WHERE id = ${id};`
+            );
+            streams = fetched;
+          }
         } catch {
-          /* keep streams null → empty arrays in the response, retry on a later view */
+          /* leave what we have; a later view retries (no sentinel stored on failure) */
         }
       }
 
@@ -251,6 +263,17 @@ function api(): express.Router {
         `SELECT id, local_date, entry, tag, created_at FROM journal ${where} ORDER BY local_date DESC, id DESC LIMIT ${limit};`
       );
       res.json(rows);
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // Notification delivery log — recent push attempts (per type) so the user can
+  // see whether a channel (e.g. the Home Assistant webhook) is the weak link.
+  r.get("/notify-log", async (req, res, next) => {
+    try {
+      const limit = Math.min(200, intParam(req.query.limit, 50));
+      res.json(await recentNotifyLog(limit));
     } catch (e) {
       next(e);
     }

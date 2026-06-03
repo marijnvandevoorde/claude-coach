@@ -35,6 +35,7 @@ export interface ReminderPrefs {
   hydration_goal_ml: number;
   water_cadence_minutes: number;
   hydration_per_active_hour_ml: number;
+  move_cadence_minutes: number;
   quiet_hours_start: string | null;
   quiet_hours_end: string | null;
   timezone: string | null;
@@ -58,6 +59,7 @@ export type PrefsPatch = Partial<{
   hydration_goal_ml: number;
   water_cadence_minutes: number;
   hydration_per_active_hour_ml: number;
+  move_cadence_minutes: number;
   quiet_hours_start: string | null;
   quiet_hours_end: string | null;
   timezone: string | null;
@@ -160,6 +162,7 @@ export interface WellnessRow {
   garmin_raw: string | null;
   last_water_reminder_at: string | null;
   last_bedtime_reminder_at: string | null;
+  last_move_reminder_at: string | null;
   updated_at: string | null;
 }
 
@@ -172,6 +175,7 @@ const WELLNESS_TEXT_COLS = new Set([
   "garmin_raw",
   "last_water_reminder_at",
   "last_bedtime_reminder_at",
+  "last_move_reminder_at",
 ]);
 
 export async function getWellness(date?: string): Promise<WellnessRow | null> {
@@ -211,5 +215,46 @@ export async function upsertWellness(
       "local_date",
       updateCols
     )
+  );
+}
+
+// ----------------------------------------------------------------------------
+// Notification delivery log (so a flaky channel is observable / debuggable)
+// ----------------------------------------------------------------------------
+
+export interface NotifyLogRow {
+  id: number;
+  sent_at: string;
+  reminder_type: string | null;
+  channel: string | null;
+  ok: number;
+  detail: string | null;
+}
+
+/** Record one delivery attempt. Best-effort: never throws (logging must not break a send). */
+export async function logNotify(
+  reminderType: string,
+  channel: string,
+  ok: boolean,
+  detail: string
+): Promise<void> {
+  try {
+    await execute(
+      `INSERT INTO notify_log (sent_at, reminder_type, channel, ok, detail) VALUES (${getDialect().now()}, ${esc(
+        reminderType
+      )}, ${esc(channel)}, ${ok ? 1 : 0}, ${esc(detail)});`
+    );
+  } catch {
+    /* best effort */
+  }
+}
+
+/** Recent delivery attempts (newest first) for the app / MCP to surface. */
+export async function recentNotifyLog(limit = 50): Promise<NotifyLogRow[]> {
+  return queryJson<NotifyLogRow>(
+    `SELECT id, sent_at, reminder_type, channel, ok, detail FROM notify_log ORDER BY sent_at DESC LIMIT ${Math.max(
+      1,
+      Math.round(limit)
+    )};`
   );
 }

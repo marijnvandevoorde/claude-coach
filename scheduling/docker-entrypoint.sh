@@ -42,7 +42,7 @@ printenv | grep -E '^(COACH_|GARMINTOKENS|TZ)=' > "$CRONTAB"
 cat >> "$CRONTAB" <<EOF
 ${COACH_GARMIN_FETCH_CRON:-15 7 * * *} node /app/dist/cli.js garmin-fetch >> /proc/1/fd/1 2>&1
 ${COACH_MORNING_CRON:-30 7 * * *} node /app/dist/cli.js checkin --notify >> /proc/1/fd/1 2>&1
-${COACH_HYDRATION_CRON:-0 9-21 * * *} node /app/dist/cli.js checkin --notify --only=hydration >> /proc/1/fd/1 2>&1
+${COACH_HYDRATION_CRON:-0 9-21 * * *} node /app/dist/cli.js checkin --notify --only=hydration,move >> /proc/1/fd/1 2>&1
 ${COACH_BEDTIME_CRON:-0 22 * * *} node /app/dist/cli.js checkin --notify --only=bedtime >> /proc/1/fd/1 2>&1
 EOF
 

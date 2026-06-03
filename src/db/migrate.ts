@@ -41,6 +41,13 @@ export async function migrate(silent = false): Promise<void> {
     "activity_streams",
     dialect.driver === "mysql" ? "LONGTEXT" : "TEXT"
   );
+  // Move-nudge cadence pref + its per-day dedup timestamp (added after prod existed).
+  await ensureColumn("reminder_prefs", "move_cadence_minutes", "INTEGER DEFAULT 120");
+  await ensureColumn(
+    "wellness_state",
+    "last_move_reminder_at",
+    dialect.driver === "mysql" ? "VARCHAR(32)" : "TEXT"
+  );
 
   // Single-row shared Garmin OAuth token + lease lock (one row, id=1). Portable
   // across both backends. See src/garmin/client.ts for why it lives in the DB.

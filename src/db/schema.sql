@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS reminder_prefs (
   hydration_goal_ml INTEGER DEFAULT 2500, -- daily water goal (ml)
   water_cadence_minutes INTEGER DEFAULT 60, -- min between water nudges while awake
   hydration_per_active_hour_ml INTEGER DEFAULT 500, -- extra fluid goal per hour of training
+  move_cadence_minutes INTEGER DEFAULT 120, -- min between "get up and move" nudges (0 = off)
   quiet_hours_start TEXT,                 -- local 'HH:MM' — no reminders after
   quiet_hours_end TEXT,                   -- local 'HH:MM' — no reminders before
   timezone TEXT,                          -- IANA tz, e.g. 'Europe/Brussels'
@@ -150,6 +151,7 @@ CREATE TABLE IF NOT EXISTS wellness_state (
   -- reminder bookkeeping (so nudges don't repeat)
   last_water_reminder_at TEXT,    -- UTC ISO 8601
   last_bedtime_reminder_at TEXT,  -- UTC ISO 8601
+  last_move_reminder_at TEXT,     -- UTC ISO 8601
   updated_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -174,6 +176,27 @@ CREATE TABLE IF NOT EXISTS journal (
   created_at TEXT DEFAULT (datetime('now')) -- UTC ISO 8601
 );
 CREATE INDEX IF NOT EXISTS idx_journal_date ON journal(local_date);
+
+-- Delivery log for push notifications (so a flaky channel is observable).
+CREATE TABLE IF NOT EXISTS notify_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  sent_at TEXT DEFAULT (datetime('now')), -- UTC ISO 8601
+  reminder_type TEXT,                     -- hydration | move | bedtime | recovery | manual
+  channel TEXT,                           -- webhook | webpush | macos | stdout
+  ok INTEGER,                             -- 1 = delivered, 0 = failed
+  detail TEXT                             -- HTTP status / error
+);
+CREATE INDEX IF NOT EXISTS idx_notify_sent_at ON notify_log(sent_at);
+
+-- Web Push (PWA) subscriptions — one row per browser/device subscription.
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  endpoint TEXT PRIMARY KEY,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  user_agent TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  last_ok_at TEXT
+);
 
 CREATE INDEX IF NOT EXISTS idx_hydration_local_date ON hydration_log(local_date);
 
