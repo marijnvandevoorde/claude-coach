@@ -157,28 +157,48 @@ export function Activities({ onOpenActivity }: { onOpenActivity: (id: number) =>
   );
 }
 
-/* ---------- upload your own GPX → Garmin (optimistic, simulated) ---------- */
+/* ---------- upload your own GPX → Garmin course (real) ---------- */
 export function GpxImport() {
-  const [state, setState] = useState<"idle" | "uploading" | "done">("idle");
+  const [state, setState] = useState<"idle" | "uploading" | "done" | "error">("idle");
   const [name, setName] = useState("");
+  const [err, setErr] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const pick = () => inputRef.current?.click();
-  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
-    setName(f ? f.name : "route.gpx");
+    e.target.value = ""; // allow re-picking the same file
+    if (!f) return;
+    setName(f.name);
+    setErr(null);
     setState("uploading");
-    setTimeout(() => setState("done"), 1200);
+    try {
+      const gpx = await f.text();
+      await api.uploadRoute(gpx, { name: f.name.replace(/\.gpx$/i, "") });
+      setState("done");
+    } catch (ex) {
+      setErr(ex instanceof Error ? ex.message : "Upload failed");
+      setState("error");
+    }
+  };
+  const reset = () => {
+    setState("idle");
+    setName("");
+    setErr(null);
   };
   return (
     <div
       className="card"
       style={{
         borderColor:
-          state === "done" ? "color-mix(in oklch, var(--go) 45%, transparent)" : "var(--accent-line)",
+          state === "done"
+            ? "color-mix(in oklch, var(--go) 45%, transparent)"
+            : state === "error"
+              ? "color-mix(in oklch, var(--back) 45%, transparent)"
+              : "var(--accent-line)",
         marginBottom: 4,
       }}
     >
-      <input ref={inputRef} type="file" accept=".gpx,.fit" style={{ display: "none" }} onChange={onFile} />
+      <input ref={inputRef} type="file" accept=".gpx" style={{ display: "none" }} onChange={onFile} />
       {state === "idle" && (
         <button
           onClick={pick}
@@ -219,17 +239,28 @@ export function GpxImport() {
               {name} · available as a course on your watch
             </div>
           </div>
-          <button
-            className="chip"
-            style={{ cursor: "pointer" }}
-            onClick={() => {
-              setState("idle");
-              setName("");
-            }}
-          >
+          <button className="chip" style={{ cursor: "pointer" }} onClick={reset}>
             another
           </button>
         </div>
+      )}
+      {state === "error" && (
+        <button
+          onClick={reset}
+          style={{ all: "unset", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, width: "100%" }}
+        >
+          <div className="sport-chip" style={{ background: "var(--back-dim)", color: "var(--back)" }}>
+            <Icon name="info" size={18} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 600, fontSize: 14.5, color: "var(--back)" }}>
+              Couldn't upload {name}
+            </div>
+            <div className="ctx-note" style={{ marginTop: 2 }}>
+              {err ?? "Something went wrong."} · tap to try another
+            </div>
+          </div>
+        </button>
       )}
     </div>
   );

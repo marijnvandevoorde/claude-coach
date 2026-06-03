@@ -13,7 +13,16 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!r.ok) throw new Error(`POST ${path} → ${r.status}`);
+  if (!r.ok) {
+    let msg = `POST ${path} → ${r.status}`;
+    try {
+      const j = (await r.json()) as { error?: unknown };
+      if (typeof j?.error === "string") msg = j.error;
+    } catch {
+      /* no JSON body — keep the status message */
+    }
+    throw new Error(msg);
+  }
   return (await r.json()) as T;
 }
 
@@ -43,6 +52,11 @@ export const api = {
   courseFromActivity: (activityId: number, opts?: { name?: string; type?: string }) =>
     post<{ courseId: number | null; name: string }>("/course-from-activity", {
       activityId,
+      ...opts,
+    }),
+  uploadRoute: (gpx: string, opts?: { name?: string; type?: string }) =>
+    post<{ courseId: number | null; name: string; points?: number }>("/upload-route", {
+      gpx,
       ...opts,
     }),
 };

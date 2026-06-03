@@ -466,6 +466,38 @@ function api(): express.Router {
     }
   });
 
+  // Upload a user-supplied GPX file as a Garmin course (route).
+  // Real write: parses the GPX body and uploads via uploadRoute (same path as
+  // the CLI/MCP `garmin-route`).
+  r.post("/upload-route", async (req, res, next) => {
+    try {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const gpx = body.gpx;
+      if (typeof gpx !== "string" || gpx.trim().length === 0) {
+        res.status(400).json({ error: "gpx (the GPX file contents) is required" });
+        return;
+      }
+      if (body.name !== undefined && typeof body.name !== "string") {
+        res.status(400).json({ error: "name must be a string" });
+        return;
+      }
+      if (body.type !== undefined && typeof body.type !== "string") {
+        res.status(400).json({ error: "type must be a string" });
+        return;
+      }
+      const name = (typeof body.name === "string" && body.name.trim()) || undefined;
+      const type = (typeof body.type === "string" && body.type.trim()) || undefined;
+      try {
+        const result = await uploadRoute({ gpx, name, type });
+        res.json({ courseId: result.courseId ?? null, name: result.name, points: result.points });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+      }
+    } catch (e) {
+      next(e);
+    }
+  });
+
   return r;
 }
 
@@ -480,7 +512,8 @@ async function main(): Promise<void> {
   app.get("/healthz", (_req, res) => res.json({ ok: true, service: "coach-app" }));
 
   // JSON API — behind Cloudflare Access.
-  app.use("/api", accessMiddleware(), express.json({ limit: "1mb" }), api());
+  // 8mb so a long ride's GPX (thousands of trackpoints) fits the upload-route body.
+  app.use("/api", accessMiddleware(), express.json({ limit: "8mb" }), api());
 
   // Static SPA (built to dist/app), also behind Access; SPA fallback for client routes.
   if (existsSync(APP_DIR)) {
