@@ -1194,14 +1194,12 @@ body:has(.desktop) {
   width: 100%;
 }
 
-/* dashboard + trends: balanced masonry columns */
-.desktop .dash-page,
-.desktop .trends-page {
+/* dashboard: balanced masonry columns */
+.desktop .dash-page {
   column-count: 2;
   column-gap: 18px;
 }
-.desktop .dash-page > *,
-.desktop .trends-page > * {
+.desktop .dash-page > * {
   break-inside: avoid;
   margin: 0 0 18px;
 }
@@ -1211,12 +1209,23 @@ body:has(.desktop) {
 .desktop .recovery-sec .lbl {
   margin-top: 0 !important;
 }
-.desktop .trends-page .seg {
-  column-span: all;
-  margin-bottom: 18px;
-}
 .desktop .dash-page .hero {
   padding: 30px 16px;
+}
+
+/* trends: explicit 2-col grid — reliable for the ResizeObserver-measured charts
+   (CSS multi-columns mis-measure them). The window selector spans both columns. */
+.desktop .trends-page {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  align-items: start;
+}
+.desktop .trends-page > * {
+  margin: 0;
+}
+.desktop .trends-page .seg {
+  grid-column: 1 / -1;
 }
 
 /* calendar: roomy single column, heatmap breathes */
@@ -1230,12 +1239,12 @@ body:has(.desktop) {
   gap: 8px;
 }
 
-/* activities + journal: comfortable reading column */
+/* activities + journal: wide like the calendar screen */
 .desktop .act-page {
-  max-width: 760px;
+  max-width: 940px;
 }
 .desktop .jrnl-page {
-  max-width: 660px;
+  max-width: 940px;
 }
 
 /* — detail sheets become a right-side drawer — */
@@ -1277,9 +1286,12 @@ body:has(.desktop) {
 }
 
 @media (max-width: 1180px) {
-  .desktop .dash-page,
-  .desktop .trends-page {
+  .desktop .dash-page {
     column-count: 1;
+    max-width: 720px;
+  }
+  .desktop .trends-page {
+    grid-template-columns: 1fr;
     max-width: 720px;
   }
 }

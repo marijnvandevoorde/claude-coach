@@ -90,13 +90,51 @@ function Sidebar({
   );
 }
 
+// --- URL routing (History API): /app/<tab> + ?day=/?activity= so refresh and
+// direct links land on the same view. (The server SPA-fallback serves index.html
+// for any /app/* path.)
+const TAB_IDS = TABS.map((t) => t.id) as string[];
+function readRoute(): { tab: TabId; day: string | null; activity: number | null } {
+  const seg = window.location.pathname.replace(/^\/app\/?/, "").split(/[/?#]/)[0];
+  const tab = (TAB_IDS.includes(seg) ? seg : "today") as TabId;
+  const q = new URLSearchParams(window.location.search);
+  const day = q.get("day");
+  const act = q.get("activity");
+  return { tab, day: day || null, activity: act && /^\d+$/.test(act) ? Number(act) : null };
+}
+function routeUrl(tab: TabId, day: string | null, activity: number | null): string {
+  const q = new URLSearchParams();
+  if (day) q.set("day", day);
+  if (activity != null) q.set("activity", String(activity));
+  const qs = q.toString();
+  return `/app/${tab === "today" ? "" : tab}${qs ? `?${qs}` : ""}`;
+}
+
 export function App() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [tab, setTab] = useState<TabId>("today");
+  const [tab, setTab] = useState<TabId>(() => readRoute().tab);
   const [metric, setMetric] = useState<MetricKey>("readiness");
   const [win, setWin] = useState(42);
-  const [daySheet, setDaySheet] = useState<string | null>(null);
-  const [activityId, setActivityId] = useState<number | null>(null);
+  const [daySheet, setDaySheet] = useState<string | null>(() => readRoute().day);
+  const [activityId, setActivityId] = useState<number | null>(() => readRoute().activity);
+
+  // Keep the URL in sync with the view, and react to back/forward.
+  useEffect(() => {
+    const want = routeUrl(tab, daySheet, activityId);
+    if (want !== window.location.pathname + window.location.search) {
+      window.history.pushState(null, "", want);
+    }
+  }, [tab, daySheet, activityId]);
+  useEffect(() => {
+    const onPop = () => {
+      const r = readRoute();
+      setTab(r.tab);
+      setDaySheet(r.day);
+      setActivityId(r.activity);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   // viewport-driven shell swap at 900px
   const [vw, setVw] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1200));
