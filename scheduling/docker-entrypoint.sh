@@ -15,6 +15,15 @@ if [ "$1" = "mcp" ]; then
   exit 1
 fi
 
+# App mode: the web app's HTTP service (serves the SPA + read-mostly /api), behind Cloudflare Access.
+if [ "$1" = "app" ]; then
+  if [ -f /app/dist/server/coach-app.js ]; then
+    exec node /app/dist/server/coach-app.js
+  fi
+  echo "coach: 'app' mode requested but the coach-app server isn't built yet." >&2
+  exit 1
+fi
+
 # Any other args: run the CLI once (e.g. `docker compose run --rm coach wellness`).
 if [ "$#" -gt 0 ]; then
   exec node /app/dist/cli.js "$@"
