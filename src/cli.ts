@@ -28,6 +28,7 @@ import {
   type ReminderPrefs,
 } from "./db/wellness.js";
 import { resolveNotify, sendNotification } from "./lib/notify.js";
+import { sendWebPush, webPushConfigured } from "./lib/webpush.js";
 import { recoveryLevelFromScore, type RecoveryLevel } from "./lib/recovery.js";
 import { assembleReadiness } from "./lib/readiness.js";
 import { generateIcs } from "./viewer/lib/export/ics.js";
@@ -1821,8 +1822,19 @@ async function runNotify(args: NotifyArgs): Promise<void> {
   });
   const result = await sendNotification(message, title, resolved);
   await logNotify("manual", resolved.channel, result.ok, result.detail);
-  if (result.ok) {
-    log.success(`Notified via ${resolved.channel} (${result.detail}).`);
+
+  // Fan out to PWA web-push too, unless a channel was explicitly forced.
+  let pushed = 0;
+  if (!flagStr(args.flags, "channel") && webPushConfigured()) {
+    const wp = await sendWebPush(title, message);
+    pushed = wp.sent;
+    await logNotify("manual", "webpush", wp.sent > 0, wp.detail);
+  }
+
+  if (result.ok || pushed > 0) {
+    log.success(
+      `Notified via ${resolved.channel} (${result.detail})${pushed > 0 ? ` + ${pushed} PWA push` : ""}.`
+    );
   } else {
     log.error(`Notify failed via ${resolved.channel}: ${result.detail}`);
     process.exit(1);
@@ -1956,13 +1968,19 @@ async function deliverReminders(
       const last = wellness?.last_bedtime_reminder_at;
       if (last && new Date(last).toDateString() === new Date().toDateString()) continue;
     }
-    const res = await sendNotification(
-      rem.message,
-      `Claude Coach — ${labels[rem.type] ?? "Recovery"}`,
-      resolved
-    );
+    const title = `Claude Coach — ${labels[rem.type] ?? "Recovery"}`;
+    const res = await sendNotification(rem.message, title, resolved);
     await logNotify(rem.type, resolved.channel, res.ok, res.detail);
-    if (!res.ok) {
+
+    // Fan out to PWA web-push too (a second, independent channel). The nudge
+    // counts as delivered if EITHER channel reached the user.
+    let delivered = res.ok;
+    if (webPushConfigured()) {
+      const wp = await sendWebPush(title, rem.message);
+      await logNotify(rem.type, "webpush", wp.sent > 0, wp.detail);
+      delivered = delivered || wp.sent > 0;
+    }
+    if (!delivered) {
       log.warn(`notify (${rem.type}) failed: ${res.detail}`);
       continue; // don't mark it sent — retry on the next cron tick
     }

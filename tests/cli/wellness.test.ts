@@ -32,6 +32,7 @@ describe("wellness data layer + migration", () => {
     expect(prefs.hydration_goal_ml).toBe(2500);
     expect(prefs.water_cadence_minutes).toBe(60);
     expect(prefs.hydration_per_active_hour_ml).toBe(500);
+    expect(prefs.move_cadence_minutes).toBe(120);
     expect(prefs.reminders_enabled).toBe(1);
     expect(prefs.notify_channel).toBe("auto");
     expect(prefs.notify_webhook_url).toBeNull();

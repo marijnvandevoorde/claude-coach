@@ -34,6 +34,8 @@ import { GarminClient } from "../garmin/client.js";
 import { fetchActivityStreams, toCompactStreams, type ActivityStreams } from "../garmin/streams.js";
 import { fetchActivityTrack, decimate, toCompactTrack } from "../garmin/tracks.js";
 import { courseTypeFromSport, trackToGpx } from "./course-gpx.js";
+import { saveSubscription, deleteSubscription, countSubscriptions } from "../db/pushSubs.js";
+import { vapidPublicKey, webPushConfigured, sendWebPush } from "../lib/webpush.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.COACH_APP_PORT || process.env.PORT || 8081);
@@ -274,6 +276,68 @@ function api(): express.Router {
     try {
       const limit = Math.min(200, intParam(req.query.limit, 50));
       res.json(await recentNotifyLog(limit));
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // --- PWA Web Push (a second notification channel) -------------------------
+
+  // Browser bootstrap: the VAPID public key + whether push is usable + current
+  // subscription count (so the UI can show "on/off").
+  r.get("/push/config", async (_req, res, next) => {
+    try {
+      res.json({
+        enabled: webPushConfigured(),
+        publicKey: vapidPublicKey(),
+        subscriptions: webPushConfigured() ? await countSubscriptions() : 0,
+      });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // Store a PushSubscription (from the SW's pushManager.subscribe). Idempotent.
+  r.post("/push/subscribe", async (req, res, next) => {
+    try {
+      const sub = req.body as {
+        endpoint?: unknown;
+        keys?: { p256dh?: unknown; auth?: unknown };
+      };
+      const endpoint = typeof sub?.endpoint === "string" ? sub.endpoint : "";
+      const p256dh = typeof sub?.keys?.p256dh === "string" ? sub.keys.p256dh : "";
+      const auth = typeof sub?.keys?.auth === "string" ? sub.keys.auth : "";
+      if (!endpoint || !p256dh || !auth) {
+        res.status(400).json({ error: "invalid subscription" });
+        return;
+      }
+      await saveSubscription({ endpoint, p256dh, auth }, req.get("user-agent"));
+      res.json({ ok: true });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // Drop a subscription (user turned notifications off, or it expired).
+  r.post("/push/unsubscribe", async (req, res, next) => {
+    try {
+      const endpoint = typeof req.body?.endpoint === "string" ? req.body.endpoint : "";
+      if (endpoint) await deleteSubscription(endpoint);
+      res.json({ ok: true });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // Send a one-off test push to all subscriptions (the "is it working?" button).
+  r.post("/push/test", async (_req, res, next) => {
+    try {
+      if (!webPushConfigured()) {
+        res.status(400).json({ error: "web push not configured" });
+        return;
+      }
+      const wp = await sendWebPush("Claude Coach", "Test notification — push is working. 🎉");
+      res.json({ ok: wp.sent > 0, ...wp });
     } catch (e) {
       next(e);
     }
@@ -557,7 +621,10 @@ async function main(): Promise<void> {
 }
 
 function noCacheHtml(res: express.Response, path: string): void {
-  if (path.endsWith("index.html")) res.setHeader("Cache-Control", "no-cache");
+  // index.html and the service worker must not be long-cached, or SPA/SW updates
+  // won't propagate (the rest is content-hashed and safe to cache for a year).
+  if (path.endsWith("index.html") || path.endsWith("sw.js"))
+    res.setHeader("Cache-Control", "no-cache");
 }
 
 main().catch((e) => {
