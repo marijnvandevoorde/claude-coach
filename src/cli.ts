@@ -43,6 +43,7 @@ import { uploadRoute, COURSE_TYPES } from "./garmin/routes.js";
 import { runBackfill, type BackfillSink } from "./garmin/backfill.js";
 import { GarminClient } from "./garmin/client.js";
 import { fetchActivityTrack, decimate, toCompactTrack } from "./garmin/tracks.js";
+import { fetchActivityStreams, toCompactStreams } from "./garmin/streams.js";
 import { addJournalEntry, listJournalEntries } from "./db/journal.js";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
@@ -167,6 +168,11 @@ interface GarminTracksArgs {
   flags: Flags;
 }
 
+interface GarminStreamsArgs {
+  command: "garmin-streams";
+  flags: Flags;
+}
+
 interface JournalArgs {
   command: "journal";
   sub: string;
@@ -202,6 +208,7 @@ type CliArgs =
   | GarminRouteArgs
   | GarminBackfillArgs
   | GarminTracksArgs
+  | GarminStreamsArgs
   | JournalArgs
   | SummaryArgs
   | WellnessArgs;
@@ -338,6 +345,9 @@ function parseArgs(): CliArgs {
   if (args[0] === "garmin-tracks") {
     return { command: "garmin-tracks", flags: parseFlags(args.slice(1)) };
   }
+  if (args[0] === "garmin-streams") {
+    return { command: "garmin-streams", flags: parseFlags(args.slice(1)) };
+  }
 
   if (args[0] === "journal") {
     const sub = args[1] && !args[1].startsWith("--") ? args[1] : "list";
@@ -445,6 +455,7 @@ Commands:
   garmin-route <file.gpx> Upload a GPX as a Garmin course (--name, --type, --dry-run)
   garmin-backfill         Backfill history into the DB (--from=|--days= --to= [--full] [--force])
   garmin-tracks           Download + store each activity's GPS track ([--limit=] [--id=] [--force])
+  garmin-streams          Download + store each activity's real splits + HR stream ([--limit=] [--id=] [--force])
   journal add "<text>"    Add a free-text journal entry (--tag= --date=)
   journal list            List journal entries (--since= --until= --limit= --json)
   summary                 Bundle the week's journal + wellness as JSON (--since= --to=)
@@ -1188,6 +1199,73 @@ async function runGarminTracks(args: GarminTracksArgs): Promise<void> {
   );
 }
 
+/**
+ * Fetch + store one activity's real splits + HR/pace streams. Returns whether
+ * real data was found (so callers can tally). Defensive — never throws.
+ */
+async function storeActivityStreams(
+  client: GarminClient,
+  id: number
+): Promise<"data" | "empty" | "error"> {
+  try {
+    const s = await fetchActivityStreams(client, id);
+    await execute(
+      `UPDATE activities SET activity_streams = ${escapeString(toCompactStreams(s))} WHERE id = ${Math.trunc(id)};`
+    );
+    return s.splits.length > 0 || s.hr.length > 0 ? "data" : "empty";
+  } catch {
+    return "error";
+  }
+}
+
+/**
+ * Download + store each activity's real splits + HR/pace streams (one compact
+ * JSON blob per activity), for the activity-detail screen. Resumable (skips
+ * activities that already have streams unless --force), throttled with 429 backoff.
+ */
+async function runGarminStreams(args: GarminStreamsArgs): Promise<void> {
+  await ensureDb();
+  const force = Boolean(args.flags["force"]);
+  const limit = flagNum(args.flags, "limit");
+  const onlyId = flagStr(args.flags, "id");
+  const delayMs = flagNum(args.flags, "delay-ms") ?? 600;
+
+  const where = onlyId
+    ? `id = ${Math.trunc(Number(onlyId))}`
+    : force
+      ? "1=1"
+      : "activity_streams IS NULL";
+  const rows = await queryJson<{ id: number }>(
+    `SELECT id FROM activities WHERE ${where} ORDER BY start_date DESC${limit ? ` LIMIT ${Math.round(limit)}` : ""};`
+  );
+  if (rows.length === 0) {
+    log.success("No activities need splits/streams.");
+    return;
+  }
+
+  const client = await GarminClient.create();
+  const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+  let withData = 0;
+  let empty = 0;
+  let errors = 0;
+  log.start(`Fetching splits + HR streams for ${rows.length} activities…`);
+  for (const r of rows) {
+    const res = await storeActivityStreams(client, r.id);
+    if (res === "data") withData++;
+    else if (res === "empty") empty++;
+    else errors++;
+    await sleep(delayMs);
+  }
+  const result = { processed: rows.length, withData, empty, errors };
+  if (args.flags["json"]) {
+    console.log(JSON.stringify(result, null, 2));
+    return;
+  }
+  log.success(
+    `Streams: ${withData} with splits/HR, ${empty} without (indoor/no-stream), ${errors} errors.`
+  );
+}
+
 async function runJournal(args: JournalArgs): Promise<void> {
   await ensureDb();
   if (args.sub === "add") {
@@ -1587,16 +1665,48 @@ async function runGarminFetch(args: GarminFetchArgs): Promise<void> {
 
   // Ingest recent activities (skip any without a usable id).
   let stored = 0;
+  const ids: number[] = [];
   for (const a of payload.activities ?? []) {
     if (a.id == null || !Number.isFinite(Number(a.id))) continue;
     await insertGarminActivity(a);
+    ids.push(Math.trunc(Number(a.id)));
     stored++;
+  }
+
+  // Pull each new activity's splits + HR streams now, so the web app reads them
+  // from the DB instead of a live Garmin call on first view. Bounded to the just-
+  // ingested activities, throttled, non-fatal, and skips ones already populated.
+  // `--no-streams` opts out (e.g. a fast wellness-only refresh).
+  let streamed = 0;
+  if (ids.length > 0 && !args.flags["no-streams"]) {
+    try {
+      const have = await queryJson<{ id: number }>(
+        `SELECT id FROM activities WHERE activity_streams IS NOT NULL AND id IN (${ids.join(",")});`
+      );
+      const haveSet = new Set(have.map((h) => h.id));
+      const todo = ids.filter((id) => !haveSet.has(id));
+      if (todo.length > 0) {
+        const client = await GarminClient.create();
+        for (const id of todo) {
+          if ((await storeActivityStreams(client, id)) === "data") streamed++;
+          await new Promise((r) => setTimeout(r, 400));
+        }
+      }
+    } catch {
+      /* non-fatal: the app's lazy fetch + the garmin-streams backfill still cover it */
+    }
   }
 
   if (args.flags["json"]) {
     console.log(
       JSON.stringify(
-        { date: payload.date, wellness: patch, activitiesStored: stored, errors: payload.errors },
+        {
+          date: payload.date,
+          wellness: patch,
+          activitiesStored: stored,
+          streamsStored: streamed,
+          errors: payload.errors,
+        },
         null,
         2
       )
@@ -2039,6 +2149,9 @@ async function main() {
       break;
     case "garmin-tracks":
       await runGarminTracks(args);
+      break;
+    case "garmin-streams":
+      await runGarminStreams(args);
       break;
     case "journal":
       await runJournal(args);
