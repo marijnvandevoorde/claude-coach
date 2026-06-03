@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS activities (
   gear_id VARCHAR(64),
   raw_json LONGTEXT,
   gps_track LONGTEXT,
+  activity_streams LONGTEXT,
   synced_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   KEY idx_activities_date (start_date),
   KEY idx_activities_sport (sport_type),

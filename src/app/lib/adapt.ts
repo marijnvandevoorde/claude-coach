@@ -5,6 +5,7 @@ import type {
   CalendarDay,
   ActivityRow,
   ActivityDetail,
+  ActivitySplit,
   Contribution,
 } from "../api";
 import { normSport } from "./coach";
@@ -177,6 +178,8 @@ export function adaptActivityRow(a: ActivityRow): ActivityView {
 export interface ActivityDetailView extends ActivityView {
   track: number[][] | null;
   calories: number | null;
+  splits: ActivitySplit[];
+  hrSeries: number[];
 }
 
 export function adaptActivityDetail(a: ActivityDetail): ActivityDetailView {
@@ -188,6 +191,8 @@ export function adaptActivityDetail(a: ActivityDetail): ActivityDetailView {
     elevation: a.total_elevation_gain != null ? Math.round(a.total_elevation_gain) : null,
     track: a.track ?? null,
     calories: a.calories,
+    splits: Array.isArray(a.splits) ? a.splits : [],
+    hrSeries: Array.isArray(a.hrSeries) ? a.hrSeries : [],
   };
 }
 

@@ -90,11 +90,20 @@ export interface ActivityRow {
   suffer_score: number | null;
   has_track: number;
 }
+export interface ActivitySplit {
+  idx: number;
+  distanceM: number;
+  durationS: number;
+  paceSecPerKm: number | null;
+  avgHr: number | null;
+}
 export interface ActivityDetail extends ActivityRow {
   track: number[][] | null;
   average_watts: number | null;
   total_elevation_gain: number | null;
   calories: number | null;
+  splits: ActivitySplit[];
+  hrSeries: number[];
 }
 export interface JournalEntry {
   id: number;

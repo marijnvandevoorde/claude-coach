@@ -36,6 +36,11 @@ export async function migrate(silent = false): Promise<void> {
   // Additive columns needed on BOTH backends for tables that already exist in prod
   // (CREATE TABLE IF NOT EXISTS won't alter them). ensureColumn ignores "duplicate column".
   await ensureColumn("activities", "gps_track", dialect.driver === "mysql" ? "LONGTEXT" : "TEXT");
+  await ensureColumn(
+    "activities",
+    "activity_streams",
+    dialect.driver === "mysql" ? "LONGTEXT" : "TEXT"
+  );
 
   if (!silent) log.success("Database schema initialized");
 }
