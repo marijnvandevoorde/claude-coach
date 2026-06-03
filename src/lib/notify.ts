@@ -67,16 +67,27 @@ export async function sendNotification(
   switch (resolved.channel) {
     case "webhook": {
       if (!resolved.webhookUrl) return { ok: false, detail: "no webhook URL configured" };
-      try {
-        const res = await fetch(resolved.webhookUrl, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ title, message }),
-        });
-        return { ok: res.ok, detail: `HTTP ${res.status}` };
-      } catch (err) {
-        return { ok: false, detail: `request failed: ${(err as Error).message}` };
+      // The webhook target (e.g. a self-hosted Home Assistant) can be briefly
+      // unreachable, so retry a few times with backoff before giving up.
+      const attempts = 3;
+      let detail = "no attempt";
+      for (let i = 0; i < attempts; i++) {
+        try {
+          const res = await fetch(resolved.webhookUrl, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ title, message }),
+            signal: AbortSignal.timeout(8000),
+          });
+          if (res.ok) return { ok: true, detail: `HTTP ${res.status}` };
+          detail = `HTTP ${res.status}`;
+          if (res.status < 500 && res.status !== 429) break; // 4xx won't fix on retry
+        } catch (err) {
+          detail = `request failed: ${(err as Error).message}`;
+        }
+        if (i < attempts - 1) await new Promise((r) => setTimeout(r, 750 * (i + 1)));
       }
+      return { ok: false, detail: `${detail} (after ${attempts} attempts)` };
     }
     case "macos": {
       const script = `display notification "${escapeAppleScript(message)}" with title "${escapeAppleScript(title)}"`;

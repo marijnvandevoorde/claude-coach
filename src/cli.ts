@@ -21,6 +21,7 @@ import {
   getWellness,
   upsertWellness,
   localDate,
+  logNotify,
   type PrefsPatch,
   type WellnessPatch,
   type WellnessRow,
@@ -1147,6 +1148,62 @@ async function runGarminBackfill(args: GarminBackfillArgs): Promise<void> {
   );
   if (res.errors.length)
     log.warn(`${res.errors.length} non-fatal errors (first: ${res.errors[0]})`);
+
+  // A --full backfill is the "complete" pass: also sweep any activities still
+  // missing a GPS track (e.g. a daily fetch that ran before the track-pull
+  // existed, or whose track fetch failed). NULL-only, so it's cheap once caught
+  // up. Opt out with --no-tracks.
+  if (full && !args.flags["no-tracks"]) {
+    try {
+      const missing = await queryJson<{ id: number }>(
+        `SELECT id FROM activities WHERE gps_track IS NULL ORDER BY start_date DESC;`
+      );
+      if (missing.length > 0) {
+        log.start(`Sweeping GPS tracks for ${missing.length} activities without one…`);
+        const client = await GarminClient.create();
+        const t = await fillTracks(
+          client,
+          missing.map((m) => m.id),
+          flagNum(args.flags, "delay-ms") ?? 600
+        );
+        log.success(
+          `GPS track sweep: ${t.withTrack} routes, ${t.empty} no-GPS, ${t.errors} errors.`
+        );
+      }
+    } catch (e) {
+      log.warn(`track sweep skipped: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+}
+
+/**
+ * Fetch + store the GPS track for each given activity id (compact polyline).
+ * Defensive per activity (never throws); throttled between calls. Shared by the
+ * `garmin-tracks` backfill and the nightly `garmin-backfill --full` track sweep.
+ */
+async function fillTracks(
+  client: GarminClient,
+  ids: Array<number | string>,
+  delayMs: number
+): Promise<{ withTrack: number; empty: number; errors: number }> {
+  const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+  let withTrack = 0;
+  let empty = 0;
+  let errors = 0;
+  for (const id of ids) {
+    try {
+      const points = decimate(await fetchActivityTrack(client, id));
+      await execute(
+        `UPDATE activities SET gps_track = ${escapeString(toCompactTrack(points))} WHERE id = ${Math.trunc(Number(id))};`
+      );
+      if (points.length >= 2) withTrack++;
+      else empty++;
+    } catch {
+      errors++;
+    }
+    await sleep(delayMs);
+  }
+  return { withTrack, empty, errors };
 }
 
 /**
@@ -1171,24 +1228,12 @@ async function runGarminTracks(args: GarminTracksArgs): Promise<void> {
   }
 
   const client = await GarminClient.create();
-  const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
-  let withTrack = 0;
-  let empty = 0;
-  let errors = 0;
   log.start(`Fetching GPS tracks for ${rows.length} activities…`);
-  for (const r of rows) {
-    try {
-      const points = decimate(await fetchActivityTrack(client, r.id));
-      await execute(
-        `UPDATE activities SET gps_track = ${escapeString(toCompactTrack(points))} WHERE id = ${Math.trunc(Number(r.id))};`
-      );
-      if (points.length >= 2) withTrack++;
-      else empty++;
-    } catch {
-      errors++;
-    }
-    await sleep(delayMs);
-  }
+  const { withTrack, empty, errors } = await fillTracks(
+    client,
+    rows.map((r) => r.id),
+    delayMs
+  );
   const result = { processed: rows.length, withTrack, empty, errors };
   if (args.flags["json"]) {
     console.log(JSON.stringify(result, null, 2));
@@ -1499,6 +1544,8 @@ async function runConfig(args: ConfigArgs): Promise<void> {
   if (waterGoal !== undefined) patch.hydration_goal_ml = Math.round(waterGoal);
   const cadence = flagNum(args.flags, "cadence");
   if (cadence !== undefined) patch.water_cadence_minutes = Math.round(cadence);
+  const moveCadence = flagNum(args.flags, "move-cadence");
+  if (moveCadence !== undefined) patch.move_cadence_minutes = Math.max(0, Math.round(moveCadence));
   const hydrationPerHour = flagNum(args.flags, "hydration-per-hour");
   if (hydrationPerHour !== undefined)
     patch.hydration_per_active_hour_ml = Math.round(hydrationPerHour);
@@ -1520,6 +1567,13 @@ async function runConfig(args: ConfigArgs): Promise<void> {
     console.log(JSON.stringify(prefs, null, 2));
     return;
   }
+  // Report the EFFECTIVE notify config: env (COACH_NOTIFY_*) overrides the DB at
+  // runtime, so show what reminders will actually use — not just the stored row.
+  const effChannel = process.env.COACH_NOTIFY_CHANNEL ?? prefs.notify_channel;
+  const effWebhook = process.env.COACH_NOTIFY_WEBHOOK_URL ?? prefs.notify_webhook_url;
+  const webhookNote = effWebhook
+    ? ` (webhook set${process.env.COACH_NOTIFY_WEBHOOK_URL ? ", from env" : ""})`
+    : " (no webhook)";
   log.box(
     [
       "Reminder preferences",
@@ -1529,9 +1583,10 @@ async function runConfig(args: ConfigArgs): Promise<void> {
       `  Water goal:    ${prefs.hydration_goal_ml} ml/day`,
       `  Water cadence: every ${prefs.water_cadence_minutes} min`,
       `  Water +load:   +${prefs.hydration_per_active_hour_ml} ml / training hour`,
+      `  Move cadence:  ${prefs.move_cadence_minutes > 0 ? `every ${prefs.move_cadence_minutes} min` : "off"}`,
       `  Quiet hours:   ${prefs.quiet_hours_start ?? "—"}–${prefs.quiet_hours_end ?? "—"}`,
       `  Timezone:      ${prefs.timezone ?? "(host default)"}`,
-      `  Notify:        ${prefs.notify_channel}${prefs.notify_webhook_url ? " (webhook set)" : ""}`,
+      `  Notify:        ${effChannel}${webhookNote}`,
     ].join("\n")
   );
   if (Object.keys(patch).length === 0) {
@@ -1765,6 +1820,7 @@ async function runNotify(args: NotifyArgs): Promise<void> {
       prefs.notify_webhook_url,
   });
   const result = await sendNotification(message, title, resolved);
+  await logNotify("manual", resolved.channel, result.ok, result.detail);
   if (result.ok) {
     log.success(`Notified via ${resolved.channel} (${result.detail}).`);
   } else {
@@ -1876,23 +1932,43 @@ async function deliverReminders(
     channel: process.env.COACH_NOTIFY_CHANNEL ?? prefs.notify_channel,
     webhookUrl: process.env.COACH_NOTIFY_WEBHOOK_URL ?? prefs.notify_webhook_url,
   });
+  const moveCadenceMs = (prefs.move_cadence_minutes || 0) * 60_000;
+  const labels: Record<string, string> = {
+    bedtime: "Bedtime",
+    hydration: "Hydration",
+    move: "Move",
+    recovery: "Recovery",
+  };
   const patch: WellnessPatch = {};
   for (const rem of reminders) {
     if (rem.suppressed) continue;
     if (only && !only.has(rem.type)) continue;
+    // Per-type dedup so a cron schedule doesn't spam. Computed up-front; the
+    // bookkeeping timestamp is only committed once delivery actually succeeds
+    // (so a momentarily-unreachable webhook doesn't silently swallow a nudge).
     if (rem.type === "hydration") {
       const last = wellness?.last_water_reminder_at;
       if (last && Date.now() - Date.parse(last) < cadenceMs) continue;
-      patch.last_water_reminder_at = nowIso;
+    } else if (rem.type === "move") {
+      const last = wellness?.last_move_reminder_at;
+      if (last && Date.now() - Date.parse(last) < moveCadenceMs) continue;
     } else if (rem.type === "bedtime") {
       const last = wellness?.last_bedtime_reminder_at;
       if (last && new Date(last).toDateString() === new Date().toDateString()) continue;
-      patch.last_bedtime_reminder_at = nowIso;
     }
-    const label =
-      rem.type === "bedtime" ? "Bedtime" : rem.type === "hydration" ? "Hydration" : "Recovery";
-    const res = await sendNotification(rem.message, `Claude Coach — ${label}`, resolved);
-    if (!res.ok) log.warn(`notify (${rem.type}) failed: ${res.detail}`);
+    const res = await sendNotification(
+      rem.message,
+      `Claude Coach — ${labels[rem.type] ?? "Recovery"}`,
+      resolved
+    );
+    await logNotify(rem.type, resolved.channel, res.ok, res.detail);
+    if (!res.ok) {
+      log.warn(`notify (${rem.type}) failed: ${res.detail}`);
+      continue; // don't mark it sent — retry on the next cron tick
+    }
+    if (rem.type === "hydration") patch.last_water_reminder_at = nowIso;
+    else if (rem.type === "move") patch.last_move_reminder_at = nowIso;
+    else if (rem.type === "bedtime") patch.last_bedtime_reminder_at = nowIso;
   }
   if (Object.keys(patch).length > 0) await upsertWellness(date, patch);
 }
@@ -1995,6 +2071,18 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
         message: `You're ${-toBed} min past your ${prefs.bedtime_target} bedtime target — time to wrap up and sleep (hydrate first). 💧`,
       });
     }
+  }
+
+  // 4b. Move / get-up nudge (gentle, Garmin move-bar style). The per-type cadence
+  // (move_cadence_minutes; 0 = off) and dedup live in deliverReminders — here we
+  // only emit it inside the active day window, suppressed during quiet hours.
+  if (enabled && (prefs.move_cadence_minutes ?? 0) > 0 && nowMin >= wake && nowMin < bed) {
+    reminders.push({
+      type: "move",
+      priority: "normal",
+      suppressed: inQuiet,
+      message: "Time to move — stand up and walk or stretch for a couple of minutes. 🚶",
+    });
   }
 
   // 5. Recovery assessment from cached Garmin / logged signals.

@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS reminder_prefs (
   hydration_goal_ml INT DEFAULT 2500,
   water_cadence_minutes INT DEFAULT 60,
   hydration_per_active_hour_ml INT DEFAULT 500,
+  move_cadence_minutes INT DEFAULT 120,
   quiet_hours_start VARCHAR(8),
   quiet_hours_end VARCHAR(8),
   timezone VARCHAR(64),
@@ -142,6 +143,7 @@ CREATE TABLE IF NOT EXISTS wellness_state (
   garmin_raw LONGTEXT,
   last_water_reminder_at VARCHAR(32),
   last_bedtime_reminder_at VARCHAR(32),
+  last_move_reminder_at VARCHAR(32),
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -161,6 +163,27 @@ CREATE TABLE IF NOT EXISTS journal (
   tag VARCHAR(48),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   KEY idx_journal_date (local_date)
+);
+
+-- Delivery log for push notifications (so a flaky channel is observable).
+CREATE TABLE IF NOT EXISTS notify_log (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  reminder_type VARCHAR(24),     -- hydration | move | bedtime | recovery | manual
+  channel VARCHAR(16),           -- webhook | webpush | macos | stdout
+  ok TINYINT,                    -- 1 = delivered, 0 = failed
+  detail TEXT,                   -- HTTP status / error
+  KEY idx_notify_sent_at (sent_at)
+);
+
+-- Web Push (PWA) subscriptions — one row per browser/device subscription.
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+  endpoint VARCHAR(512) PRIMARY KEY,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  user_agent TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  last_ok_at DATETIME
 );
 
 CREATE OR REPLACE VIEW hydration_daily AS
