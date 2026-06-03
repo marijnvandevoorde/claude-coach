@@ -96,3 +96,51 @@ Add a **custom connector** pointing at `https://coach.example.com/mcp` — on De
 - Registered clients persist to `oauth-clients.json` in `/data`; `coach.db` + Garmin tokens stay on your volume. Single-user, personal use.
 
 > Not yet verified end-to-end here (OAuth handshakes are fiddly). If a client errors: check `docker compose logs -f coach-mcp`, confirm the Google redirect URI matches `ISSUER/oauth/google/callback` **exactly**, and that `coach.example.com` is reachable **without** a Cloudflare Access challenge.
+
+---
+
+## Tier 3 — the web app (`/app`)
+
+The browse web app (React SPA + read-mostly JSON `/api`) runs as a **third service from the same image** in `app` mode, alongside `coach` (cron) and `coach-mcp`. It shares the `/data` volume + DB. Add to your host compose:
+
+```yaml
+coach-app:
+  image: ghcr.io/marijnvandevoorde/claude-coach:latest
+  command: ["app"]
+  container_name: coach-app
+  restart: unless-stopped
+  env_file: .env
+  environment:
+    COACH_DB_PATH: /data/coach.db
+    GARMINTOKENS: /data/garminconnect
+    COACH_APP_PORT: "8080"
+  volumes:
+    - ./data:/data
+  networks:
+    - traefik
+  labels:
+    - traefik.enable=true
+    # /app + /api on the same host as the MCP; PathPrefix is more specific so it wins over the
+    # MCP's host-only rule (explicit priority to be safe). /mcp + /oauth/* stay on coach-mcp.
+    - "traefik.http.routers.coach-app.rule=Host(`coach.small-victories.co`) && (PathPrefix(`/app`) || PathPrefix(`/api`))"
+    - traefik.http.routers.coach-app.priority=100
+    - traefik.http.routers.coach-app.entrypoints=websecure
+    - traefik.http.routers.coach-app.tls=true
+    - traefik.http.routers.coach-app.tls.certresolver=letsencrypt
+    - traefik.http.routers.coach-app.service=coach-app
+    - traefik.http.services.coach-app.loadbalancer.server.port=8080
+```
+
+### Auth — a separate Cloudflare Zero Trust Access app (REQUIRED before exposing)
+
+`/app` + `/api` are browser-interactive, so they're protected by **Cloudflare Access** (not the MCP's OAuth). Create a **second** Zero Trust Access application scoped to `coach.small-victories.co/app` and `/api` (Google IdP, your email allowlist). Then set on `coach-app` (in `.env`):
+
+| Var                          | What                                                |
+| ---------------------------- | --------------------------------------------------- |
+| `COACH_ACCESS_TEAM_DOMAIN`   | e.g. `https://small-victories.cloudflareaccess.com` |
+| `COACH_ACCESS_AUD`           | the Access application's AUD tag                    |
+| `COACH_OAUTH_ALLOWED_EMAILS` | reused allowlist (already set for the MCP)          |
+
+`coach-app` verifies the `Cf-Access-Jwt-Assertion` at the origin (team JWKS + AUD) and re-checks the email — so even a direct-to-origin request is rejected. **If `COACH_ACCESS_TEAM_DOMAIN`/`AUD` are unset, `/api` is OPEN** (fine for local dev; do NOT expose publicly without the Access app + these vars). Leave `/mcp` on its own OAuth, untouched.
+
+Deploy: `docker compose pull coach-app && docker compose up -d coach-app`, then open `https://coach.small-victories.co/app`.
