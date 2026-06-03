@@ -47,6 +47,12 @@ export interface WebPushResult {
   detail: string;
 }
 
+/** A notification action button (shown by the SW where the platform supports it). */
+export interface PushAction {
+  action: string;
+  title: string;
+}
+
 /** Send one notification to a single subscription. Returns the HTTP status code. */
 async function sendOne(sub: PushSub, payload: string): Promise<number> {
   const res = await webpush.sendNotification(
@@ -61,13 +67,17 @@ async function sendOne(sub: PushSub, payload: string): Promise<number> {
  * subscription error never throws; 404/410 (gone) subscriptions are pruned so the
  * table self-cleans. Returns a tally for the delivery log.
  */
-export async function sendWebPush(title: string, message: string): Promise<WebPushResult> {
+export async function sendWebPush(
+  title: string,
+  message: string,
+  actions?: PushAction[]
+): Promise<WebPushResult> {
   if (!webPushConfigured())
     return { sent: 0, failed: 0, pruned: 0, detail: "VAPID not configured" };
   const subs = await listSubscriptions();
   if (subs.length === 0) return { sent: 0, failed: 0, pruned: 0, detail: "no subscriptions" };
 
-  const payload = JSON.stringify({ title, body: message, url: "/app/" });
+  const payload = JSON.stringify({ title, body: message, url: "/app/", actions });
   let sent = 0;
   let failed = 0;
   let pruned = 0;

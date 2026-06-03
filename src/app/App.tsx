@@ -240,6 +240,21 @@ export function App() {
     };
   }, []);
 
+  // A `?water=NNN` param means a notification action button couldn't log in the
+  // background (e.g. the Access session had expired) and handed off to the app.
+  // Log it once, then strip the param so a refresh doesn't double-count.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get("water");
+    if (!raw) return;
+    params.delete("water");
+    const qs = params.toString();
+    window.history.replaceState({}, "", window.location.pathname + (qs ? `?${qs}` : ""));
+    const ml = parseInt(raw, 10);
+    if (Number.isFinite(ml) && ml > 0 && ml <= 3000) addWater(ml);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function onSubj(k: "energy" | "mood", v: number) {
     setSubjective((s) => {
       const next = { ...s, [k]: s[k] === v ? undefined : v };

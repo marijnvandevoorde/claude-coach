@@ -1976,7 +1976,17 @@ async function deliverReminders(
     // counts as delivered if EITHER channel reached the user.
     let delivered = res.ok;
     if (webPushConfigured()) {
-      const wp = await sendWebPush(title, rem.message);
+      // Hydration nudges carry quick-log buttons so water can be logged straight
+      // from the notification. Platforms cap/ignore these, so they're additive only.
+      const actions =
+        rem.type === "hydration"
+          ? [
+              { action: "log-water-100", title: "100 ml" },
+              { action: "log-water-200", title: "200 ml" },
+              { action: "log-water-500", title: "500 ml" },
+            ]
+          : undefined;
+      const wp = await sendWebPush(title, rem.message, actions);
       await logNotify(rem.type, "webpush", wp.sent > 0, wp.detail);
       delivered = delivered || wp.sent > 0;
     }
