@@ -11,7 +11,7 @@
  * so the runtime image needs nothing but Node. This replaces the old
  * `scripts/garmin_fetch.py` (which did the same over Python's urllib).
  */
-import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -67,13 +67,16 @@ async function refreshAccess(tokens: GarminTokens): Promise<RefreshResponse> {
   return (await res.json()) as RefreshResponse;
 }
 
-/** Cache the latest access token + rotate the refresh token (best effort). */
+/** Cache the latest access token + rotate the refresh token (best effort).
+ * Writes atomically (tmp + rename) so a concurrent reader never sees a torn file. */
 function persist(path: string, tokens: GarminTokens, refreshed: RefreshResponse): void {
   try {
     const updated: GarminTokens = { ...tokens };
     if (refreshed.access_token) updated.di_token = refreshed.access_token;
     if (refreshed.refresh_token) updated.di_refresh_token = refreshed.refresh_token;
-    writeFileSync(path, JSON.stringify(updated));
+    const tmp = `${path}.tmp-${process.pid}`;
+    writeFileSync(tmp, JSON.stringify(updated));
+    renameSync(tmp, path);
   } catch {
     /* best effort — a read-only token store still works for this run */
   }
@@ -85,11 +88,26 @@ export class GarminClient {
 
   static async create(): Promise<GarminClient> {
     const path = tokenPath();
-    const tokens = loadTokens(path);
-    const refreshed = await refreshAccess(tokens);
-    if (!refreshed.access_token) throw new Error("refresh: no access_token in response");
-    persist(path, tokens, refreshed);
-    return new GarminClient(refreshed.access_token);
+    // Garmin rotates the refresh token on every refresh (single-use). Several
+    // processes share one token file, so two near-simultaneous refreshes race —
+    // the loser gets `invalid_grant`. Re-read the file (the winner has by then
+    // persisted the new token) and retry a few times before giving up.
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const tokens = loadTokens(path);
+      try {
+        const refreshed = await refreshAccess(tokens);
+        if (!refreshed.access_token) throw new Error("refresh: no access_token in response");
+        persist(path, tokens, refreshed);
+        return new GarminClient(refreshed.access_token);
+      } catch (e) {
+        lastErr = e;
+        const raced = /invalid_grant|invalid refresh|HTTP 400/i.test(String(e));
+        if (!raced || attempt === 2) throw e;
+        await new Promise((r) => setTimeout(r, 500 + attempt * 750));
+      }
+    }
+    throw lastErr;
   }
 
   private headers(extra?: Record<string, string>): Record<string, string> {
