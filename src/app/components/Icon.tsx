@@ -30,6 +30,7 @@ export type IconName =
   | "scale"
   | "check"
   | "undo"
+  | "refresh"
   | "settings"
   | "layers";
 
@@ -135,6 +136,12 @@ const PATHS: Record<IconName, ReactNode> = {
     <>
       <path d="M9 14L4 9l5-5" />
       <path d="M4 9h11a5 5 0 010 10h-3" />
+    </>
+  ),
+  refresh: (
+    <>
+      <path d="M20 11a8 8 0 10-1.5 5.5" />
+      <path d="M20 5v4h-4" />
     </>
   ),
   settings: (

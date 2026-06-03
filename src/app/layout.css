@@ -1402,3 +1402,50 @@ body:has(.desktop) {
     animation: none;
   }
 }
+
+/* ---------- pull-to-refresh (Garmin sync) ---------- */
+.ptr {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  overflow: hidden;
+  color: var(--muted, #7a8a90);
+  font-size: 12px;
+  font-weight: 500;
+  transition: opacity 0.15s ease;
+}
+.ptr-spin {
+  display: inline-flex;
+  color: var(--accent, #1f93a6);
+}
+.ptr-label {
+  letter-spacing: 0.02em;
+}
+@keyframes coach-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spinning {
+  animation: coach-spin 0.9s linear infinite;
+}
+
+/* Readiness gauge "syncing" affordance — a short bright arc that orbits the
+   ring while a Garmin sync runs (subtle glow, not a spinner). */
+.ring-glow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ring-orbit 1.8s linear infinite;
+}
+@keyframes ring-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinning,
+  .ring-glow {
+    animation: none;
+  }
+}

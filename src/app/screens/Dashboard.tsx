@@ -294,6 +294,7 @@ export function Dashboard({
   theme,
   onToggleTheme,
   showThemeToggle,
+  refreshing = false,
 }: {
   day: DayView;
   hrvSeries: (number | null)[];
@@ -305,6 +306,7 @@ export function Dashboard({
   theme: string;
   onToggleTheme: () => void;
   showThemeToggle: boolean;
+  refreshing?: boolean;
 }) {
   const [info, setInfo] = useState(false);
 
@@ -331,7 +333,7 @@ export function Dashboard({
         {topbar}
         <div className="page dash-page" style={{ paddingTop: 0 }}>
           <div className="card hero" style={{ padding: "30px 16px" }}>
-            <ReadinessRing value={null} />
+            <ReadinessRing value={null} refreshing={refreshing} />
             <div className="verdict-head" style={{ marginTop: 18 }}>
               Waiting on your watch
             </div>
@@ -364,7 +366,7 @@ export function Dashboard({
       <div className="page dash-page" style={{ paddingTop: 0 }}>
         {/* HERO */}
         <div className="card hero fade-in" style={{ padding: "22px 16px 22px" }}>
-          <ReadinessRing value={day.readiness} />
+          <ReadinessRing value={day.readiness} refreshing={refreshing} />
           <button className="est-tag" style={{ marginTop: 16 }} onClick={() => setInfo(true)}>
             <Icon name="info" size={12} /> Estimated readiness
           </button>

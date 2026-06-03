@@ -6,6 +6,7 @@
  * Runs as a third compose service alongside `coach` (cron) and `coach-mcp`.
  */
 import express from "express";
+import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -41,6 +42,65 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.COACH_APP_PORT || process.env.PORT || 8081);
 // dist/server/coach-app.js → dist/app
 const APP_DIR = join(__dirname, "..", "app");
+// dist/server/coach-app.js → dist/cli.js (the same CLI the cron + MCP run).
+const CLI = process.env.COACH_CLI || join(__dirname, "..", "cli.js");
+// Cap a server-triggered Garmin fetch so a slow/hung Garmin call can't tie up the request.
+const GARMIN_FETCH_TIMEOUT_MS = Number(process.env.COACH_APP_GARMIN_TIMEOUT_MS || 120_000);
+
+/**
+ * Run the same `garmin-fetch` the cron uses, as an ASYNC child process (a
+ * blocking spawnSync would freeze the event loop for the fetch's duration).
+ * Reuses the exact, tested fetch+ingest path instead of duplicating it here.
+ * `--no-streams` keeps the pull-to-refresh snappy — the app lazy-loads GPS
+ * tracks/streams on activity view anyway. Resolves with the CLI's JSON summary.
+ */
+// One garmin-fetch at a time, process-wide. A pull-to-refresh kicks this off and
+// returns immediately; the app polls /summary + this state to live-update as data
+// lands. (coach-app is a single instance, so an in-process guard is sufficient.)
+interface GarminRefreshState {
+  running: boolean;
+  startedAt: string | null;
+  finishedAt: string | null;
+  ok: boolean | null;
+  error?: string;
+}
+let garminRefreshState: GarminRefreshState = {
+  running: false,
+  startedAt: null,
+  finishedAt: null,
+  ok: null,
+};
+
+function garminFetch(date?: string): Promise<{ ok: boolean; data?: unknown; error?: string }> {
+  return new Promise((resolve) => {
+    const args = ["garmin-fetch", "--json", "--no-streams"];
+    if (date) args.push(`--date=${date}`);
+    const child = spawn("node", [CLI, ...args], { stdio: ["ignore", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGKILL");
+    }, GARMIN_FETCH_TIMEOUT_MS);
+    child.stdout.on("data", (d: Buffer) => (stdout += d.toString()));
+    child.stderr.on("data", (d: Buffer) => (stderr += d.toString()));
+    child.on("error", (e) => {
+      clearTimeout(timer);
+      resolve({ ok: false, error: e.message });
+    });
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      if (timedOut) return resolve({ ok: false, error: "garmin fetch timed out" });
+      if (code !== 0) return resolve({ ok: false, error: (stderr || `exit ${code}`).trim() });
+      try {
+        resolve({ ok: true, data: JSON.parse(stdout) });
+      } catch {
+        resolve({ ok: true, data: undefined }); // succeeded but produced no JSON
+      }
+    });
+  });
+}
 
 const esc = (s: string): string => `'${String(s).replace(/'/g, "''")}'`;
 const intParam = (v: unknown, def: number): number => {
@@ -584,6 +644,56 @@ function api(): express.Router {
       next(e);
     }
   });
+
+  // Trigger a live Garmin sync on the server (pull-to-refresh). Fire-and-poll:
+  // kicks off garmin-fetch in the background and returns immediately; the client
+  // re-fetches /summary (and polls GET /garmin/refresh) to live-update as the
+  // fresh wellness/activities land. Guarded so concurrent pulls don't pile up.
+  r.post("/garmin/refresh", async (req, res, next) => {
+    try {
+      const date = optDate((req.body ?? {}).date);
+      if (date === null) {
+        res.status(400).json({ error: "date must be YYYY-MM-DD" });
+        return;
+      }
+      if (garminRefreshState.running) {
+        res.status(202).json({ status: "running", startedAt: garminRefreshState.startedAt });
+        return;
+      }
+      garminRefreshState = {
+        running: true,
+        startedAt: new Date().toISOString(),
+        finishedAt: null,
+        ok: null,
+      };
+      void garminFetch(date || undefined)
+        .then((r) => {
+          if (!r.ok) log.warn(`garmin refresh failed: ${r.error}`);
+          garminRefreshState = {
+            running: false,
+            startedAt: garminRefreshState.startedAt,
+            finishedAt: new Date().toISOString(),
+            ok: r.ok,
+            error: r.ok ? undefined : r.error,
+          };
+        })
+        .catch((e) => {
+          garminRefreshState = {
+            running: false,
+            startedAt: garminRefreshState.startedAt,
+            finishedAt: new Date().toISOString(),
+            ok: false,
+            error: e instanceof Error ? e.message : String(e),
+          };
+        });
+      res.status(202).json({ status: "started" });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // Poll the state of the most recent (or in-flight) Garmin refresh.
+  r.get("/garmin/refresh", (_req, res) => res.json(garminRefreshState));
 
   return r;
 }
