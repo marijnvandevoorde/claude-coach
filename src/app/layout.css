@@ -6,7 +6,9 @@
 .app-root.mobile {
   position: relative;
   width: 100%;
-  min-height: 100vh;
+  min-height: 100vh; /* fallback for browsers without dvh */
+  min-height: 100dvh; /* match the *visible* viewport so the tab bar isn't pushed
+                          behind iOS Chrome's bottom toolbar */
   height: 100dvh;
   margin: 0 auto;
   max-width: 540px;
@@ -1213,8 +1215,19 @@ body:has(.desktop) {
   padding: 30px 16px;
 }
 
-/* trends: explicit 2-col grid — reliable for the ResizeObserver-measured charts
-   (CSS multi-columns mis-measure them). The window selector spans both columns. */
+/* trends: cards stack on mobile (the chart cards are now direct children, so
+   spacing lives here, not in a wrapper). */
+.trends-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.trends-page .seg {
+  margin-bottom: 0;
+}
+
+/* trends desktop: explicit 2-col grid — reliable for the ResizeObserver-measured
+   charts (CSS multi-columns mis-measure them). The window selector spans both. */
 .desktop .trends-page {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1228,23 +1241,13 @@ body:has(.desktop) {
   grid-column: 1 / -1;
 }
 
-/* calendar: roomy single column, heatmap breathes */
-.desktop .cal-page {
-  max-width: 940px;
-}
+/* calendar / activities / journal: same 1080px content width as Today + Trends
+   (inherited from .desktop .page) so titles and content share a left edge. */
 .desktop .cal-page .mcell {
   font-size: 14px;
 }
 .desktop .month-strip {
   gap: 8px;
-}
-
-/* activities + journal: wide like the calendar screen */
-.desktop .act-page {
-  max-width: 940px;
-}
-.desktop .jrnl-page {
-  max-width: 940px;
 }
 
 /* — detail sheets become a right-side drawer — */
