@@ -40,6 +40,11 @@ export const api = {
   logSubjective: (b: { energy?: number; mood?: number; date?: string }) =>
     post<unknown>("/subjective", b),
   addJournal: (b: { entry: string; tag?: string; date?: string }) => post<unknown>("/journal", b),
+  courseFromActivity: (activityId: number, opts?: { name?: string; type?: string }) =>
+    post<{ courseId: number | null; name: string }>("/course-from-activity", {
+      activityId,
+      ...opts,
+    }),
 };
 
 // --- response shapes (loose; refined as screens land) ---
