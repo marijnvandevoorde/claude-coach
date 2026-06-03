@@ -1,0 +1,1030 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Coach · App mockup</title>
+    <style>
+      :root {
+        --bg: #0f1115;
+        --card: #1a1d23;
+        --card2: #21252d;
+        --line: #2b313b;
+        --text: #e6e8eb;
+        --muted: #8b929e;
+        --green: #3fb950;
+        --amber: #d6a020;
+        --red: #f85149;
+        --blue: #4c8dff;
+        --accent: #5b9cff;
+      }
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #07080a;
+      }
+      body {
+        font:
+          15px/1.45 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        color: var(--text);
+        display: flex;
+        justify-content: center;
+      }
+      #frame {
+        width: 100%;
+        max-width: 430px;
+        background: var(--bg);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
+      }
+      header {
+        padding: 14px 16px 10px;
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        position: sticky;
+        top: 0;
+        background: linear-gradient(var(--bg), var(--bg) 70%, transparent);
+        z-index: 5;
+      }
+      header h1 {
+        font-size: 17px;
+        margin: 0;
+        font-weight: 650;
+      }
+      header .sub {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .banner {
+        background: #2a2410;
+        color: #e8c14a;
+        font-size: 11.5px;
+        text-align: center;
+        padding: 4px;
+      }
+      main {
+        flex: 1;
+        overflow-y: auto;
+        padding: 4px 14px 96px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 14px;
+        margin: 10px 0;
+      }
+      .card h3 {
+        margin: 0 0 10px;
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--muted);
+        font-weight: 600;
+      }
+      .row {
+        display: flex;
+        gap: 10px;
+      }
+      .row > * {
+        flex: 1;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .tiny {
+        font-size: 12px;
+      }
+      .big {
+        font-size: 30px;
+        font-weight: 700;
+      }
+      .pill {
+        display: inline-block;
+        padding: 2px 9px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .tap {
+        cursor: pointer;
+      }
+      /* nav */
+      nav {
+        position: sticky;
+        bottom: 0;
+        display: flex;
+        background: #14171d;
+        border-top: 1px solid var(--line);
+        position: fixed;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 430px;
+        bottom: 0;
+      }
+      nav button {
+        flex: 1;
+        background: none;
+        border: 0;
+        color: var(--muted);
+        padding: 9px 0 11px;
+        font-size: 10.5px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 3px;
+        cursor: pointer;
+        min-height: 52px;
+      }
+      nav button .ico {
+        font-size: 19px;
+        line-height: 1;
+      }
+      nav button.active {
+        color: var(--accent);
+      }
+      /* readiness ring */
+      .ring-wrap {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .verdict {
+        font-weight: 650;
+      }
+      .factors {
+        margin-top: 12px;
+        display: none;
+      }
+      .factors.open {
+        display: block;
+      }
+      .fbar {
+        display: grid;
+        grid-template-columns: 78px 1fr 34px;
+        gap: 8px;
+        align-items: center;
+        margin: 6px 0;
+        font-size: 12.5px;
+      }
+      .fbar .track {
+        height: 8px;
+        background: var(--card2);
+        border-radius: 4px;
+        position: relative;
+      }
+      .fbar .fill {
+        position: absolute;
+        top: 0;
+        height: 8px;
+        border-radius: 4px;
+      }
+      .tiles {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .tile {
+        background: var(--card2);
+        border-radius: 10px;
+        padding: 10px;
+      }
+      .tile .k {
+        color: var(--muted);
+        font-size: 11px;
+      }
+      .tile .v {
+        font-size: 20px;
+        font-weight: 650;
+        margin-top: 2px;
+      }
+      .spark {
+        display: flex;
+        align-items: flex-end;
+        gap: 3px;
+        height: 26px;
+        margin-top: 6px;
+      }
+      .spark span {
+        flex: 1;
+        background: var(--accent);
+        border-radius: 2px;
+        opacity: 0.8;
+      }
+      /* quick add */
+      .qa-btns {
+        display: flex;
+        gap: 8px;
+      }
+      .qa-btns button {
+        flex: 1;
+        min-height: 46px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: var(--card2);
+        color: var(--text);
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .qa-btns button:active {
+        transform: scale(0.96);
+      }
+      .water-bar {
+        height: 10px;
+        background: var(--card2);
+        border-radius: 6px;
+        margin: 12px 0 4px;
+        overflow: hidden;
+      }
+      .water-bar > div {
+        height: 100%;
+        background: linear-gradient(90deg, #2f7fe0, #5b9cff);
+        width: 0;
+        transition: width 0.25s;
+      }
+      .faces {
+        display: flex;
+        gap: 8px;
+        font-size: 24px;
+      }
+      .faces span,
+      .dots span {
+        cursor: pointer;
+        opacity: 0.4;
+        transition:
+          opacity 0.15s,
+          transform 0.15s;
+      }
+      .faces span.sel {
+        opacity: 1;
+        transform: scale(1.18);
+      }
+      .dots {
+        display: flex;
+        gap: 6px;
+      }
+      .dots span {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: var(--card2);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        opacity: 1;
+        border: 1px solid var(--line);
+      }
+      .dots span.sel {
+        background: var(--accent);
+        color: #04101f;
+        font-weight: 700;
+      }
+      /* heatmap */
+      .heat {
+        display: grid;
+        grid-auto-flow: column;
+        grid-template-rows: repeat(7, 1fr);
+        gap: 3px;
+      }
+      .heat .cell {
+        width: 100%;
+        aspect-ratio: 1;
+        border-radius: 3px;
+        background: #20242c;
+      }
+      .legend {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        justify-content: flex-end;
+        margin-top: 8px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .legend i {
+        width: 12px;
+        height: 12px;
+        border-radius: 3px;
+        display: inline-block;
+      }
+      /* chart */
+      svg {
+        display: block;
+        width: 100%;
+      }
+      .seg {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 8px;
+      }
+      .seg button {
+        flex: 1;
+        background: var(--card2);
+        border: 1px solid var(--line);
+        color: var(--muted);
+        border-radius: 8px;
+        padding: 6px;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .seg button.active {
+        color: var(--text);
+        border-color: var(--accent);
+      }
+      /* list rows */
+      .lrow {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 11px 2px;
+        border-bottom: 1px solid var(--line);
+        cursor: pointer;
+      }
+      .lrow:last-child {
+        border-bottom: 0;
+      }
+      .lrow .ic {
+        font-size: 20px;
+        width: 26px;
+        text-align: center;
+      }
+      .lrow .meta {
+        flex: 1;
+      }
+      .lrow .meta b {
+        font-weight: 600;
+      }
+      .lrow .stat {
+        text-align: right;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .tag {
+        background: #243047;
+        color: #9cc0ff;
+        border-radius: 6px;
+        padding: 1px 7px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .composer textarea {
+        width: 100%;
+        background: var(--card2);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        color: var(--text);
+        padding: 10px;
+        resize: vertical;
+        font: inherit;
+      }
+      .composer .crow {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+        align-items: center;
+      }
+      .composer select,
+      .composer button {
+        background: var(--card2);
+        border: 1px solid var(--line);
+        color: var(--text);
+        border-radius: 8px;
+        padding: 8px 10px;
+        font: inherit;
+        cursor: pointer;
+      }
+      .composer button.save {
+        background: var(--accent);
+        color: #04101f;
+        font-weight: 700;
+        border: 0;
+      }
+      /* day-detail sheet */
+      #scrim {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        display: none;
+        z-index: 20;
+      }
+      #scrim.open {
+        display: block;
+      }
+      #sheet {
+        position: fixed;
+        left: 50%;
+        transform: translateX(-50%) translateY(100%);
+        bottom: 0;
+        width: 100%;
+        max-width: 430px;
+        background: var(--card);
+        border-radius: 18px 18px 0 0;
+        padding: 8px 16px 24px;
+        z-index: 21;
+        transition: transform 0.25s;
+        max-height: 88vh;
+        overflow-y: auto;
+      }
+      #sheet.open {
+        transform: translateX(-50%) translateY(0);
+      }
+      .grab {
+        width: 38px;
+        height: 4px;
+        background: #3a4150;
+        border-radius: 2px;
+        margin: 6px auto 10px;
+      }
+      .sheet-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 6px;
+      }
+      .sheet-nav button {
+        background: none;
+        border: 0;
+        color: var(--accent);
+        font-size: 22px;
+        cursor: pointer;
+        padding: 2px 10px;
+      }
+      .toast {
+        position: fixed;
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 70px;
+        background: #2b313b;
+        color: var(--text);
+        padding: 10px 14px;
+        border-radius: 10px;
+        font-size: 13px;
+        z-index: 30;
+        display: none;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+      }
+      .toast.show {
+        display: flex;
+      }
+      .toast b {
+        color: var(--accent);
+        cursor: pointer;
+      }
+      .kv {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 14px;
+        font-size: 13px;
+      }
+      .kv span b {
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="frame">
+      <div class="banner">Mockup · sample data · clickable prototype (not live)</div>
+      <header>
+        <h1 id="hTitle">Today</h1>
+        <span class="sub" id="hSub"></span>
+      </header>
+      <main id="view"></main>
+      <nav id="nav"></nav>
+    </div>
+
+    <div id="scrim" onclick="closeSheet()"></div>
+    <div id="sheet">
+      <div class="grab"></div>
+      <div class="sheet-nav">
+        <button onclick="stepDay(-1)">‹</button>
+        <strong id="sheetDate"></strong>
+        <button onclick="closeSheet()">✕</button>
+      </div>
+      <div id="sheetBody"></div>
+    </div>
+    <div class="toast" id="toast"><span id="toastMsg"></span><b onclick="undoWater()">Undo</b></div>
+
+    <script>
+      // ---------- mock data ----------
+      function rng(seed) {
+        return function () {
+          seed |= 0;
+          seed = (seed + 0x6d2b79f5) | 0;
+          let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+      const R = rng(42);
+      const SPORTS = [
+        ["run", "🏃"],
+        ["ride", "🚴"],
+        ["swim", "🏊"],
+        ["hike", "🥾"],
+      ];
+      const NDAYS = 140;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      function iso(d) {
+        return d.toISOString().slice(0, 10);
+      }
+      function fmtDate(d) {
+        return d.toLocaleDateString(undefined, {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        });
+      }
+      const hrvBaseLow = 58,
+        hrvBaseUp = 74;
+      const days = [];
+      let chronic = 55;
+      for (let i = NDAYS - 1; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const wobble = Math.sin(i / 9) * 12;
+        const sleepScore = Math.round(clamp(72 + wobble * 0.6 + (R() * 22 - 11), 30, 98));
+        const sleepH = +(6.4 + wobble * 0.04 + (R() * 1.6 - 0.8)).toFixed(1);
+        const hrv = Math.round(clamp(66 + wobble * 0.5 + (R() * 16 - 8), 40, 92));
+        const rhr = Math.round(clamp(49 - wobble * 0.15 + (R() * 5 - 2), 42, 60));
+        const trained = R() > 0.32;
+        const acute = Math.round(clamp(chronic + wobble * 1.5 + (R() * 30 - 12), 10, 130));
+        chronic = chronic * 0.94 + acute * 0.06;
+        const acwr = +(acute / Math.max(20, chronic)).toFixed(2);
+        const stress = Math.round(clamp(30 + (R() * 40 - 20) - wobble * 0.4, 10, 80));
+        const bb = Math.round(clamp(55 + wobble * 0.7 + (R() * 30 - 15), 8, 100));
+        // readiness factors (signed contributions around a 60 baseline)
+        const fSleep = Math.round((sleepScore - 65) * 0.45);
+        const fLoad = Math.round((1.05 - acwr) * 40);
+        const fHrv = Math.round(((hrv - hrvBaseLow) / (hrvBaseUp - hrvBaseLow)) * 16 - 4);
+        const fStress = Math.round((40 - stress) * 0.25);
+        const energy = Math.max(1, Math.min(5, Math.round(3 + wobble * 0.08 + (R() * 2 - 1))));
+        const fSubj = (energy - 3) * 4;
+        const score = Math.round(clamp(60 + fSleep + fLoad + fHrv + fStress + fSubj, 8, 99));
+        const act = trained
+          ? (() => {
+              const s = SPORTS[Math.floor(R() * SPORTS.length)];
+              const dist = +(4 + R() * 22).toFixed(1);
+              const dur = Math.round(dist * (5 + R() * 3));
+              return {
+                sport: s[0],
+                icon: s[1],
+                dist,
+                dur,
+                hr: Math.round(128 + R() * 40),
+                elev: Math.round(R() * 600),
+                suffer: Math.round(20 + R() * 120),
+                name:
+                  s[0] === "run"
+                    ? "Aerobic run"
+                    : s[0] === "ride"
+                      ? "Endurance ride"
+                      : s[0] === "swim"
+                        ? "Pool swim"
+                        : "Trail hike",
+              };
+            })()
+          : null;
+        days.push({
+          date: iso(d),
+          dObj: d,
+          score,
+          sleepScore,
+          sleepH,
+          hrv,
+          rhr,
+          bb,
+          acwr,
+          acute: Math.round(acute),
+          chronic: Math.round(chronic),
+          stress,
+          energy,
+          soreness: Math.max(1, Math.min(5, 6 - energy + Math.round(R() * 1.5 - 0.7))),
+          mood: energy,
+          steps: Math.round(4000 + R() * 9000),
+          weight: +(71 + Math.sin(i / 20) * 0.8).toFixed(1),
+          act,
+          factors: [
+            ["Sleep", fSleep],
+            ["Prior load", fLoad],
+            ["HRV", fHrv],
+            ["Stress", fStress],
+            ["Subjective", fSubj],
+          ],
+        });
+      }
+      function clamp(n, a, b) {
+        return Math.max(a, Math.min(b, n));
+      }
+      const byDate = Object.fromEntries(days.map((d) => [d.date, d]));
+      const TODAY = days[days.length - 1];
+
+      // journal
+      const journal = [
+        {
+          date: days[days.length - 1].date,
+          tag: "note",
+          text: "Legs a touch heavy this morning, loosened up by the afternoon.",
+        },
+        {
+          date: days[days.length - 4].date,
+          tag: "travel",
+          text: "Red-eye flight, slept badly. Easy day.",
+        },
+        {
+          date: days[days.length - 9].date,
+          tag: "race",
+          text: "Local 10k — felt strong, negative split. PB by 18s!",
+        },
+        {
+          date: days[days.length - 15].date,
+          tag: "niggle",
+          text: "Right calf tight after the hill reps, watching it.",
+        },
+      ];
+
+      // water quick-action state
+      const GOAL = 2500;
+      let water = 1200;
+      const waterStack = [];
+
+      // ---------- helpers ----------
+      function band(score) {
+        return score >= 75
+          ? ["Prime", "var(--green)"]
+          : score >= 55
+            ? ["High", "var(--green)"]
+            : score >= 40
+              ? ["Moderate", "var(--amber)"]
+              : score >= 25
+                ? ["Low", "var(--red)"]
+                : ["Poor", "var(--red)"];
+      }
+      function el(html) {
+        const t = document.createElement("template");
+        t.innerHTML = html.trim();
+        return t.content.firstElementChild;
+      }
+      function ringSVG(score) {
+        const [lbl, col] = band(score);
+        const r = 34,
+          c = 2 * Math.PI * r,
+          off = c * (1 - score / 100);
+        return `<svg width="92" height="92" viewBox="0 0 92 92">
+          <circle cx="46" cy="46" r="${r}" fill="none" stroke="var(--card2)" stroke-width="9"/>
+          <circle cx="46" cy="46" r="${r}" fill="none" stroke="${col}" stroke-width="9" stroke-linecap="round"
+            stroke-dasharray="${c}" stroke-dashoffset="${off}" transform="rotate(-90 46 46)"/>
+          <text x="46" y="50" text-anchor="middle" font-size="24" font-weight="700" fill="var(--text)">${score}</text>
+          <text x="46" y="64" text-anchor="middle" font-size="9" fill="var(--muted)">/100</text></svg>`;
+      }
+      function lineChart(vals, w, h, zones) {
+        const min = Math.min(...vals),
+          max = Math.max(...vals),
+          pad = 4;
+        const sx = w / (vals.length - 1),
+          sy = (h - pad * 2) / Math.max(1, max - min);
+        const pts = vals
+          .map((v, i) => `${(i * sx).toFixed(1)},${(h - pad - (v - min) * sy).toFixed(1)}`)
+          .join(" ");
+        let bands = "";
+        if (zones) {
+          const zb = [
+            [0, 40, "#f8514922"],
+            [40, 55, "#d6a02022"],
+            [55, 100, "#3fb95022"],
+          ];
+          bands = zb
+            .map(([lo, hi, c]) => {
+              const y1 = h - pad - (clamp(hi, min, max) - min) * sy,
+                y2 = h - pad - (clamp(lo, min, max) - min) * sy;
+              return `<rect x="0" y="${y1}" width="${w}" height="${Math.max(0, y2 - y1)}" fill="${c}"/>`;
+            })
+            .join("");
+        }
+        return `<svg viewBox="0 0 ${w} ${h}" height="${h}">${bands}<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2"/></svg>`;
+      }
+
+      // ---------- views ----------
+      const views = {
+        today: renderToday,
+        calendar: renderCalendar,
+        trends: renderTrends,
+        activities: renderActivities,
+        journal: renderJournal,
+      };
+      let factorsOpen = false;
+
+      function renderToday() {
+        const d = TODAY;
+        const [lbl, col] = band(d.score);
+        const wpct = Math.min(100, (water / GOAL) * 100);
+        const last7 = days.slice(-7);
+        const v = el(`<div>
+          <div class="card">
+            <h3>Readiness · <span class="muted" style="text-transform:none">reconstructed ⓘ</span></h3>
+            <div class="ring-wrap">
+              ${ringSVG(d.score)}
+              <div>
+                <div class="verdict" style="color:${col}">${lbl}</div>
+                <div class="tiny muted">${d.score >= 55 ? "Recovered — proceed as planned" : "Ease intensity today"}</div>
+                <div class="tiny tap" style="margin-top:8px;color:var(--accent)" id="ftog">Show factor breakdown ▾</div>
+              </div>
+            </div>
+            <div class="factors ${factorsOpen ? "open" : ""}" id="facs">
+              ${d.factors
+                .map(([n, val]) => {
+                  const w = Math.min(50, Math.abs(val) * 3.2);
+                  const pos = val >= 0;
+                  return `<div class="fbar"><span class="muted">${n}</span><div class="track"><div class="fill" style="left:${pos ? "50%" : 50 - w + "%"};width:${w}%;background:${pos ? "var(--green)" : "var(--red)"}"></div></div><span style="text-align:right">${val > 0 ? "+" : ""}${val}</span></div>`;
+                })
+                .join("")}
+              <div class="tiny muted" style="margin-top:6px">Window: last night vs trailing baseline · all inputs present ✓</div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Sleep</h3>
+            <div class="row" style="align-items:baseline"><div class="big">${d.sleepH}h</div><div class="muted">score ${d.sleepScore}</div></div>
+            <div class="spark">${last7.map((x) => `<span style="height:${20 + x.sleepScore * 0.5}%"></span>`).join("")}</div>
+          </div>
+          <div class="tiles">
+            <div class="tile"><div class="k">Body Battery</div><div class="v">${d.bb}</div></div>
+            <div class="tile"><div class="k">Resting HR (7d)</div><div class="v">${d.rhr}</div></div>
+            <div class="tile"><div class="k">HRV ${d.hrv >= hrvBaseLow ? "✓ in band" : "↓ below"}</div><div class="v">${d.hrv}<span class="tiny muted"> /${hrvBaseLow}–${hrvBaseUp}</span></div></div>
+            <div class="tile"><div class="k">Load (ACWR)</div><div class="v">${d.acwr <= 1.3 && d.acwr >= 0.8 ? '<span style="color:var(--green)">Optimal</span>' : '<span style="color:var(--amber)">Caution</span>'}<span class="tiny muted"> ${d.acwr}</span></div></div>
+          </div>
+          <div class="card"><h3>Today's plan</h3><div><b>Z2 run · 60 min · ~8.5 km</b><div class="tiny muted">Keep HR &lt; 145. Easy aerobic.</div></div></div>
+          <div class="card">
+            <h3>Quick add</h3>
+            <div class="tiny muted">Water · ${water} / ${GOAL} ml</div>
+            <div class="water-bar"><div id="wfill" style="width:${wpct}%"></div></div>
+            <div class="qa-btns">
+              <button onclick="addWater(100)">+100</button>
+              <button onclick="addWater(250)">+250</button>
+              <button onclick="addWater(500)">+500</button>
+            </div>
+            <div style="margin-top:14px" class="tiny muted">Mood</div>
+            <div class="faces" id="mood">${["😖", "😐", "🙂", "😄", "🤩"].map((f, i) => `<span data-i="${i + 1}" class="${d.mood === i + 1 ? "sel" : ""}" onclick="pick(this,'mood')">${f}</span>`).join("")}</div>
+            <div style="margin-top:12px" class="tiny muted">Energy</div>
+            <div class="dots" id="energy">${[1, 2, 3, 4, 5].map((i) => `<span data-i="${i}" class="${d.energy === i ? "sel" : ""}" onclick="pick(this,'energy')">${i}</span>`).join("")}</div>
+            <div class="tiny tap" style="margin-top:12px;color:var(--accent)" onclick="go('journal')">✎ Add journal note ›</div>
+          </div>
+        </div>`);
+        v.querySelector("#ftog").onclick = () => {
+          factorsOpen = !factorsOpen;
+          v.querySelector("#facs").classList.toggle("open");
+          v.querySelector("#ftog").textContent = factorsOpen
+            ? "Hide factor breakdown ▴"
+            : "Show factor breakdown ▾";
+        };
+        return v;
+      }
+
+      function renderCalendar() {
+        const wk = days.slice(-Math.floor(days.length / 7) * 7); // whole weeks
+        const v = el(`<div>
+          <div class="card">
+            <h3>Calendar · readiness</h3>
+            <div class="heat" id="heat"></div>
+            <div class="legend">Less <i style="background:#20242c"></i><i style="background:#1f3a25"></i><i style="background:#2f7a3a"></i><i style="background:#3fb950"></i> More</div>
+            <div class="tiny muted" style="margin-top:8px">Tap a day for the full detail. Colour = readiness; a dot marks a training day.</div>
+          </div>
+        </div>`);
+        const heat = v.querySelector("#heat");
+        wk.forEach((x) => {
+          const s = x.score;
+          const c = s < 35 ? "#20242c" : s < 50 ? "#1f3a25" : s < 68 ? "#2f7a3a" : "#3fb950";
+          const cell = el(
+            `<div class="cell tap" title="${fmtDate(x.dObj)} · readiness ${s}" style="background:${c};position:relative"></div>`
+          );
+          if (x.act)
+            cell.innerHTML = `<i style="position:absolute;right:1px;bottom:1px;width:4px;height:4px;border-radius:50%;background:#cfe;opacity:.8"></i>`;
+          cell.onclick = () => openSheet(x.date);
+          heat.appendChild(cell);
+        });
+        return v;
+      }
+
+      let trendRange = 42;
+      function renderTrends() {
+        const slice = days.slice(-trendRange);
+        const v = el(`<div>
+          <div class="seg" id="seg">
+            ${[
+              ["7d", 7],
+              ["6w", 42],
+              ["Season", days.length],
+            ]
+              .map(
+                ([l, n]) =>
+                  `<button data-n="${n}" class="${trendRange === n ? "active" : ""}">${l}</button>`
+              )
+              .join("")}
+          </div>
+          <div class="card"><h3>Readiness</h3>${lineChart(
+            slice.map((x) => x.score),
+            360,
+            120,
+            true
+          )}<div class="tiny muted">avg ${Math.round(slice.reduce((a, x) => a + x.score, 0) / slice.length)} · band-zoned (low/mod/high)</div></div>
+          <div class="card"><h3>HRV vs baseline (${hrvBaseLow}–${hrvBaseUp})</h3>
+            <svg viewBox="0 0 360 110" height="110">
+              <rect x="0" y="${110 - 4 - (hrvBaseUp - 30) * 1.0}" width="360" height="${(hrvBaseUp - hrvBaseLow) * 1.0}" fill="#3fb95022"/>
+              <polyline points="${slice.map((x, i) => `${((i * 360) / (slice.length - 1)).toFixed(1)},${(110 - 4 - (x.hrv - 30) * 1.0).toFixed(1)}`).join(" ")}" fill="none" stroke="var(--accent)" stroke-width="2"/>
+            </svg></div>
+          <div class="card"><h3>Acute vs chronic load</h3>${lineChart(
+            slice.map((x) => x.acute),
+            360,
+            100,
+            false
+          )}<div class="tiny muted">acute load; chronic trails below — divergence = ramp/risk</div></div>
+        </div>`);
+        v.querySelectorAll("#seg button").forEach(
+          (b) =>
+            (b.onclick = () => {
+              trendRange = +b.dataset.n;
+              mount();
+            })
+        );
+        return v;
+      }
+
+      function renderActivities() {
+        const acts = days
+          .filter((d) => d.act)
+          .slice(-30)
+          .reverse();
+        const v = el(
+          `<div class="card"><h3>Activities</h3>${acts
+            .map(
+              (d) => `
+          <div class="lrow" onclick="openSheet('${d.date}')">
+            <div class="ic">${d.act.icon}</div>
+            <div class="meta"><b>${d.act.name}</b><div class="tiny muted">${fmtDate(d.dObj)} · ${d.act.dist} km · ${Math.floor(d.act.dur / 60)}:${String(d.act.dur % 60).padStart(2, "0")}</div></div>
+            <div class="stat">HR ${d.act.hr}<br>↑${d.act.elev}m · SS ${d.act.suffer}</div>
+          </div>`
+            )
+            .join("")}</div>`
+        );
+        return v;
+      }
+
+      function renderJournal() {
+        const v = el(`<div>
+          <div class="card composer">
+            <h3>New entry</h3>
+            <textarea id="jtext" rows="2" placeholder="How did today feel?"></textarea>
+            <div class="crow">
+              <select id="jtag"><option>note</option><option>race</option><option>niggle</option><option>travel</option><option>illness</option></select>
+              <span class="muted tiny" style="flex:1">today</span>
+              <button class="save" onclick="addJournal()">Save</button>
+            </div>
+          </div>
+          <div class="card"><h3>Journal</h3><div id="jlist">${journal.map((j) => journalRow(j)).join("")}</div></div>
+        </div>`);
+        return v;
+      }
+      function journalRow(j) {
+        const d = byDate[j.date];
+        return `<div class="lrow" onclick="openSheet('${j.date}')"><div class="meta"><span class="tag">#${j.tag}</span> <span class="tiny muted">${d ? fmtDate(d.dObj) : j.date}</span><div style="margin-top:4px">${j.text}</div></div></div>`;
+      }
+
+      // ---------- day detail sheet ----------
+      let sheetDate = null;
+      function openSheet(date) {
+        sheetDate = date;
+        renderSheet();
+        document.getElementById("scrim").classList.add("open");
+        document.getElementById("sheet").classList.add("open");
+      }
+      function closeSheet() {
+        document.getElementById("scrim").classList.remove("open");
+        document.getElementById("sheet").classList.remove("open");
+      }
+      function stepDay(n) {
+        const i = days.findIndex((d) => d.date === sheetDate);
+        const j = clamp(i + n, 0, days.length - 1);
+        sheetDate = days[j].date;
+        renderSheet();
+      }
+      function renderSheet() {
+        const d = byDate[sheetDate];
+        const [lbl, col] = band(d.score);
+        document.getElementById("sheetDate").textContent = fmtDate(d.dObj);
+        const js = journal.filter((j) => j.date === d.date);
+        document.getElementById("sheetBody").innerHTML = `
+          <div class="card" style="margin-top:4px">
+            <div class="row" style="align-items:center"><div class="big" style="color:${col}">${d.score}</div><div class="verdict" style="color:${col};flex:0">${lbl}</div></div>
+            ${d.factors
+              .map(([n, val]) => {
+                const w = Math.min(50, Math.abs(val) * 3.2);
+                const pos = val >= 0;
+                return `<div class="fbar"><span class="muted">${n}</span><div class="track"><div class="fill" style="left:${pos ? "50%" : 50 - w + "%"};width:${w}%;background:${pos ? "var(--green)" : "var(--red)"}"></div></div><span style="text-align:right">${val > 0 ? "+" : ""}${val}</span></div>`;
+              })
+              .join("")}
+          </div>
+          <div class="card"><div class="kv">
+            <span>Sleep <b>${d.sleepH}h</b> (${d.sleepScore})</span><span>HRV <b>${d.hrv}</b></span><span>RHR <b>${d.rhr}</b></span>
+            <span>Body batt <b>${d.bb}</b></span><span>Stress <b>${d.stress}</b></span><span>ACWR <b>${d.acwr}</b></span>
+            <span>Steps <b>${d.steps.toLocaleString()}</b></span><span>Weight <b>${d.weight}kg</b></span>
+          </div></div>
+          ${d.act ? `<div class="card"><div class="lrow" style="border:0;padding:2px"><div class="ic">${d.act.icon}</div><div class="meta"><b>${d.act.name}</b><div class="tiny muted">${d.act.dist} km · ${Math.floor(d.act.dur / 60)}:${String(d.act.dur % 60).padStart(2, "0")} · HR ${d.act.hr} · ↑${d.act.elev}m</div></div></div></div>` : `<div class="card tiny muted">No activity logged.</div>`}
+          <div class="card"><div class="tiny muted">Subjective</div><div>Energy ${d.energy}/5 · Soreness ${d.soreness}/5 · Mood ${["", "😖", "😐", "🙂", "😄", "🤩"][d.mood]}</div></div>
+          ${js.length ? `<div class="card"><div class="tiny muted">Journal</div>${js.map((j) => `<div style="margin-top:4px"><span class="tag">#${j.tag}</span> ${j.text}</div>`).join("")}</div>` : ""}
+        `;
+      }
+
+      // ---------- interactions ----------
+      function addWater(ml) {
+        water += ml;
+        waterStack.push(ml);
+        refreshWater();
+        showToast("Added " + ml + " ml");
+      }
+      function undoWater() {
+        const last = waterStack.pop();
+        if (last) {
+          water -= last;
+          refreshWater();
+        }
+        hideToast();
+      }
+      function refreshWater() {
+        const f = document.getElementById("wfill");
+        if (f) {
+          f.style.width = Math.min(100, (water / GOAL) * 100) + "%";
+          const lbl = f.closest(".card").querySelector(".muted");
+          if (lbl) lbl.textContent = "Water · " + water + " / " + GOAL + " ml";
+        }
+      }
+      let toastTimer;
+      function showToast(m) {
+        const t = document.getElementById("toast");
+        document.getElementById("toastMsg").textContent = m;
+        t.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(hideToast, 5000);
+      }
+      function hideToast() {
+        document.getElementById("toast").classList.remove("show");
+      }
+      function pick(span, grp) {
+        document.querySelectorAll("#" + grp + " span").forEach((s) => s.classList.remove("sel"));
+        span.classList.add("sel");
+      }
+      function addJournal() {
+        const t = document.getElementById("jtext").value.trim();
+        if (!t) return;
+        journal.unshift({ date: TODAY.date, tag: document.getElementById("jtag").value, text: t });
+        document.getElementById("jlist").innerHTML = journal.map((j) => journalRow(j)).join("");
+        document.getElementById("jtext").value = "";
+        showToast("Journal saved");
+      }
+
+      // ---------- nav / mount ----------
+      let current = "today";
+      const NAVS = [
+        ["today", "Today", "◉"],
+        ["calendar", "Calendar", "▦"],
+        ["trends", "Trends", "📈"],
+        ["activities", "Activity", "🏃"],
+        ["journal", "Journal", "✎"],
+      ];
+      function go(v) {
+        current = v;
+        mount();
+      }
+      function mount() {
+        document.getElementById("hTitle").textContent = NAVS.find((n) => n[0] === current)[1];
+        document.getElementById("hSub").textContent =
+          current === "today" ? fmtDate(TODAY.dObj) : "";
+        const view = document.getElementById("view");
+        view.innerHTML = "";
+        view.appendChild(views[current]());
+        view.scrollTop = 0;
+        document.getElementById("nav").innerHTML = NAVS.map(
+          (n) =>
+            `<button class="${current === n[0] ? "active" : ""}" onclick="go('${n[0]}')"><span class="ico">${n[2]}</span>${n[1]}</button>`
+        ).join("");
+      }
+      mount();
+    </script>
+  </body>
+</html>
