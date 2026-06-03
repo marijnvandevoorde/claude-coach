@@ -1,11 +1,12 @@
 /**
  * Garmin Connect client — token management + authenticated HTTP, in TypeScript.
  *
- * Talks to Garmin Connect using the OAuth2 ("diauth") tokens stored in
+ * Talks to Garmin Connect using the OAuth2 ("diauth") tokens first minted into
  * $GARMINTOKENS (a `garmin_tokens.json` with di_token / di_refresh_token /
- * di_client_id, minted once by `garmin-mcp-auth`). Access tokens are short-lived,
- * so we refresh on every `create()` and persist the rotated refresh token back —
- * the client stays alive for months without any re-auth or password.
+ * di_client_id, via `garmin-mcp-auth`). The live access/refresh token is then
+ * kept in a shared DB row and refreshed only when the access token expires (see
+ * the "Shared OAuth token store" section below) — the file becomes a seed only.
+ * The client stays alive for months without any re-auth or password.
  *
  * Uses only Node built-ins (global `fetch`, `node:fs`) — no third-party deps,
  * so the runtime image needs nothing but Node. This replaces the old
