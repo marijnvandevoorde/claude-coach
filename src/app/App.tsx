@@ -173,6 +173,35 @@ export function App() {
     batchTotal.current = 0;
   }
 
+  // Flush any un-committed water if the page is hidden/closed before the 5s undo
+  // window elapses — otherwise a quick refresh loses the tap. sendBeacon survives
+  // unload and carries the same-origin Access cookie.
+  useEffect(() => {
+    const flush = () => {
+      const amt = batchTotal.current;
+      if (amt <= 0) return;
+      batchTotal.current = 0;
+      batchBase.current = null;
+      try {
+        navigator.sendBeacon(
+          "/api/hydration",
+          new Blob([JSON.stringify({ ml: amt })], { type: "application/json" })
+        );
+      } catch {
+        /* best effort */
+      }
+    };
+    const onHide = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onHide);
+    };
+  }, []);
+
   function onSubj(k: "energy" | "mood", v: number) {
     setSubjective((s) => {
       const next = { ...s, [k]: s[k] === v ? undefined : v };
