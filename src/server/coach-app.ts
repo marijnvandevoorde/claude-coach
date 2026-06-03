@@ -11,7 +11,21 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { initDatabase, queryJson } from "../db/client.js";
 import { migrate } from "../db/migrate.js";
-import { localDate } from "../db/wellness.js";
+import {
+  localDate,
+  logHydration,
+  hydrationTotal,
+  upsertWellness,
+  getPrefs,
+  getWellness,
+} from "../db/wellness.js";
+import { addJournalEntry } from "../db/journal.js";
+import { assembleReadinessSignals } from "../lib/readiness.js";
+import {
+  readinessContributions,
+  computeReadiness,
+  recoveryLevelFromScore,
+} from "../lib/recovery.js";
 import { accessMiddleware, accessEnabled } from "./access.js";
 import { log } from "../lib/logging.js";
 
@@ -35,6 +49,53 @@ function parseTrack(raw: unknown): number[][] | null {
   } catch {
     return null;
   }
+}
+
+interface SleepStages {
+  deep: number | null;
+  light: number | null;
+  rem: number | null;
+  awake: number | null;
+}
+
+/**
+ * Parse sleep-stage minutes from the day's `garmin_raw` blob. The stage seconds
+ * live on `raw.sleep` (the Garmin `dailySleepDTO`): deepSleepSeconds,
+ * lightSleepSeconds, remSleepSeconds, awakeSleepSeconds. Returns minutes, or
+ * null if the blob (or all stage fields) are absent.
+ */
+function parseSleepStages(rawBlob: unknown): SleepStages | null {
+  if (typeof rawBlob !== "string" || rawBlob.length < 2) return null;
+  let raw: Record<string, unknown>;
+  try {
+    raw = JSON.parse(rawBlob) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+  const sleep = raw?.sleep as Record<string, unknown> | undefined;
+  if (!sleep || typeof sleep !== "object") return null;
+  const toMin = (v: unknown): number | null =>
+    typeof v === "number" && Number.isFinite(v) ? Math.round(v / 60) : null;
+  const stages: SleepStages = {
+    deep: toMin(sleep.deepSleepSeconds),
+    light: toMin(sleep.lightSleepSeconds),
+    rem: toMin(sleep.remSleepSeconds),
+    awake: toMin(sleep.awakeSleepSeconds),
+  };
+  if (stages.deep == null && stages.light == null && stages.rem == null && stages.awake == null)
+    return null;
+  return stages;
+}
+
+const isInt = (v: unknown): v is number => typeof v === "number" && Number.isInteger(v);
+const intInRange = (v: unknown, lo: number, hi: number): boolean => isInt(v) && v >= lo && v <= hi;
+
+/** Validate an optional YYYY-MM-DD date string. Returns the string, undefined
+ *  (absent → today), or null (present but invalid). */
+function optDate(v: unknown): string | undefined | null {
+  if (v === undefined || v === null) return undefined;
+  if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  return null;
 }
 
 function api(): express.Router {
@@ -150,7 +211,9 @@ function api(): express.Router {
     }
   });
 
-  // Today's snapshot: wellness row + hydration total + most recent activity.
+  // Today's snapshot: wellness row + hydration total + most recent activity,
+  // plus a readiness breakdown (score/level/contributions/coverage) and a sleep
+  // summary (hours/score/stages parsed from the day's garmin_raw blob).
   r.get("/summary", async (req, res) => {
     try {
       const date = String(req.query.date ?? localDate());
@@ -166,14 +229,144 @@ function api(): express.Router {
           `SELECT id, name, sport_type, start_date, distance, moving_time, average_heartrate, max_heartrate, total_elevation_gain, suffer_score FROM activities ORDER BY start_date DESC LIMIT 1;`
         ),
       ]);
+      const w = wellness[0] ?? null;
+
+      // Readiness: prefer the native Garmin score if cached, else reconstruct.
+      // Contributions/coverage always come from the assembled signals.
+      const signals = await assembleReadinessSignals(date);
+      let readiness: {
+        score: number | null;
+        level: string | null;
+        contributions: ReturnType<typeof readinessContributions>["contributions"];
+        coverage: ReturnType<typeof readinessContributions>["coverage"];
+      } | null = null;
+      if (signals) {
+        const { contributions, coverage } = readinessContributions(signals);
+        const native = w?.readiness_score;
+        if (native != null) {
+          readiness = {
+            score: Number(native),
+            level: recoveryLevelFromScore(Number(native)),
+            contributions,
+            coverage,
+          };
+        } else {
+          const derived = computeReadiness(signals);
+          readiness = {
+            score: derived?.score ?? null,
+            level: derived?.level ?? null,
+            contributions,
+            coverage,
+          };
+        }
+      }
+
+      const sleep = {
+        hours: w?.sleep_hours != null ? Number(w.sleep_hours) : null,
+        score: w?.sleep_score != null ? Number(w.sleep_score) : null,
+        stages: parseSleepStages(w?.garmin_raw),
+      };
+
       res.json({
         date,
-        wellness: wellness[0] ?? null,
+        wellness: w,
         hydration: { total_ml: Number(hyd[0]?.total ?? 0) },
         lastActivity: act[0] ?? null,
+        readiness,
+        sleep,
       });
     } catch (e) {
       res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+    }
+  });
+
+  // ---- Write endpoints (Access-gated; reuse the CLI's tested data helpers) ----
+
+  // Log hydration; returns the updated total + the day's goal.
+  r.post("/hydration", async (req, res, next) => {
+    try {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const ml = body.ml;
+      if (!intInRange(ml, 1, 3000)) {
+        res.status(400).json({ error: "ml must be a positive integer ≤ 3000" });
+        return;
+      }
+      const date = optDate(body.date);
+      if (date === null) {
+        res.status(400).json({ error: "date must be YYYY-MM-DD" });
+        return;
+      }
+      await logHydration(ml as number, { date });
+      const d = localDate(date);
+      const total_ml = await hydrationTotal(d);
+      const goal_ml = (await getPrefs()).hydration_goal_ml ?? 0;
+      res.json({ date: d, total_ml, goal_ml });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // Log subjective wellness (energy/mood); returns the updated wellness row.
+  r.post("/subjective", async (req, res, next) => {
+    try {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const { energy, mood } = body;
+      if (energy === undefined && mood === undefined) {
+        res.status(400).json({ error: "provide at least one of energy, mood" });
+        return;
+      }
+      if (energy !== undefined && !intInRange(energy, 1, 5)) {
+        res.status(400).json({ error: "energy must be an integer 1–5" });
+        return;
+      }
+      if (mood !== undefined && !intInRange(mood, 1, 5)) {
+        res.status(400).json({ error: "mood must be an integer 1–5" });
+        return;
+      }
+      const date = optDate(body.date);
+      if (date === null) {
+        res.status(400).json({ error: "date must be YYYY-MM-DD" });
+        return;
+      }
+      await upsertWellness(date, {
+        ...(energy !== undefined ? { subjective_energy: energy as number } : {}),
+        ...(mood !== undefined ? { mood: mood as number } : {}),
+      });
+      const d = localDate(date);
+      res.json({ date: d, wellness: await getWellness(d) });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // Add a free-text journal entry; returns the day's entries (newest first).
+  r.post("/journal", async (req, res, next) => {
+    try {
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const entry = body.entry;
+      if (typeof entry !== "string" || entry.trim() === "") {
+        res.status(400).json({ error: "entry must be a non-empty string" });
+        return;
+      }
+      const tag = body.tag;
+      if (tag !== undefined && typeof tag !== "string") {
+        res.status(400).json({ error: "tag must be a string" });
+        return;
+      }
+      const date = optDate(body.date);
+      if (date === null) {
+        res.status(400).json({ error: "date must be YYYY-MM-DD" });
+        return;
+      }
+      await addJournalEntry(entry, { date, tag });
+      const d = localDate(date);
+      const escD = `'${d.replace(/'/g, "''")}'`;
+      const rows = await queryJson<Record<string, unknown>>(
+        `SELECT id, local_date, entry, tag, created_at FROM journal WHERE local_date = ${escD} ORDER BY id DESC;`
+      );
+      res.json({ date: d, entries: rows });
+    } catch (e) {
+      next(e);
     }
   });
 
@@ -200,7 +393,10 @@ async function main(): Promise<void> {
       accessMiddleware(),
       express.static(APP_DIR, { index: "index.html", maxAge: "1y", setHeaders: noCacheHtml })
     );
-    app.get("/app/*", accessMiddleware(), (_req, res) => res.sendFile(join(APP_DIR, "index.html")));
+    // SPA fallback for client-side routes (Express 5 needs a NAMED wildcard).
+    app.get("/app/*splat", accessMiddleware(), (_req, res) =>
+      res.sendFile(join(APP_DIR, "index.html"))
+    );
   }
 
   app.listen(PORT, () =>

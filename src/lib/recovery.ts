@@ -264,3 +264,113 @@ export function computeReadiness(s: ReadinessSignals): DerivedReadiness | null {
   score = Math.round(score);
   return { score, level: recoveryLevelFromScore(score), factors, cappedBySubjective };
 }
+
+// ============================================================================
+// Signed factor contributions + coverage (for the web app's readiness UI)
+//
+// `computeReadiness` returns the raw 0–100 component scores and their weights,
+// which is what the CLI prints. The web UI instead wants, per input, how much
+// it pushed the day above or below a *typical* day — a signed deviation. We
+// model "typical" as a component score of 70 (a normal, unremarkable day) and
+// express each contribution as the weighted deviation from that anchor, scaled
+// so a strong single factor lands in roughly the ±17 range. These do NOT sum
+// to the score — they're a relative "what's driving today" breakdown.
+//
+// We collapse Garmin's three sleep-flavoured factors (sleep / sleep history /
+// sleep regularity) into one "Sleep" contribution and map the remaining factor
+// names to the five athlete-facing inputs: Sleep, HRV, Training load, Stress,
+// Subjective.
+// ============================================================================
+
+export type ReadinessInput = "sleep" | "hrv" | "load" | "stress" | "subjective";
+
+export interface ReadinessContribution {
+  key: ReadinessInput;
+  label: string;
+  points: number; // signed deviation-vs-typical-day (~ ±17 range)
+}
+
+export interface ReadinessContributions {
+  contributions: ReadinessContribution[];
+  coverage: Record<ReadinessInput, boolean>;
+}
+
+const INPUT_LABEL: Record<ReadinessInput, string> = {
+  sleep: "Sleep",
+  hrv: "HRV",
+  load: "Training load",
+  stress: "Stress",
+  subjective: "Subjective",
+};
+
+// Map each computeReadiness factor name to one of the five athlete-facing inputs.
+const FACTOR_TO_INPUT: Record<string, ReadinessInput> = {
+  sleep: "sleep",
+  "sleep history": "sleep",
+  "sleep regularity": "sleep",
+  hrv: "hrv",
+  recovery: "load",
+  stress: "stress",
+  subjective: "subjective",
+};
+
+const TYPICAL_COMPONENT = 70; // a normal, unremarkable day's component score
+const CONTRIBUTION_SCALE = 0.6; // tunes weighted deviation into the ~±17 range
+
+/**
+ * Signed factor contributions (deviation vs a typical day) and per-input
+ * coverage, derived from the same signals `computeReadiness` consumes.
+ *
+ * `points` is the weighted distance of each input's component score from a
+ * typical day (anchored at 70), so positive = boosting today's readiness,
+ * negative = dragging it down. The five sleep-flavoured factors collapse into
+ * one "Sleep" contribution (weighted-average deviation). The RHR penalty is
+ * folded into HRV/load context and does not get its own contribution.
+ *
+ * Coverage reports whether each of the five inputs had any non-null signal for
+ * the day (independent of whether it produced a scored factor).
+ */
+export function readinessContributions(s: ReadinessSignals): ReadinessContributions {
+  const coverage: Record<ReadinessInput, boolean> = {
+    sleep: s.sleepScore != null || s.sleepHistoryScore != null || s.sleepRegularityMinutes != null,
+    hrv:
+      s.hrvLnRmssd != null || s.hrvWeeklyAvg != null || (s.hrvStatus != null && s.hrvStatus !== ""),
+    load: s.acwr != null,
+    stress: s.avgStress != null,
+    subjective: s.energy != null || s.soreness != null || s.mood != null,
+  };
+
+  const derived = computeReadiness(s);
+  if (!derived) {
+    return { contributions: [], coverage };
+  }
+
+  // Accumulate weighted deviation-from-typical per input (weighted by factor weight).
+  const acc: Record<ReadinessInput, { weighted: number; weight: number }> = {
+    sleep: { weighted: 0, weight: 0 },
+    hrv: { weighted: 0, weight: 0 },
+    load: { weighted: 0, weight: 0 },
+    stress: { weighted: 0, weight: 0 },
+    subjective: { weighted: 0, weight: 0 },
+  };
+
+  for (const f of derived.factors) {
+    const input = FACTOR_TO_INPUT[f.name];
+    if (!input) continue; // skip the RHR penalty (weight 0, no input)
+    if (f.weight <= 0) continue;
+    acc[input].weighted += f.weight * (f.score - TYPICAL_COMPONENT);
+    acc[input].weight += f.weight;
+  }
+
+  const contributions: ReadinessContribution[] = [];
+  for (const key of Object.keys(acc) as ReadinessInput[]) {
+    const a = acc[key];
+    if (a.weight === 0) continue;
+    const points = Math.round((a.weighted / a.weight) * CONTRIBUTION_SCALE);
+    contributions.push({ key, label: INPUT_LABEL[key], points });
+  }
+
+  // Largest absolute impact first — the UI leads with what's driving today.
+  contributions.sort((x, y) => Math.abs(y.points) - Math.abs(x.points));
+  return { contributions, coverage };
+}
