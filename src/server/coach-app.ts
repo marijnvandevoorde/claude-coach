@@ -266,6 +266,8 @@ function api(): express.Router {
         score: w?.sleep_score != null ? Number(w.sleep_score) : null,
         stages: parseSleepStages(w?.garmin_raw),
       };
+      // Don't ship the big raw blob to the client — stages were parsed above.
+      if (w) delete w.garmin_raw;
 
       res.json({
         date,
