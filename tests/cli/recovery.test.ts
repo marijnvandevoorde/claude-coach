@@ -3,6 +3,7 @@ import {
   computeReadiness,
   recoveryFromAcwr,
   recoveryLevelFromScore,
+  readinessContributions,
 } from "../../src/lib/recovery.js";
 
 describe("recoveryLevelFromScore", () => {
@@ -152,5 +153,68 @@ describe("computeReadiness", () => {
     expect(noPenalty.score).toBe(70); // +3 is within noise — no penalty now
     expect(penalty.score).toBeLessThan(70);
     expect(penalty.factors.some((f) => f.name === "resting HR")).toBe(true);
+  });
+});
+
+describe("readinessContributions", () => {
+  it("collapses the three sleep factors into one Sleep contribution", () => {
+    const { contributions } = readinessContributions({
+      sleepScore: 80,
+      sleepHistoryScore: 75,
+      sleepRegularityMinutes: 20,
+      acwr: 1.0,
+    });
+    const sleep = contributions.filter((c) => c.key === "sleep");
+    expect(sleep.length).toBe(1);
+    expect(sleep[0].label).toBe("Sleep");
+  });
+
+  it("maps factor names to the five athlete-facing inputs", () => {
+    const { contributions } = readinessContributions({
+      sleepScore: 70,
+      acwr: 1.0,
+      hrvStatus: "balanced",
+      avgStress: 20,
+      energy: 4,
+      mood: 4,
+    });
+    const keys = new Set(contributions.map((c) => c.key));
+    expect(keys).toEqual(new Set(["sleep", "load", "hrv", "stress", "subjective"]));
+    for (const c of contributions) {
+      expect(["Sleep", "HRV", "Training load", "Stress", "Subjective"]).toContain(c.label);
+    }
+  });
+
+  it("signs points: a good day is positive, a bad day negative", () => {
+    const good = readinessContributions({ sleepScore: 95 });
+    const bad = readinessContributions({ sleepScore: 30 });
+    expect(good.contributions[0].points).toBeGreaterThan(0);
+    expect(bad.contributions[0].points).toBeLessThan(0);
+    // ~±17 range, not summing to the score.
+    expect(Math.abs(good.contributions[0].points)).toBeLessThanOrEqual(20);
+  });
+
+  it("reports per-input coverage from the raw signals", () => {
+    const { coverage } = readinessContributions({
+      sleepScore: 80,
+      energy: 3,
+    });
+    expect(coverage.sleep).toBe(true);
+    expect(coverage.subjective).toBe(true);
+    expect(coverage.hrv).toBe(false);
+    expect(coverage.load).toBe(false);
+    expect(coverage.stress).toBe(false);
+  });
+
+  it("returns empty contributions but real coverage when no factor scores", () => {
+    const { contributions, coverage } = readinessContributions({});
+    expect(contributions).toEqual([]);
+    expect(coverage).toEqual({
+      sleep: false,
+      hrv: false,
+      load: false,
+      stress: false,
+      subjective: false,
+    });
   });
 });

@@ -27,7 +27,8 @@ import {
   type ReminderPrefs,
 } from "./db/wellness.js";
 import { resolveNotify, sendNotification } from "./lib/notify.js";
-import { computeReadiness, recoveryLevelFromScore, type RecoveryLevel } from "./lib/recovery.js";
+import { recoveryLevelFromScore, type RecoveryLevel } from "./lib/recovery.js";
+import { assembleReadiness } from "./lib/readiness.js";
 import { generateIcs } from "./viewer/lib/export/ics.js";
 import { getSportIcon } from "./viewer/lib/utils.js";
 import type { TrainingPlan } from "./schema/training-plan.js";
@@ -1769,111 +1770,6 @@ async function deliverReminders(
   if (Object.keys(patch).length > 0) await upsertWellness(date, patch);
 }
 
-/** Rolling mean of resting HR over recent days (excludes `beforeDate`). Needs a
- *  few samples to be meaningful — returns null until enough history exists. */
-async function restingHrBaseline(beforeDate: string): Promise<number | null> {
-  const rows = await queryJson<{ resting_hr: number }>(
-    `SELECT resting_hr FROM wellness_state
-     WHERE resting_hr IS NOT NULL AND local_date < ${escapeString(beforeDate)}
-     ORDER BY local_date DESC LIMIT 30;`
-  );
-  const vals = rows.map((row) => Number(row.resting_hr)).filter(Number.isFinite);
-  if (vals.length < 5) return null;
-  return vals.reduce((a, b) => a + b, 0) / vals.length;
-}
-
-/** Rolling mean of sleep score over recent days (the "sleep history" factor). */
-async function sleepScoreHistory(beforeDate: string): Promise<number | null> {
-  const rows = await queryJson<{ sleep_score: number }>(
-    `SELECT sleep_score FROM wellness_state
-     WHERE sleep_score IS NOT NULL AND local_date < ${escapeString(beforeDate)}
-     ORDER BY local_date DESC LIMIT 5;`
-  );
-  const vals = rows.map((row) => Number(row.sleep_score)).filter(Number.isFinite);
-  if (vals.length < 3) return null;
-  return vals.reduce((a, b) => a + b, 0) / vals.length;
-}
-
-/** Circular SD (in minutes) of a set of times-of-day, so the midnight wrap
- *  doesn't inflate the spread (e.g. 23:50 and 00:10 are 20 min apart, not 23h). */
-function circularSdMinutes(mins: number[]): number {
-  const TWO_PI = 2 * Math.PI;
-  let sumSin = 0;
-  let sumCos = 0;
-  for (const m of mins) {
-    const a = (m / 1440) * TWO_PI;
-    sumSin += Math.sin(a);
-    sumCos += Math.cos(a);
-  }
-  const r = Math.sqrt(sumSin ** 2 + sumCos ** 2) / mins.length;
-  if (r >= 1) return 0;
-  return (Math.sqrt(-2 * Math.log(r)) / TWO_PI) * 1440;
-}
-
-/**
- * Derive the richer HRV + sleep-regularity readiness inputs from the stored
- * `garmin_raw` blobs (no new Garmin fetch). Reads the recent window once and
- * returns: today's ln(RMSSD) with the rolling baseline mean/SD (for the SWC
- * band), and the SD of recent midsleep time-of-day. Each needs a week+ of
- * nights; fields stay null until enough history exists, so the model falls
- * back to the Garmin-band/status HRV path and simply omits sleep regularity.
- */
-async function recoveryHistoryFromRaw(date: string): Promise<{
-  hrvLnRmssd: number | null;
-  hrvLnRmssdMean: number | null;
-  hrvLnRmssdSd: number | null;
-  sleepRegularityMinutes: number | null;
-}> {
-  const out = {
-    hrvLnRmssd: null as number | null,
-    hrvLnRmssdMean: null as number | null,
-    hrvLnRmssdSd: null as number | null,
-    sleepRegularityMinutes: null as number | null,
-  };
-  const rows = await queryJson<{ local_date: string; garmin_raw: string }>(
-    `SELECT local_date, garmin_raw FROM wellness_state
-     WHERE garmin_raw IS NOT NULL AND local_date <= ${escapeString(date)}
-     ORDER BY local_date DESC LIMIT 45;`
-  );
-  if (rows.length === 0) return out;
-
-  const lnByDate: Array<{ date: string; ln: number }> = [];
-  const midsleepMins: number[] = [];
-  for (const row of rows) {
-    let raw: Record<string, any>;
-    try {
-      raw = JSON.parse(row.garmin_raw) as Record<string, any>;
-    } catch {
-      continue;
-    }
-    const lastNight = raw?.hrv?.hrvSummary?.lastNightAvg;
-    if (typeof lastNight === "number" && lastNight > 0)
-      lnByDate.push({ date: row.local_date, ln: Math.log(lastNight) });
-    const start = raw?.sleep?.sleepStartTimestampLocal;
-    const end = raw?.sleep?.sleepEndTimestampLocal;
-    if (typeof start === "number" && typeof end === "number" && end > start) {
-      // Local-shifted epoch ms → midsleep time-of-day in minutes.
-      midsleepMins.push(Math.floor((start + end) / 2 / 60000) % 1440);
-    }
-  }
-
-  // HRV: today's ln(RMSSD) vs the baseline built from strictly-earlier nights.
-  const todayLn = lnByDate.find((x) => x.date === date)?.ln ?? null;
-  const baseline = lnByDate.filter((x) => x.date < date).map((x) => x.ln);
-  if (todayLn != null && baseline.length >= 7) {
-    const mean = baseline.reduce((a, b) => a + b, 0) / baseline.length;
-    const variance = baseline.reduce((a, b) => a + (b - mean) ** 2, 0) / (baseline.length - 1);
-    out.hrvLnRmssd = todayLn;
-    out.hrvLnRmssdMean = mean;
-    out.hrvLnRmssdSd = Math.sqrt(variance);
-  }
-
-  // Sleep regularity: spread of midsleep time-of-day across the recent window.
-  if (midsleepMins.length >= 7) out.sleepRegularityMinutes = circularSdMinutes(midsleepMins);
-
-  return out;
-}
-
 async function runCheckin(args: CheckinArgs): Promise<void> {
   await ensureDb();
   const date = flagStr(args.flags, "date") ?? localDate();
@@ -1991,33 +1887,10 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
         `Training readiness ${r} (${recoveryLevel}) — consider easing today's intensity.`
       );
   } else {
-    const sleepHistoryScore = await sleepScoreHistory(date);
-    // Prefer Garmin's own 7-day resting-HR average (available immediately);
-    // fall back to our rolling DB mean once enough history exists.
-    const rhrBaseline = wellness?.rhr_7day_avg ?? (await restingHrBaseline(date));
-    // Richer HRV (LnRMSSD vs SWC band) + sleep-regularity, derived from the
-    // stored garmin_raw history when enough nights exist (else these are null
-    // and the model falls back to the Garmin HRV band / status).
-    const hist = await recoveryHistoryFromRaw(date);
-    const derived = computeReadiness({
-      sleepScore: wellness?.sleep_score,
-      acwr: wellness?.acwr,
-      hrvLnRmssd: hist.hrvLnRmssd,
-      hrvLnRmssdMean: hist.hrvLnRmssdMean,
-      hrvLnRmssdSd: hist.hrvLnRmssdSd,
-      hrvWeeklyAvg: wellness?.hrv_weekly_avg,
-      hrvBaselineLow: wellness?.hrv_baseline_low,
-      hrvBaselineUpper: wellness?.hrv_baseline_upper,
-      hrvStatus: wellness?.hrv_status,
-      avgStress: wellness?.avg_stress,
-      sleepHistoryScore,
-      sleepRegularityMinutes: hist.sleepRegularityMinutes,
-      energy: wellness?.subjective_energy,
-      soreness: wellness?.soreness,
-      mood: wellness?.mood,
-      restingHr: wellness?.resting_hr,
-      restingHrBaseline: rhrBaseline,
-    });
+    // Reconstructed readiness: assembles the wellness row + rolling-history
+    // signals (sleep-score history, RHR baseline, HRV/sleep-regularity from the
+    // stored garmin_raw blobs) and runs the from-scratch model.
+    const derived = await assembleReadiness(date);
     if (derived) {
       recoveryLevel = derived.level;
       recoveryScore = derived.score;
