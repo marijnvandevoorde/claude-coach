@@ -1673,27 +1673,43 @@ async function runGarminFetch(args: GarminFetchArgs): Promise<void> {
     stored++;
   }
 
-  // Pull each new activity's splits + HR streams now, so the web app reads them
-  // from the DB instead of a live Garmin call on first view. Bounded to the just-
-  // ingested activities, throttled, non-fatal, and skips ones already populated.
-  // `--no-streams` opts out (e.g. a fast wellness-only refresh).
+  // Pull each new activity's GPS track + splits/HR streams now, so the web app
+  // reads them from the DB instead of a live Garmin call on first view. Bounded
+  // to the just-ingested activities, throttled, non-fatal, skips ones already
+  // populated. `--no-streams` opts out (e.g. a fast wellness-only refresh).
   let streamed = 0;
+  let tracked = 0;
   if (ids.length > 0 && !args.flags["no-streams"]) {
     try {
-      const have = await queryJson<{ id: number }>(
-        `SELECT id FROM activities WHERE activity_streams IS NOT NULL AND id IN (${ids.join(",")});`
-      );
-      const haveSet = new Set(have.map((h) => h.id));
-      const todo = ids.filter((id) => !haveSet.has(id));
+      const idSet = (col: string): Promise<Set<number>> =>
+        queryJson<{ id: number }>(
+          `SELECT id FROM activities WHERE ${col} IS NOT NULL AND id IN (${ids.join(",")});`
+        ).then((rows) => new Set(rows.map((r) => r.id)));
+      const haveStreams = await idSet("activity_streams");
+      const haveTracks = await idSet("gps_track");
+      const todo = ids.filter((id) => !haveStreams.has(id) || !haveTracks.has(id));
       if (todo.length > 0) {
         const client = await GarminClient.create();
         for (const id of todo) {
-          if ((await storeActivityStreams(client, id)) === "data") streamed++;
+          if (!haveTracks.has(id)) {
+            try {
+              const points = decimate(await fetchActivityTrack(client, id));
+              await execute(
+                `UPDATE activities SET gps_track = ${escapeString(toCompactTrack(points))} WHERE id = ${id};`
+              );
+              if (points.length >= 2) tracked++;
+            } catch {
+              /* non-fatal */
+            }
+          }
+          if (!haveStreams.has(id) && (await storeActivityStreams(client, id)) === "data") {
+            streamed++;
+          }
           await new Promise((r) => setTimeout(r, 400));
         }
       }
     } catch {
-      /* non-fatal: the app's lazy fetch + the garmin-streams backfill still cover it */
+      /* non-fatal: the app's lazy fetch + the garmin-streams/garmin-tracks backfills still cover it */
     }
   }
 
@@ -1705,6 +1721,7 @@ async function runGarminFetch(args: GarminFetchArgs): Promise<void> {
           wellness: patch,
           activitiesStored: stored,
           streamsStored: streamed,
+          tracksStored: tracked,
           errors: payload.errors,
         },
         null,
