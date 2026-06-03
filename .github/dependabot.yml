@@ -21,6 +21,11 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      # @types/node is pinned to the Node version the image/CI runs on (22), so
+      # ignore major bumps (they'd outrun the runtime). Minor/patch still flow.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions used by the workflows (keeps actions/* etc. current).
   - package-ecosystem: "github-actions"
