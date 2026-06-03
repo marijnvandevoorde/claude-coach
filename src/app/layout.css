@@ -2,7 +2,25 @@
    COACH — component + layout classes
    ============================================================ */
 
-/* ---------- phone shell ---------- */
+/* ---------- mobile app root (no phone frame in production) ---------- */
+.app-root.mobile {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  height: 100dvh;
+  margin: 0 auto;
+  max-width: 540px;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.app-root.mobile .app {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* ---------- phone shell (prototype-only; unused in production) ---------- */
 .phone {
   position: relative;
   width: 390px;
