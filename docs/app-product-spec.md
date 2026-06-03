@@ -82,6 +82,26 @@ language + colour bands by default, raw numbers + the factor math one tap deeper
 - **COULD — Tag mini-insights** ("days tagged 'poor sleep' average −9 readiness") — descriptive,
   explicitly correlational, never causal advice.
 
+### Activity detail (per sport)
+
+Tapping an activity opens a detail whose fields **adapt to the sport** — show what that session
+actually records, never fake fields:
+
+- **Run** (incl. treadmill w/ GPS): distance, duration, avg pace, avg/max HR, cadence, elevation,
+  calories, effort; per-km **splits**; HR-over-time.
+- **Outdoor cycling:** distance, duration, avg/NP/max **power**, avg speed, avg HR, elevation, calories.
+- **Indoor cycling (trainer):** duration, avg/NP/max **power**, cadence, avg/max HR, calories (no GPS/distance).
+- **Swim:** distance (m), duration, pace /100m, avg HR, calories.
+- **Strength / gym & machine cardio (treadmill / stairmaster / elliptical):** **duration + heart rate
+  (+ calories) only** — that's all these record. Say so honestly; let the athlete add sets/reps,
+  incline, or level as a **day-linked journal note** (tied to the day, not the activity — there are no
+  per-activity custom fields, and that's fine).
+
+Data note: `activities` already has power columns (`average_watts` / `max_watts` /
+`weighted_average_watts` / `kilojoules`) + `suffer_score`, and `raw_json` retains the full Garmin
+payload — so these per-sport fields exist today (the daily mapper just doesn't promote all of them to
+columns yet; a small ticket if a field needs to be queryable).
+
 ### Quick actions (writes — strictly limited)
 
 - **MUST — Water log, 100 ml taps.** `+100 / +250 / +500 ml` → `hydration_log`; running daily total

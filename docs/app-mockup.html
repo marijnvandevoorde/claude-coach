@@ -514,9 +514,11 @@
     <div id="sheet">
       <div class="grab"></div>
       <div class="sheet-nav">
-        <button onclick="stepDay(-1)">‹</button>
+        <button onclick="stepSheet(-1)">‹</button>
         <strong id="sheetDate"></strong>
-        <button onclick="closeSheet()">✕</button>
+        <span
+          ><button onclick="stepSheet(1)">›</button><button onclick="closeSheet()">✕</button></span
+        >
       </div>
       <div id="sheetBody"></div>
     </div>
@@ -534,12 +536,138 @@
         };
       }
       const R = rng(42);
-      const SPORTS = [
-        ["run", "🏃"],
-        ["ride", "🚴"],
-        ["swim", "🏊"],
-        ["hike", "🥾"],
+      // Sport types and the realistic field set each one exposes.
+      const ACT_TYPES = [
+        { key: "run", kind: "run", icon: "🏃", name: "Aerobic run" },
+        { key: "long_run", kind: "run", icon: "🏃", name: "Long run" },
+        { key: "intervals", kind: "run", icon: "🏃", name: "Track intervals" },
+        { key: "ride", kind: "ride", icon: "🚴", name: "Endurance ride" },
+        { key: "indoor_ride", kind: "indoor_ride", icon: "🚲", name: "Indoor ride (trainer)" },
+        { key: "swim", kind: "swim", icon: "🏊", name: "Pool swim" },
+        { key: "hike", kind: "hike", icon: "🥾", name: "Trail hike" },
+        { key: "strength", kind: "strength", icon: "🏋️", name: "Strength / gym" },
+        { key: "treadmill", kind: "machine", icon: "🏃", name: "Treadmill" },
+        { key: "elliptical", kind: "machine", icon: "🌀", name: "Elliptical" },
+        { key: "stairmaster", kind: "machine", icon: "🪜", name: "Stairmaster" },
       ];
+      function hrSeries(R, avg) {
+        return Array.from({ length: 28 }, (_, i) =>
+          Math.round(avg + Math.sin(i / 3) * 9 + (R() * 12 - 6))
+        );
+      }
+      function genActivity(R) {
+        const t = ACT_TYPES[Math.floor(R() * ACT_TYPES.length)];
+        const a = { type: t.key, kind: t.kind, icon: t.icon, name: t.name };
+        const baseHr =
+          t.kind === "strength" ? 104 : t.kind === "machine" ? 134 : t.kind === "swim" ? 132 : 140;
+        a.avgHr = Math.round(baseHr + R() * 20);
+        a.maxHr = a.avgHr + Math.round(12 + R() * 22);
+        a.hrSeries = hrSeries(R, a.avgHr);
+        a.suffer = Math.round(20 + R() * 130);
+        a.durMin =
+          t.kind === "strength"
+            ? Math.round(35 + R() * 40)
+            : t.kind === "machine"
+              ? Math.round(25 + R() * 35)
+              : t.kind === "indoor_ride"
+                ? Math.round(45 + R() * 45)
+                : Math.round(40 + R() * 90);
+        if (t.kind === "run") {
+          a.dist =
+            t.key === "long_run"
+              ? +(18 + R() * 16).toFixed(1)
+              : t.key === "intervals"
+                ? +(8 + R() * 5).toFixed(1)
+                : +(6 + R() * 16).toFixed(1);
+          const pace = t.key === "intervals" ? 3.9 + R() * 0.6 : 4.6 + R() * 1.2;
+          a.durMin = Math.round(a.dist * pace);
+          a.paceMin = a.durMin / a.dist;
+          a.cadence = Math.round(166 + R() * 16);
+          a.elev = Math.round(R() * (t.key === "long_run" ? 700 : 320));
+          a.splits = Array.from(
+            { length: Math.min(12, Math.max(3, Math.round(a.dist))) },
+            (_, i) => ({
+              km: i + 1,
+              pace: pace + (R() * 0.5 - 0.2),
+              hr: a.avgHr + Math.round(i * 0.7 + (R() * 8 - 4)),
+            })
+          );
+        } else if (t.kind === "ride") {
+          a.dist = +(25 + R() * 75).toFixed(1);
+          a.avgPower = Math.round(150 + R() * 110);
+          a.np = a.avgPower + Math.round(8 + R() * 25);
+          a.maxPower = a.avgPower + Math.round(180 + R() * 400);
+          a.avgSpeed = +(26 + R() * 12).toFixed(1);
+          a.cadence = Math.round(82 + R() * 14);
+          a.elev = Math.round(R() * 1200);
+          a.durMin = Math.round((a.dist / a.avgSpeed) * 60);
+        } else if (t.kind === "indoor_ride") {
+          a.avgPower = Math.round(160 + R() * 110);
+          a.np = a.avgPower + Math.round(6 + R() * 18);
+          a.maxPower = a.avgPower + Math.round(120 + R() * 350);
+          a.cadence = Math.round(85 + R() * 12);
+          a.virtualDist = +((a.durMin / 60) * (28 + R() * 8)).toFixed(1);
+        } else if (t.kind === "swim") {
+          a.distM = Math.round((1.5 + R() * 2.5) * 10) * 100;
+          a.pace100 = (a.durMin * 60) / (a.distM / 100);
+        } else if (t.kind === "hike") {
+          a.dist = +(6 + R() * 16).toFixed(1);
+          a.elev = Math.round(300 + R() * 1100);
+        } else if (t.kind === "machine") {
+          if (t.key === "treadmill") {
+            a.dist = +(4 + R() * 8).toFixed(1);
+            a.incline = +(1 + R() * 6).toFixed(1);
+          }
+          if (t.key === "stairmaster") a.floors = Math.round(60 + R() * 140);
+          if (t.key === "elliptical") a.level = Math.round(6 + R() * 10);
+        }
+        a.cal = Math.round(
+          a.durMin * (t.kind === "strength" ? 6 : t.kind === "swim" ? 9 : 9 + R() * 4)
+        );
+        return a;
+      }
+      function fmtDur(min) {
+        const h = Math.floor(min / 60),
+          m = Math.round(min % 60);
+        return h ? `${h}h ${String(m).padStart(2, "0")}m` : `${m} min`;
+      }
+      function fmtPace(p) {
+        const m = Math.floor(p),
+          s = Math.round((p - m) * 60);
+        return `${m}:${String(s).padStart(2, "0")}/km`;
+      }
+      function fmtPace100(sec) {
+        const m = Math.floor(sec / 60),
+          s = Math.round(sec % 60);
+        return `${m}:${String(s).padStart(2, "0")}/100m`;
+      }
+      function actLine(a) {
+        if (a.kind === "run") return `${a.dist} km · ${fmtDur(a.durMin)} · ${fmtPace(a.paceMin)}`;
+        if (a.kind === "ride") return `${a.dist} km · ${fmtDur(a.durMin)} · ${a.avgPower} W`;
+        if (a.kind === "indoor_ride") return `${fmtDur(a.durMin)} · ${a.avgPower} W (NP ${a.np})`;
+        if (a.kind === "swim")
+          return `${a.distM} m · ${fmtDur(a.durMin)} · ${fmtPace100(a.pace100)}`;
+        if (a.kind === "hike") return `${a.dist} km · ${fmtDur(a.durMin)} · ↑${a.elev} m`;
+        return `${fmtDur(a.durMin)} · HR ${a.avgHr}`;
+      }
+      function actStatRight(a) {
+        if (a.kind === "ride" || a.kind === "indoor_ride")
+          return `${a.avgPower} W<br>SS ${a.suffer}`;
+        if (a.kind === "run" || a.kind === "hike") return `HR ${a.avgHr}<br>↑${a.elev} m`;
+        return `HR ${a.avgHr}<br>${a.cal} kcal`;
+      }
+      function miniSeries(series, color) {
+        const w = 320,
+          h = 40,
+          min = Math.min(...series),
+          max = Math.max(...series);
+        const sx = w / (series.length - 1),
+          sy = (h - 6) / Math.max(1, max - min);
+        const pts = series
+          .map((v, i) => `${(i * sx).toFixed(1)},${(h - 3 - (v - min) * sy).toFixed(1)}`)
+          .join(" ");
+        return `<svg viewBox="0 0 ${w} ${h}" height="${h}"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2"/></svg>`;
+      }
       const NDAYS = 140;
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -579,30 +707,7 @@
         const energy = Math.max(1, Math.min(5, Math.round(3 + wobble * 0.08 + (R() * 2 - 1))));
         const fSubj = (energy - 3) * 4;
         const score = Math.round(clamp(60 + fSleep + fLoad + fHrv + fStress + fSubj, 8, 99));
-        const act = trained
-          ? (() => {
-              const s = SPORTS[Math.floor(R() * SPORTS.length)];
-              const dist = +(4 + R() * 22).toFixed(1);
-              const dur = Math.round(dist * (5 + R() * 3));
-              return {
-                sport: s[0],
-                icon: s[1],
-                dist,
-                dur,
-                hr: Math.round(128 + R() * 40),
-                elev: Math.round(R() * 600),
-                suffer: Math.round(20 + R() * 120),
-                name:
-                  s[0] === "run"
-                    ? "Aerobic run"
-                    : s[0] === "ride"
-                      ? "Endurance ride"
-                      : s[0] === "swim"
-                        ? "Pool swim"
-                        : "Trail hike",
-              };
-            })()
-          : null;
+        const act = trained ? genActivity(R) : null;
         days.push({
           date: iso(d),
           dObj: d,
@@ -875,10 +980,10 @@
           `<div class="card"><h3>Activities</h3>${acts
             .map(
               (d) => `
-          <div class="lrow" onclick="openSheet('${d.date}')">
+          <div class="lrow" onclick="openActivity('${d.date}')">
             <div class="ic">${d.act.icon}</div>
-            <div class="meta"><b>${d.act.name}</b><div class="tiny muted">${fmtDate(d.dObj)} · ${d.act.dist} km · ${Math.floor(d.act.dur / 60)}:${String(d.act.dur % 60).padStart(2, "0")}</div></div>
-            <div class="stat">HR ${d.act.hr}<br>↑${d.act.elev}m · SS ${d.act.suffer}</div>
+            <div class="meta"><b>${d.act.name}</b><div class="tiny muted">${fmtDate(d.dObj)} · ${actLine(d.act)}</div></div>
+            <div class="stat">${actStatRight(d.act)}</div>
           </div>`
             )
             .join("")}</div>`
@@ -906,25 +1011,58 @@
         return `<div class="lrow" onclick="openSheet('${j.date}')"><div class="meta"><span class="tag">#${j.tag}</span> <span class="tiny muted">${d ? fmtDate(d.dObj) : j.date}</span><div style="margin-top:4px">${j.text}</div></div></div>`;
       }
 
-      // ---------- day detail sheet ----------
+      // ---------- detail sheet (day OR activity) ----------
       let sheetDate = null;
-      function openSheet(date) {
-        sheetDate = date;
-        renderSheet();
+      let sheetMode = "day";
+      function showSheet() {
         document.getElementById("scrim").classList.add("open");
         document.getElementById("sheet").classList.add("open");
+      }
+      function openSheet(date) {
+        sheetMode = "day";
+        sheetDate = date;
+        renderSheet();
+        showSheet();
+      }
+      function openActivity(date) {
+        sheetMode = "activity";
+        sheetDate = date;
+        renderSheet();
+        showSheet();
       }
       function closeSheet() {
         document.getElementById("scrim").classList.remove("open");
         document.getElementById("sheet").classList.remove("open");
       }
-      function stepDay(n) {
+      function stepSheet(n) {
         const i = days.findIndex((d) => d.date === sheetDate);
-        const j = clamp(i + n, 0, days.length - 1);
-        sheetDate = days[j].date;
+        if (sheetMode === "activity") {
+          for (let k = i + n; k >= 0 && k < days.length; k += n) {
+            if (days[k].act) {
+              sheetDate = days[k].date;
+              renderSheet();
+              return;
+            }
+          }
+          return;
+        }
+        sheetDate = days[clamp(i + n, 0, days.length - 1)].date;
         renderSheet();
       }
+      function addNoteForDay(date) {
+        closeSheet();
+        go("journal");
+        showToast("Tip: log extra detail for " + fmtDate(byDate[date].dObj) + " here");
+      }
       function renderSheet() {
+        if (sheetMode === "activity" && byDate[sheetDate].act)
+          renderActivitySheet(byDate[sheetDate]);
+        else {
+          sheetMode = "day";
+          renderDaySheet();
+        }
+      }
+      function renderDaySheet() {
         const d = byDate[sheetDate];
         const [lbl, col] = band(d.score);
         document.getElementById("sheetDate").textContent = fmtDate(d.dObj);
@@ -945,9 +1083,92 @@
             <span>Body batt <b>${d.bb}</b></span><span>Stress <b>${d.stress}</b></span><span>ACWR <b>${d.acwr}</b></span>
             <span>Steps <b>${d.steps.toLocaleString()}</b></span><span>Weight <b>${d.weight}kg</b></span>
           </div></div>
-          ${d.act ? `<div class="card"><div class="lrow" style="border:0;padding:2px"><div class="ic">${d.act.icon}</div><div class="meta"><b>${d.act.name}</b><div class="tiny muted">${d.act.dist} km · ${Math.floor(d.act.dur / 60)}:${String(d.act.dur % 60).padStart(2, "0")} · HR ${d.act.hr} · ↑${d.act.elev}m</div></div></div></div>` : `<div class="card tiny muted">No activity logged.</div>`}
+          ${d.act ? `<div class="card lrow tap" style="border-radius:14px" onclick="openActivity('${d.date}')"><div class="ic">${d.act.icon}</div><div class="meta"><b>${d.act.name}</b><div class="tiny muted">${actLine(d.act)}</div></div><div class="stat" style="color:var(--accent);font-size:18px">›</div></div>` : `<div class="card tiny muted">No activity logged.</div>`}
           <div class="card"><div class="tiny muted">Subjective</div><div>Energy ${d.energy}/5 · Soreness ${d.soreness}/5 · Mood ${["", "😖", "😐", "🙂", "😄", "🤩"][d.mood]}</div></div>
           ${js.length ? `<div class="card"><div class="tiny muted">Journal</div>${js.map((j) => `<div style="margin-top:4px"><span class="tag">#${j.tag}</span> ${j.text}</div>`).join("")}</div>` : ""}
+        `;
+      }
+      function renderActivitySheet(d) {
+        const a = d.act;
+        document.getElementById("sheetDate").textContent = `${a.icon} ${a.name}`;
+        const stat = (k, v) =>
+          `<span style="min-width:74px"><b>${v}</b><br><span class="tiny muted">${k}</span></span>`;
+        const g = [stat("Duration", fmtDur(a.durMin))];
+        if (a.kind === "run")
+          g.push(
+            stat("Distance", a.dist + " km"),
+            stat("Avg pace", fmtPace(a.paceMin)),
+            stat("Avg HR", a.avgHr),
+            stat("Max HR", a.maxHr),
+            stat("Cadence", a.cadence + " spm"),
+            stat("Elev", "↑" + a.elev + " m"),
+            stat("Calories", a.cal),
+            stat("Effort", a.suffer)
+          );
+        else if (a.kind === "ride")
+          g.push(
+            stat("Distance", a.dist + " km"),
+            stat("Avg power", a.avgPower + " W"),
+            stat("Norm power", a.np + " W"),
+            stat("Max power", a.maxPower + " W"),
+            stat("Avg speed", a.avgSpeed + " km/h"),
+            stat("Avg HR", a.avgHr),
+            stat("Elev", "↑" + a.elev + " m"),
+            stat("Calories", a.cal)
+          );
+        else if (a.kind === "indoor_ride")
+          g.push(
+            stat("Avg power", a.avgPower + " W"),
+            stat("Norm power", a.np + " W"),
+            stat("Max power", a.maxPower + " W"),
+            stat("Cadence", a.cadence + " rpm"),
+            stat("Avg HR", a.avgHr),
+            stat("Max HR", a.maxHr),
+            stat("Virtual dist", a.virtualDist + " km"),
+            stat("Calories", a.cal)
+          );
+        else if (a.kind === "swim")
+          g.push(
+            stat("Distance", a.distM + " m"),
+            stat("Avg pace", fmtPace100(a.pace100)),
+            stat("Avg HR", a.avgHr),
+            stat("Calories", a.cal)
+          );
+        else if (a.kind === "hike")
+          g.push(
+            stat("Distance", a.dist + " km"),
+            stat("Elev", "↑" + a.elev + " m"),
+            stat("Avg HR", a.avgHr),
+            stat("Calories", a.cal)
+          );
+        else if (a.kind === "strength")
+          g.push(stat("Avg HR", a.avgHr), stat("Max HR", a.maxHr), stat("Calories", a.cal));
+        else if (a.kind === "machine") {
+          g.push(stat("Avg HR", a.avgHr), stat("Max HR", a.maxHr), stat("Calories", a.cal));
+          if (a.dist) g.push(stat("Distance", a.dist + " km"));
+          if (a.incline) g.push(stat("Incline", a.incline + " %"));
+          if (a.floors) g.push(stat("Floors", a.floors));
+          if (a.level) g.push(stat("Level", a.level));
+        }
+        const minimal = a.kind === "strength" || a.kind === "machine";
+        const power =
+          a.kind === "ride" || a.kind === "indoor_ride"
+            ? `<div class="card"><h3>Power (sample)</h3>${miniSeries(
+                a.hrSeries.map((h, i) => Math.max(0, a.avgPower - 25 + i * 2 + (h - a.avgHr) * 3)),
+                "#e8a13a"
+              )}<div class="tiny muted">avg ${a.avgPower} W · NP ${a.np} · max ${a.maxPower} W</div></div>`
+            : "";
+        const splits = a.splits
+          ? `<div class="card"><h3>Splits</h3><table style="width:100%;font-size:13px;border-collapse:collapse">${a.splits.map((s) => `<tr><td class="muted">km ${s.km}</td><td style="text-align:right">${fmtPace(s.pace)}</td><td style="text-align:right" class="muted">${Math.round(s.hr)} bpm</td></tr>`).join("")}</table></div>`
+          : "";
+        document.getElementById("sheetBody").innerHTML = `
+          <div class="card" style="margin-top:4px"><div class="tiny muted">${fmtDate(d.dObj)}</div>
+            <div class="kv" style="gap:14px 18px;margin-top:8px">${g.join("")}</div></div>
+          <div class="card"><h3>Heart rate (sample)</h3>${miniSeries(a.hrSeries, "#f85149")}<div class="tiny muted">avg ${a.avgHr} · max ${a.maxHr} bpm</div></div>
+          ${power}${splits}
+          ${minimal ? `<div class="card tiny muted">This session records <b>duration & heart rate</b>${a.dist ? " (and distance)" : ""} only. Sets/reps, incline or level aren't part of the activity record — log them as a note for this day.</div>` : ""}
+          <div class="card tap" onclick="openSheet('${d.date}')"><b style="color:var(--accent)">View full day ›</b></div>
+          <div class="card tap" onclick="addNoteForDay('${d.date}')"><b style="color:var(--accent)">＋ Log extra for this day (journal) ›</b></div>
         `;
       }
 
