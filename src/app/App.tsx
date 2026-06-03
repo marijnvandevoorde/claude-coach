@@ -1,120 +1,285 @@
-import { useEffect, useState } from "react";
-import { api, type Summary } from "./api";
+import { useEffect, useRef, useState } from "react";
+import { Icon } from "./components/Icon";
+import { UndoToast, TabBar, TABS, type TabId, type ToastState } from "./components/primitives";
+import { band, todayISO, isoOf, parseISO, DAY_MIN } from "./lib/coach";
+import { api } from "./api";
+import { adaptSummary, type DayView } from "./lib/adapt";
+import { useAsync } from "./lib/useAsync";
+import { Dashboard, DashboardLoading } from "./screens/Dashboard";
+import { Calendar } from "./screens/Calendar";
+import { Trends } from "./screens/Trends";
+import { Activities } from "./screens/Activities";
+import { Journal } from "./screens/Journal";
+import { DaySheet } from "./screens/DayDetail";
+import { ActivitySheet } from "./screens/ActivityDetail";
+import type { MetricKey } from "./charts/charts";
 
-/**
- * App shell — scaffold. Responsive shell-swap (sidebar ≥900px / tab bar below)
- * + a live Today view off /api/summary. The full design screens (Calendar,
- * Trends, Activity, Journal, Day/Activity detail, charts) are ported on top of
- * this foundation; this proves the build → serve → API → render path.
- */
-const TABS = [
-  { k: "today", label: "Today" },
-  { k: "calendar", label: "Calendar" },
-  { k: "trends", label: "Trends" },
-  { k: "activities", label: "Activity" },
-  { k: "journal", label: "Journal" },
-] as const;
-type Tab = (typeof TABS)[number]["k"];
+const BREAKPOINT = 900;
+const UNDO_MS = 5000;
 
-function useWide(): boolean {
-  const [wide, setWide] = useState(() => window.innerWidth >= 900);
-  useEffect(() => {
-    const on = () => setWide(window.innerWidth >= 900);
-    window.addEventListener("resize", on);
-    return () => window.removeEventListener("resize", on);
-  }, []);
-  return wide;
-}
+const EMPTY_DAY = (date: string): DayView => ({
+  date,
+  readiness: null,
+  factors: [],
+  coverage: {},
+  sleep_hours: null,
+  sleep_score: null,
+  sleep_stages: null,
+  hrv: null,
+  hrv_base_low: null,
+  hrv_base_high: null,
+  resting_hr: null,
+  body_battery: null,
+  acwr: null,
+  load_acute: null,
+  load_chronic: null,
+  stress: null,
+  steps: null,
+  subjective: null,
+  hasData: false,
+});
 
-const BAND = (score: number | null | undefined): string =>
-  score == null ? "var(--text-3)" : score >= 67 ? "var(--go)" : score >= 40 ? "var(--modify)" : "var(--back)";
-
-function Today() {
-  const [s, setS] = useState<Summary | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  useEffect(() => {
-    api.summary().then(setS).catch((e) => setErr(String(e)));
-  }, []);
-
-  if (err) return <div className="page">Couldn’t load: {err}</div>;
-  if (!s) return <div className="page">Loading…</div>;
-  const r = s.readiness;
+function Sidebar({
+  active,
+  onChange,
+  theme,
+  onToggleTheme,
+  readiness,
+}: {
+  active: TabId;
+  onChange: (t: TabId) => void;
+  theme: string;
+  onToggleTheme: () => void;
+  readiness: number | null;
+}) {
+  const b = band(readiness);
   return (
-    <div className="page" style={{ paddingTop: 0 }}>
-      <div className="card" style={{ textAlign: "center", padding: 26 }}>
-        <div className="eyebrow">Readiness · est.</div>
-        <div style={{ fontSize: 60, fontWeight: 600, color: BAND(r?.score) }}>{r?.score ?? "—"}</div>
-        <div style={{ color: BAND(r?.score), fontWeight: 600, textTransform: "capitalize" }}>
-          {r?.level ?? "no data"}
+    <aside className="sidebar">
+      <div className="side-brand">
+        <div className="brand-mark">C</div>
+        <div>
+          <div className="brand-name">Coach</div>
+          <div className="brand-sub">small victories</div>
         </div>
       </div>
-      {r?.contributions?.length ? (
-        <div className="card">
-          <h3>What moved it</h3>
-          {r.contributions.map((c) => (
-            <div key={c.key} style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>{c.label}</span>
-              <span style={{ color: c.points >= 0 ? "var(--go)" : "var(--back)" }}>
-                {c.points > 0 ? "+" : ""}
-                {c.points}
-              </span>
-            </div>
-          ))}
+      <nav className="side-nav">
+        {TABS.map((tb) => (
+          <button
+            key={tb.id}
+            className={`side-link ${active === tb.id ? "on" : ""}`}
+            onClick={() => onChange(tb.id)}
+          >
+            <Icon name={tb.icon} size={19} sw={active === tb.id ? 2 : 1.6} />
+            <span>{tb.label}</span>
+          </button>
+        ))}
+      </nav>
+      <div className="side-foot">
+        <div className="side-ready">
+          <span style={{ width: 9, height: 9, borderRadius: "50%", background: b.color }} />
+          <span className="mono" style={{ fontSize: 12, color: "var(--text-2)" }}>
+            {readiness != null ? `Readiness ${readiness} · ${b.label}` : "Readiness —"}
+          </span>
         </div>
-      ) : null}
-      <div className="card">
-        <h3>Hydration</h3>
-        <div style={{ fontSize: 22 }}>
-          {s.hydration.total_ml} ml{s.hydration.goal_ml ? ` / ${s.hydration.goal_ml}` : ""}
-        </div>
-        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-          {[100, 250, 500].map((ml) => (
-            <button
-              key={ml}
-              onClick={() => api.logWater(ml).then((h) => setS({ ...s, hydration: h }))}
-              style={{ flex: 1, padding: 12, borderRadius: 12 }}
-            >
-              +{ml}
-            </button>
-          ))}
-        </div>
+        <button className="side-link" onClick={onToggleTheme}>
+          <Icon name={theme === "dark" ? "sun" : "moon"} size={19} />
+          <span>{theme === "dark" ? "Light" : "Dark"} mode</span>
+        </button>
       </div>
-    </div>
+    </aside>
   );
 }
 
 export function App() {
-  const wide = useWide();
-  const [tab, setTab] = useState<Tab>("today");
   const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [tab, setTab] = useState<TabId>("today");
+  const [metric, setMetric] = useState<MetricKey>("readiness");
+  const [win, setWin] = useState(42);
+  const [daySheet, setDaySheet] = useState<string | null>(null);
+  const [activityId, setActivityId] = useState<number | null>(null);
 
-  const screen =
-    tab === "today" ? <Today /> : <div className="page">“{tab}” — coming next.</div>;
+  // viewport-driven shell swap at 900px
+  const [vw, setVw] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1200));
+  useEffect(() => {
+    const on = () => setVw(window.innerWidth);
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
+  const wide = vw >= BREAKPOINT;
+
+  const today = todayISO();
+
+  // today's summary — drives dashboard + sidebar readiness + hydration seed
+  const summaryState = useAsync(() => api.summary(), []);
+  const day: DayView | null = summaryState.data ? adaptSummary(summaryState.data) : null;
+
+  // recent window for tile sparklines (HRV / RHR)
+  const trendsState = useAsync(() => api.trends(30), []);
+  const recent = trendsState.data?.series ?? [];
+  const numOrNull = (v: unknown) => (v == null || v === "" ? null : Number(v));
+  const hrvSeries = recent.map((r) => numOrNull((r as Record<string, unknown>).hrv_weekly_avg));
+  const rhrSeries = recent.map((r) => numOrNull((r as Record<string, unknown>).resting_hr));
+
+  // hydration: optimistic local total + 5s batched undo
+  const [water, setWater] = useState(0);
+  const [goal, setGoal] = useState(2500);
+  const summaryHyd = summaryState.data?.hydration;
+  useEffect(() => {
+    if (summaryHyd) {
+      setWater(summaryHyd.total_ml ?? 0);
+      if (summaryHyd.goal_ml) setGoal(summaryHyd.goal_ml);
+    }
+  }, [summaryHyd]);
+
+  // subjective (today) — seed from summary, override locally
+  const [subjective, setSubjective] = useState<{ energy?: number; mood?: number }>({});
+  useEffect(() => {
+    if (day?.subjective) setSubjective({ energy: day.subjective.energy, mood: day.subjective.mood });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summaryState.data]);
+
+  const [journalKey, setJournalKey] = useState(0);
+
+  // toast / undo (batched)
+  const [toast, setToast] = useState<ToastState | null>(null);
+  const batchBase = useRef<number | null>(null);
+  const batchTotal = useRef(0);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function commitWater() {
+    const amt = batchTotal.current;
+    batchBase.current = null;
+    batchTotal.current = 0;
+    if (amt > 0) api.logWater(amt).catch(() => {});
+  }
+  function addWater(amt: number) {
+    if (batchBase.current == null) batchBase.current = water;
+    batchTotal.current += amt;
+    setWater((w) => Math.min(goal * 2, w + amt));
+    const base = batchBase.current;
+    const total = batchTotal.current;
+    setToast({ id: Date.now(), text: `+${total} ml water logged`, base });
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      setToast(null);
+      commitWater();
+    }, UNDO_MS);
+  }
+  function undoWater() {
+    if (toast?.base != null) setWater(toast.base);
+    if (timer.current) clearTimeout(timer.current);
+    setToast(null);
+    batchBase.current = null;
+    batchTotal.current = 0;
+  }
+
+  function onSubj(k: "energy" | "mood", v: number) {
+    setSubjective((s) => {
+      const next = { ...s, [k]: s[k] === v ? undefined : v };
+      api.logSubjective({ energy: next.energy, mood: next.mood }).catch(() => {});
+      return next;
+    });
+  }
+
+  function stepDay(delta: number) {
+    setDaySheet((cur) => {
+      if (!cur) return cur;
+      const d = parseISO(cur);
+      d.setDate(d.getDate() + delta);
+      return isoOf(d);
+    });
+  }
+  const canPrev = !!daySheet && daySheet > DAY_MIN;
+  const canNext = !!daySheet && daySheet < today;
+
+  const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
+
+  const dashDay: DayView | null = day
+    ? {
+        ...day,
+        subjective:
+          subjective.energy != null || subjective.mood != null
+            ? { ...day.subjective, ...subjective }
+            : day.subjective,
+      }
+    : null;
+
+  let screen: React.ReactNode;
+  if (tab === "today") {
+    screen = summaryState.loading ? (
+      <DashboardLoading theme={theme} />
+    ) : (
+      <Dashboard
+        day={dashDay ?? EMPTY_DAY(today)}
+        hrvSeries={hrvSeries}
+        rhrSeries={rhrSeries}
+        water={water}
+        goal={goal}
+        onWater={addWater}
+        onOpenDay={setDaySheet}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        showThemeToggle={!wide}
+      />
+    );
+  } else if (tab === "calendar") {
+    screen = <Calendar metric={metric} onMetric={setMetric} onPick={setDaySheet} />;
+  } else if (tab === "trends") {
+    screen = <Trends win={win} onWin={setWin} />;
+  } else if (tab === "activities") {
+    screen = <Activities onOpenActivity={setActivityId} />;
+  } else {
+    screen = (
+      <Journal
+        subjective={subjective}
+        onSubj={onSubj}
+        onPick={setDaySheet}
+        refreshKey={journalKey}
+        onAdded={() => setJournalKey((k) => k + 1)}
+      />
+    );
+  }
+
+  const overlays = (
+    <>
+      <DaySheet
+        date={daySheet}
+        onClose={() => setDaySheet(null)}
+        onStep={stepDay}
+        canPrev={canPrev}
+        canNext={canNext}
+        water={water}
+        goal={goal}
+        todayISO={today}
+      />
+      <ActivitySheet id={activityId} onClose={() => setActivityId(null)} />
+      <UndoToast toast={toast} onUndo={undoWater} />
+    </>
+  );
+
+  if (wide) {
+    return (
+      <div className="desktop app-root" data-theme={theme} data-scheme="lagoon">
+        <Sidebar
+          active={tab}
+          onChange={setTab}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+          readiness={day?.readiness ?? null}
+        />
+        <main className="desktop-main">{screen}</main>
+        {overlays}
+      </div>
+    );
+  }
 
   return (
-    <div data-theme={theme} data-scheme="lagoon" className={wide ? "desktop" : "phone-screen"}>
-      <div className="topbar">
-        <div>
-          <div className="eyebrow">Coach</div>
-          <h1>{TABS.find((t) => t.k === tab)!.label}</h1>
-        </div>
-        <button className="icon-btn" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-          {theme === "dark" ? "☀" : "☾"}
-        </button>
+    <div className="app-root mobile" data-theme={theme} data-scheme="lagoon">
+      <div className="app">
+        {screen}
+        <TabBar active={tab} onChange={setTab} />
+        {overlays}
       </div>
-      <div className="scroll">{screen}</div>
-      <nav className="tabbar">
-        {TABS.map((t) => (
-          <button
-            key={t.k}
-            className={tab === t.k ? "active" : ""}
-            onClick={() => setTab(t.k)}
-            style={{ flex: 1, padding: "10px 0" }}
-          >
-            {t.label}
-          </button>
-        ))}
-      </nav>
     </div>
   );
 }

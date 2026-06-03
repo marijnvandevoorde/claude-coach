@@ -49,3 +49,7 @@ docker_dist/
 
 # ...but DO keep the committed env template (overrides the .env.* rule above).
 !.env.example
+
+# Global gitignore excludes any lib/ dir; the web app needs src/app/lib/
+!src/app/lib/
+!src/app/lib/**
