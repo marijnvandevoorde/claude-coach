@@ -196,6 +196,8 @@ export function Trends({
               color="var(--accent)"
               annotations={anns}
               yPad={0.05}
+              seriesLabel="readiness"
+              unit=" / 100"
               hbands={[
                 { from: 67, to: 100, color: "var(--go)", opacity: 0.07 },
                 { from: 40, to: 67, color: "var(--modify)", opacity: 0.07 },
@@ -217,6 +219,8 @@ export function Trends({
               band={hrvBand}
               annotations={anns}
               fmtY={(t) => Math.round(t)}
+              seriesLabel="HRV"
+              unit=" ms"
             />
             <div className="ctx-note" style={{ marginTop: 6 }}>
               Shaded = your normal range. Below the band = under-recovered.
@@ -236,6 +240,8 @@ export function Trends({
               area={false}
               annotations={anns}
               fmtY={(t) => Math.round(t)}
+              seriesLabel="acute 7d"
+              line2Label="chronic 28d"
             />
             <div className="row" style={{ gap: 14, marginTop: 6 }}>
               <span className="ctx-note" style={{ display: "flex", alignItems: "center", gap: 5 }}>

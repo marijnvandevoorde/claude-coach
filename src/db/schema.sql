@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS activities (
   gear_id TEXT,
   raw_json TEXT,                    -- full Strava response as JSON
   gps_track TEXT,                   -- compact GPS track [[lat,lon,ele?],…]; '[]' = fetched, no track
+  activity_streams TEXT,            -- compact { splits:[…], hr:[…], pace?:[…] }; '{}' = fetched, none
   synced_at TEXT DEFAULT (datetime('now'))
 );
 

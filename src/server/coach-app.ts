@@ -9,7 +9,7 @@ import express from "express";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { initDatabase, queryJson } from "../db/client.js";
+import { execute, initDatabase, queryJson } from "../db/client.js";
 import { migrate } from "../db/migrate.js";
 import {
   localDate,
@@ -29,6 +29,8 @@ import {
 import { accessMiddleware, accessEnabled } from "./access.js";
 import { log } from "../lib/logging.js";
 import { uploadRoute } from "../garmin/routes.js";
+import { GarminClient } from "../garmin/client.js";
+import { fetchActivityStreams, toCompactStreams, type ActivityStreams } from "../garmin/streams.js";
 import { courseTypeFromSport, trackToGpx } from "./course-gpx.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -48,6 +50,22 @@ function parseTrack(raw: unknown): number[][] | null {
   try {
     const t = JSON.parse(raw) as number[][];
     return Array.isArray(t) && t.length >= 2 ? t : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Parse the stored compact `activity_streams` blob ({ splits, hr, pace? }) safely. */
+function parseStreams(raw: unknown): ActivityStreams | null {
+  if (typeof raw !== "string" || raw.length < 2) return null;
+  try {
+    const s = JSON.parse(raw) as Partial<ActivityStreams>;
+    if (!s || typeof s !== "object") return null;
+    return {
+      splits: Array.isArray(s.splits) ? s.splits : [],
+      hr: Array.isArray(s.hr) ? s.hr : [],
+      ...(Array.isArray(s.pace) ? { pace: s.pace } : {}),
+    };
   } catch {
     return null;
   }
@@ -180,7 +198,8 @@ function api(): express.Router {
       const rows = await queryJson<Record<string, unknown>>(
         `SELECT id, name, sport_type, start_date, distance, moving_time, elapsed_time,
                 total_elevation_gain, average_heartrate, max_heartrate, average_watts,
-                max_watts, weighted_average_watts, average_cadence, calories, suffer_score, gps_track
+                max_watts, weighted_average_watts, average_cadence, calories, suffer_score,
+                gps_track, activity_streams
          FROM activities WHERE id = ${id} LIMIT 1;`
       );
       const a = rows[0];
@@ -189,8 +208,32 @@ function api(): express.Router {
         return;
       }
       const track = parseTrack(a.gps_track);
+
+      // Lazy-populate the real splits + HR/pace streams on first view. Best effort:
+      // if Garmin is unreachable, fall through with empty streams (don't store a
+      // sentinel, so a later view can retry).
+      let streams = parseStreams(a.activity_streams);
+      if (a.activity_streams == null) {
+        try {
+          const client = await GarminClient.create();
+          const fetched = await fetchActivityStreams(client, id);
+          await execute(
+            `UPDATE activities SET activity_streams = ${esc(toCompactStreams(fetched))} WHERE id = ${id};`
+          );
+          streams = fetched;
+        } catch {
+          /* keep streams null → empty arrays in the response, retry on a later view */
+        }
+      }
+
       delete a.gps_track;
-      res.json({ ...a, track });
+      delete a.activity_streams;
+      res.json({
+        ...a,
+        track,
+        splits: streams?.splits ?? [],
+        hrSeries: streams?.hr ?? [],
+      });
     } catch (e) {
       next(e);
     }

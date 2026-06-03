@@ -1,92 +1,57 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Icon } from "../components/Icon";
 import { SportChip, Skeleton, EmptyState, Sheet } from "../components/primitives";
-import { LineChart, RouteMap, genTrack, trackSeed } from "../charts/charts";
+import { LineChart, RouteMap } from "../charts/charts";
 import { fmtDate, fmtDur } from "../lib/coach";
 import { api } from "../api";
 import { adaptActivityDetail, type ActivityDetailView } from "../lib/adapt";
 import { useAsync } from "../lib/useAsync";
 import { paceStr } from "./Activities";
 
-// Synthesize an HR session series from avg/max HR (the API has no per-second stream).
-function sessionSeries(a: ActivityDetailView): { v: number }[] {
-  const n = 60;
-  const out: { v: number }[] = [];
-  const base = a.avg_hr ?? 140;
-  const max = a.max_hr ?? base + 25;
-  const seed = trackSeed(a.date + a.name);
-  const rng = (i: number) => {
-    const x = Math.sin((seed % 1000) * 0.013 + i * 12.9898) * 43758.5;
-    return x - Math.floor(x);
-  };
-  const intervals = /interval|rep|×|x\d/i.test(a.name);
-  for (let i = 0; i < n; i++) {
-    const t = i / (n - 1);
-    let hr =
-      base -
-      14 * Math.exp(-t * 6) +
-      (intervals ? 16 * Math.max(0, Math.sin(t * Math.PI * 6)) : 0) +
-      (rng(i) - 0.5) * 5 +
-      t * 6;
-    out.push({ v: Math.round(Math.min(max, hr)) });
-  }
-  return out;
+// A rendered split row, derived from real Garmin lap data.
+interface SplitRow {
+  idx: number;
+  label: string; // distance, e.g. "1.0 km"
+  pace: string; // m:ss /km
+  hr: number | null;
+  w: number; // bar width %
+  shade: number; // 0..1, 1 = fastest → deepest green
 }
 
-interface Split {
-  km: number;
-  pace: string;
-  hr: number;
-  w: number;
-  fast: boolean;
-}
-function buildSplits(a: ActivityDetailView): Split[] {
-  if (a.sport === "ride" || !a.distanceKm || !a.durationMin || !a.avg_hr) return [];
-  const km = Math.floor(a.distanceKm);
-  const basePace = a.durationMin / a.distanceKm;
-  const seed = trackSeed(a.date + a.name);
-  const raw: { km: number; pRaw: number; pace: string; hr: number }[] = [];
-  let fastest = 99;
-  for (let i = 1; i <= km; i++) {
-    const x = Math.sin(((seed % 100) + i) * 5.17) * 0.5;
-    const p = basePace + x * 0.5 - (i / km) * 0.2;
-    fastest = Math.min(fastest, p);
-    const m = Math.floor(p);
-    const s = Math.round((p - m) * 60);
-    raw.push({
-      km: i,
-      pRaw: p,
-      pace: `${m}:${String(s).padStart(2, "0")}`,
-      hr: Math.round(a.avg_hr + x * 8 + (i / km) * 5),
-    });
-  }
-  const max = Math.max(...raw.map((o) => o.pRaw));
-  const min = Math.min(...raw.map((o) => o.pRaw));
-  return raw
-    .map((o) => ({
-      km: o.km,
-      pace: o.pace,
-      hr: o.hr,
-      w: 100 - ((o.pRaw - min) / (max - min || 1)) * 55,
-      fast: o.pRaw <= fastest + 0.05,
-    }))
-    .slice(0, 14);
+const fmtPace = (secPerKm: number): string => {
+  const m = Math.floor(secPerKm / 60);
+  const s = Math.round(secPerKm % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+};
+
+// Map the real per-split data to rendered rows (fastest split highlighted).
+function buildSplits(a: ActivityDetailView): SplitRow[] {
+  const splits = a.splits.filter((s) => s.paceSecPerKm != null && s.paceSecPerKm > 0);
+  if (splits.length === 0) return [];
+  const paces = splits.map((s) => s.paceSecPerKm as number);
+  const min = Math.min(...paces);
+  const max = Math.max(...paces);
+  return splits.map((s) => {
+    const pace = s.paceSecPerKm as number;
+    return {
+      idx: s.idx,
+      label: `${(s.distanceM / 1000).toFixed(s.distanceM >= 1000 ? 1 : 2)} km`,
+      pace: fmtPace(pace),
+      hr: s.avgHr,
+      // Faster (lower s/km) → longer bar + deeper green.
+      w: 100 - ((pace - min) / (max - min || 1)) * 55,
+      shade: 1 - (pace - min) / (max - min || 1),
+    };
+  });
 }
 
+// Only rendered for activities that have a real GPS track (gated at the call
+// site) — no synthetic/"approx" routes.
 function RouteCard({ a }: { a: ActivityDetailView }) {
-  const track = useMemo(
-    () => (a.track && a.track.length > 1 ? a.track : genTrack(trackSeed(a.date + a.name))),
-    [a]
-  );
-  const hasTrack = !!(a.track && a.track.length > 1);
+  const track = a.track ?? [];
   const [status, setStatus] = useState<"idle" | "creating" | "done" | "error">("idle");
   const [errMsg, setErrMsg] = useState<string | null>(null);
   const create = async () => {
-    if (!hasTrack) {
-      setStatus("error");
-      setErrMsg("No GPS track on this activity.");
-      return;
-    }
     setStatus("creating");
     setErrMsg(null);
     try {
@@ -101,7 +66,7 @@ function RouteCard({ a }: { a: ActivityDetailView }) {
     <>
       <div className="card" style={{ paddingBottom: 12 }}>
         <div className="row between" style={{ marginBottom: 10 }}>
-          <span className="lbl">Route · {a.track && a.track.length > 1 ? "from GPS" : "approx"}</span>
+          <span className="lbl">Route · from GPS</span>
           <span className="ctx-note">
             {a.distanceKm} km{a.elevation != null ? ` · ↑${a.elevation} m` : ""}
           </span>
@@ -232,7 +197,7 @@ export function useActivityDetail(id: number): { head: ReactNode; body: ReactNod
   } else if (error || !a) {
     body = <EmptyState icon="info" title="Couldn't load activity" body={error ?? "Not found."} />;
   } else {
-    const hr = sessionSeries(a);
+    const hr = a.hrSeries.map((v) => ({ v }));
     const splits = buildSplits(a);
     const stats: [string, ReactNode][] = [
       ["Distance", `${a.distanceKm} km`],
@@ -256,9 +221,9 @@ export function useActivityDetail(id: number): { head: ReactNode; body: ReactNod
           ))}
         </div>
 
-        {a.sport !== "swim" && <RouteCard a={a} />}
+        {a.sport !== "swim" && a.track && a.track.length > 1 && <RouteCard a={a} />}
 
-        {a.avg_hr != null && (
+        {hr.length > 1 && (
           <div className="card" style={{ paddingBottom: 12 }}>
             <div className="lbl" style={{ marginBottom: 6 }}>
               Heart rate · session
@@ -274,9 +239,9 @@ export function useActivityDetail(id: number): { head: ReactNode; body: ReactNod
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {splits.map((s) => (
-                <div key={s.km} className="row" style={{ gap: 10 }}>
+                <div key={s.idx} className="row" style={{ gap: 10 }}>
                   <span className="mono ctx-note" style={{ width: 24 }}>
-                    {s.km}
+                    {s.idx}
                   </span>
                   <div
                     style={{
@@ -293,7 +258,8 @@ export function useActivityDetail(id: number): { head: ReactNode; body: ReactNod
                         position: "absolute",
                         inset: 0,
                         width: `${s.w}%`,
-                        background: s.fast ? "var(--accent)" : "var(--surface-2)",
+                        // All bars green + clearly visible; faster = deeper green.
+                        background: `color-mix(in oklch, var(--go) ${Math.round(60 + s.shade * 40)}%, var(--track))`,
                         borderRadius: 5,
                       }}
                     />
@@ -302,7 +268,7 @@ export function useActivityDetail(id: number): { head: ReactNode; body: ReactNod
                     {s.pace}
                   </span>
                   <span className="mono ctx-note" style={{ width: 40, textAlign: "right" }}>
-                    {s.hr}
+                    {s.hr ?? "—"}
                   </span>
                 </div>
               ))}

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 export function useMeasure(): [React.RefObject<HTMLDivElement>, number] {
   const ref = useRef<HTMLDivElement>(null);
@@ -14,6 +14,120 @@ export function useMeasure(): [React.RefObject<HTMLDivElement>, number] {
     return () => ro.disconnect();
   }, []);
   return [ref, w];
+}
+
+/* ============================================================
+   Reusable on-brand chart tooltip
+   A DOM overlay (absolutely positioned inside the chart wrapper)
+   that flips/clamps to never overflow, fades+scales in, and is
+   driven by pointer + touch via useChartHover. Pure DOM/SVG —
+   no chart lib — so every chart shares one look.
+   ============================================================ */
+
+export interface TooltipRow {
+  label: string;
+  value: string;
+  color?: string;
+}
+export interface TooltipState {
+  /** anchor point in px relative to the chart wrapper (top-left origin) */
+  x: number;
+  y: number;
+  title: string;
+  rows: TooltipRow[];
+}
+
+/**
+ * Drives tooltip visibility from pointer + touch events on an SVG.
+ * `resolve(px, py)` maps a local pixel coord to a TooltipState (or null
+ * when there's no point to show). Returns handlers to spread on the <svg>
+ * plus the active state and a manual clear.
+ */
+export function useChartHover(resolve: (px: number, py: number) => TooltipState | null) {
+  const [tip, setTip] = useState<TooltipState | null>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  const at = useCallback(
+    (clientX: number, clientY: number) => {
+      const el = svgRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setTip(resolve(clientX - r.left, clientY - r.top));
+    },
+    [resolve]
+  );
+
+  const clear = useCallback(() => setTip(null), []);
+
+  // tap-away anywhere outside the svg dismisses the tooltip (touch)
+  useEffect(() => {
+    if (!tip) return;
+    const away = (e: Event) => {
+      if (svgRef.current && !svgRef.current.contains(e.target as Node)) setTip(null);
+    };
+    document.addEventListener("pointerdown", away, true);
+    return () => document.removeEventListener("pointerdown", away, true);
+  }, [tip]);
+
+  const handlers = {
+    onPointerMove: (e: React.PointerEvent) => {
+      if (e.pointerType === "touch") return; // touch handled on down/move below
+      at(e.clientX, e.clientY);
+    },
+    onPointerLeave: (e: React.PointerEvent) => {
+      if (e.pointerType !== "touch") clear();
+    },
+    onPointerDown: (e: React.PointerEvent) => {
+      if (e.pointerType === "touch") at(e.clientX, e.clientY);
+    },
+    onTouchMove: (e: React.TouchEvent) => {
+      const t = e.touches[0];
+      if (t) at(t.clientX, t.clientY);
+    },
+  };
+
+  return { tip, svgRef, handlers, clear, setTip };
+}
+
+/** The floating tooltip card. Renders nothing when `tip` is null. */
+export function ChartTooltip({ tip, width }: { tip: TooltipState | null; width: number }) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [box, setBox] = useState({ w: 0, h: 0 });
+
+  useLayoutEffect(() => {
+    if (tip && cardRef.current) {
+      setBox({ w: cardRef.current.offsetWidth, h: cardRef.current.offsetHeight });
+    }
+  }, [tip]);
+
+  if (!tip) return null;
+
+  const gap = 12; // space for caret + breathing room above the point
+  const flip = tip.y - box.h - gap < 0; // not enough room above → drop below
+  let left = tip.x - box.w / 2;
+  left = Math.max(4, Math.min(left, width - box.w - 4)); // clamp horizontally
+  const top = flip ? tip.y + gap : tip.y - box.h - gap;
+  // caret sits under the anchor, clamped within the card edges
+  const caretLeft = Math.max(10, Math.min(tip.x - left, box.w - 10));
+
+  return (
+    <div
+      ref={cardRef}
+      className={"chart-tip" + (flip ? " flip" : "")}
+      style={{ left, top, ["--caret-x" as string]: caretLeft + "px" }}
+      role="status"
+      aria-live="polite"
+    >
+      <div className="chart-tip-title">{tip.title}</div>
+      {tip.rows.map((r, i) => (
+        <div className="chart-tip-row" key={i}>
+          {r.color && <span className="chart-tip-dot" style={{ background: r.color }} />}
+          {tip.rows.length > 1 && <span className="chart-tip-lbl">{r.label}</span>}
+          <span className="chart-tip-val">{r.value}</span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export interface LinePoint {
@@ -48,6 +162,11 @@ export function LineChart({
   threshold,
   hbands,
   line2,
+  seriesLabel = "value",
+  line2Label = "secondary",
+  line2Color = "var(--text-3)",
+  fmtTip,
+  unit = "",
 }: {
   data: LinePoint[];
   height?: number;
@@ -60,6 +179,16 @@ export function LineChart({
   threshold?: number;
   hbands?: HBand[];
   line2?: (number | null)[];
+  /** legend/tooltip name for the primary series */
+  seriesLabel?: string;
+  /** legend/tooltip name for the optional 2nd series */
+  line2Label?: string;
+  /** stroke color for the optional 2nd series (defaults to muted dashed) */
+  line2Color?: string;
+  /** format a value for the tooltip (defaults to fmtY, else rounded) */
+  fmtTip?: (v: number) => string;
+  /** unit suffix appended in the tooltip, e.g. " ms" */
+  unit?: string;
 }) {
   const [ref, w] = useMeasure();
   const padL = 30;
@@ -129,9 +258,44 @@ export function LineChart({
     });
   const gid = "g" + Math.round(lo * 100 + hi);
   const lastIdx = data.length - 1;
+
+  const tipFmt = (v: number) => (fmtTip ? fmtTip(v) : fmtY ? String(fmtY(v)) : String(Math.round(v))) + unit;
+  const resolve = useCallback(
+    (px: number): TooltipState | null => {
+      if (!data.length) return null;
+      // snap to nearest data index by x
+      const rel = (px - padL) / (iw || 1);
+      let i = Math.round(rel * (data.length - 1));
+      i = Math.max(0, Math.min(data.length - 1, i));
+      const primary = data[i]?.v;
+      const secondary = line2 ? line2[i] : null;
+      if (primary == null && secondary == null) return null;
+      const rows: TooltipRow[] = [];
+      if (primary != null) rows.push({ label: seriesLabel, value: tipFmt(primary), color });
+      if (line2 && secondary != null)
+        rows.push({ label: line2Label, value: tipFmt(secondary), color: line2Color });
+      // anchor on the primary point if present, else the secondary
+      const anchorV = primary != null ? primary : (secondary as number);
+      return { x: X(i), y: Y(anchorV), title: fmtTipDate(data[i]?.date), rows };
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data, line2, iw, lo, hi, color, seriesLabel, line2Label, line2Color, unit, fmtTip, fmtY]
+  );
+  const { tip, svgRef, handlers } = useChartHover(resolve);
+  const hi_i = tip
+    ? Math.max(0, Math.min(data.length - 1, Math.round(((tip.x - padL) / (iw || 1)) * (data.length - 1))))
+    : -1;
+
   return (
-    <div ref={ref} style={{ width: "100%" }}>
-      <svg width={w} height={height} role="img">
+    <div ref={ref} className="chart-wrap" style={{ width: "100%" }}>
+      <svg
+        ref={svgRef}
+        width={w}
+        height={height}
+        role="img"
+        style={{ touchAction: "pan-y", display: "block" }}
+        {...handlers}
+      >
         <defs>
           <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={color} stopOpacity="0.22" />
@@ -227,9 +391,39 @@ export function LineChart({
             strokeWidth="1.5"
           />
         )}
+        {hi_i >= 0 && (
+          <g pointerEvents="none">
+            <line
+              x1={X(hi_i)}
+              y1={padT}
+              x2={X(hi_i)}
+              y2={padT + ih}
+              stroke="var(--text-3)"
+              strokeWidth="1"
+              strokeOpacity="0.5"
+            />
+            {line2 && line2[hi_i] != null && (
+              <circle cx={X(hi_i)} cy={Y(line2[hi_i] as number)} r="3.6" fill={line2Color} stroke="var(--surface)" strokeWidth="1.5" />
+            )}
+            {data[hi_i]?.v != null && (
+              <circle cx={X(hi_i)} cy={Y(data[hi_i].v as number)} r="4" fill={color} stroke="var(--surface)" strokeWidth="1.5" />
+            )}
+          </g>
+        )}
       </svg>
+      <ChartTooltip tip={tip} width={w} />
     </div>
   );
+}
+
+/* shared: format an ISO date (YYYY-MM-DD) for tooltips, falling back gracefully */
+function fmtTipDate(d?: string): string {
+  if (!d) return "";
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d);
+  if (!m) return d;
+  const date = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  if (isNaN(date.getTime())) return d;
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 /* ---------- ACWR sweet-spot gauge ---------- */
@@ -246,9 +440,40 @@ export function ACWRGauge({ value }: { value: number }) {
     { a: 1.5, b: 1.8, c: "var(--back)" },
   ];
   const yBar = 20;
+  const zone =
+    value < 0.8
+      ? { label: "Undertraining", c: "var(--modify)" }
+      : value <= 1.3
+        ? { label: "Sweet spot", c: "var(--go)" }
+        : value <= 1.5
+          ? { label: "Caution", c: "var(--modify)" }
+          : { label: "High risk", c: "var(--back)" };
+  const resolve = useCallback(
+    (): TooltipState => ({
+      x: X(value),
+      y: yBar,
+      title: "acute : chronic",
+      rows: [{ label: "ratio", value: value.toFixed(2), color: zone.c }, { label: "zone", value: zone.label }],
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [value, w]
+  );
+  const { tip, svgRef, handlers } = useChartHover(resolve);
   return (
-    <div ref={ref} style={{ width: "100%" }}>
-      <svg width={w} height={h}>
+    <div
+      ref={ref}
+      className="chart-wrap"
+      style={{ width: "100%" }}
+      aria-label={`ACWR ${value.toFixed(2)}, ${zone.label}`}
+    >
+      <svg
+        ref={svgRef}
+        width={w}
+        height={h}
+        role="img"
+        style={{ touchAction: "pan-y", display: "block" }}
+        {...handlers}
+      >
         {zones.map((z, i) => (
           <rect
             key={i}
@@ -289,6 +514,7 @@ export function ACWRGauge({ value }: { value: number }) {
           SWEET SPOT
         </text>
       </svg>
+      <ChartTooltip tip={tip} width={w} />
     </div>
   );
 }
@@ -297,9 +523,18 @@ export function ACWRGauge({ value }: { value: number }) {
 export function VolumeBars({
   data,
   height = 120,
+  unit = " h",
+  fmtTip,
+  seriesLabel = "volume",
 }: {
   data: { label: string; v: number; hl: boolean }[];
   height?: number;
+  /** unit suffix shown in the tooltip (default " h") */
+  unit?: string;
+  /** format a bar value for the tooltip */
+  fmtTip?: (v: number) => string;
+  /** tooltip row label */
+  seriesLabel?: string;
 }) {
   const [ref, w] = useMeasure();
   const padB = 20;
@@ -308,13 +543,43 @@ export function VolumeBars({
   const ih = height - padB - padT;
   const max = Math.max(...data.map((d) => d.v), 1);
   const bw = (w - padL * 2) / Math.max(1, data.length);
+
+  const resolve = useCallback(
+    (px: number): TooltipState | null => {
+      if (!data.length) return null;
+      let i = Math.floor((px - padL) / (bw || 1));
+      i = Math.max(0, Math.min(data.length - 1, i));
+      const d = data[i];
+      const bh = (d.v / max) * ih;
+      const x = padL + i * bw + bw * 0.5;
+      return {
+        x,
+        y: padT + ih - bh,
+        title: d.label,
+        rows: [{ label: seriesLabel, value: (fmtTip ? fmtTip(d.v) : d.v.toFixed(1)) + unit, color: "var(--accent)" }],
+      };
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data, bw, ih, max, unit, fmtTip, seriesLabel]
+  );
+  const { tip, svgRef, handlers } = useChartHover(resolve);
+  const hi_i = tip ? Math.max(0, Math.min(data.length - 1, Math.floor((tip.x - padL) / (bw || 1)))) : -1;
+
   return (
-    <div ref={ref} style={{ width: "100%" }}>
-      <svg width={w} height={height}>
+    <div ref={ref} className="chart-wrap" style={{ width: "100%" }}>
+      <svg
+        ref={svgRef}
+        width={w}
+        height={height}
+        role="img"
+        style={{ touchAction: "pan-y", display: "block" }}
+        {...handlers}
+      >
         {data.map((d, i) => {
           const bh = (d.v / max) * ih;
           const x = padL + i * bw + bw * 0.18;
           const ww = bw * 0.64;
+          const active = i === hi_i;
           return (
             <g key={i}>
               <rect
@@ -323,7 +588,8 @@ export function VolumeBars({
                 width={ww}
                 height={Math.max(1, bh)}
                 rx="3"
-                fill={d.hl ? "var(--accent)" : "var(--surface-2)"}
+                fill={d.hl || active ? "var(--accent)" : "var(--surface-2)"}
+                fillOpacity={hi_i >= 0 && !active ? 0.55 : 1}
               />
               <text
                 x={x + ww / 2}
@@ -339,6 +605,7 @@ export function VolumeBars({
           );
         })}
       </svg>
+      <ChartTooltip tip={tip} width={w} />
     </div>
   );
 }
