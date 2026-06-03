@@ -1,0 +1,296 @@
+/* ============================================================
+   COACH — design system
+   Instrument-panel calm. Dark default, optional light.
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+
+:root {
+  /* ---- type ---- */
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* ---- accent (dusty teal — distinct from readiness bands) ---- */
+  --accent: oklch(0.66 0.07 200);
+  --accent-2: oklch(0.66 0.12 35);
+
+  /* ---- readiness bands (muted: sage / honey / clay) ---- */
+  --go: oklch(0.72 0.09 155); /* sage  — train as planned */
+  --modify: oklch(0.8 0.09 75); /* honey — modify */
+  --back: oklch(0.68 0.11 35); /* clay  — back off */
+  --go-dim: color-mix(in oklch, var(--go) 16%, transparent);
+  --modify-dim: color-mix(in oklch, var(--modify) 16%, transparent);
+  --back-dim: color-mix(in oklch, var(--back) 16%, transparent);
+
+  /* signed factor colors */
+  --pos: var(--go);
+  --neg: var(--back);
+}
+
+/* ---------- DARK (default) — warm charcoal ---------- */
+:root,
+[data-theme="dark"] {
+  --bg: oklch(0.195 0.008 70);
+  --bg-2: oklch(0.155 0.008 70);
+  --surface: oklch(0.235 0.009 72);
+  --surface-2: oklch(0.285 0.011 74);
+  --hairline: oklch(1 0 0 / 0.07);
+  --hairline-2: oklch(1 0 0 / 0.12);
+  --text: oklch(0.95 0.006 75);
+  --text-2: oklch(0.73 0.012 75);
+  --text-3: oklch(0.56 0.012 75);
+  --track: oklch(1 0 0 / 0.08);
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 28px rgb(0 0 0 / 0.32);
+  --scrim: oklch(0.1 0.008 70 / 0.62);
+  --accent: oklch(0.74 0.075 200);
+  --go: oklch(0.76 0.09 155);
+  --modify: oklch(0.83 0.09 78);
+  --back: oklch(0.71 0.11 35);
+  /* readiness heatmap ramp (low → high), muted warm for dark */
+  --r1: oklch(0.6 0.09 35);
+  --r2: oklch(0.66 0.08 55);
+  --r3: oklch(0.72 0.07 82);
+  --r4: oklch(0.7 0.07 120);
+  --r5: oklch(0.67 0.08 150);
+  --r6: oklch(0.65 0.09 156);
+  color-scheme: dark;
+}
+
+/* ---------- LIGHT — warm sand / cream ---------- */
+[data-theme="light"] {
+  --bg: oklch(0.965 0.012 82);
+  --bg-2: oklch(0.94 0.014 80);
+  --surface: oklch(0.995 0.006 85);
+  --surface-2: oklch(0.955 0.012 82);
+  --hairline: oklch(0.34 0.03 60 / 0.1);
+  --hairline-2: oklch(0.34 0.03 60 / 0.16);
+  --text: oklch(0.3 0.022 58);
+  --text-2: oklch(0.48 0.02 60);
+  --text-3: oklch(0.62 0.018 64);
+  --track: oklch(0.45 0.03 70 / 0.11);
+  --accent: oklch(0.56 0.075 205);
+  --go: oklch(0.56 0.09 155);
+  --modify: oklch(0.64 0.1 70);
+  --back: oklch(0.57 0.12 33);
+  --shadow: 0 1px 2px rgb(60 50 30 / 0.05), 0 10px 30px rgb(60 50 30 / 0.07);
+  --scrim: oklch(0.35 0.02 70 / 0.4);
+  /* readiness heatmap ramp (low → high), soft warm pastels */
+  --r1: oklch(0.82 0.07 35);
+  --r2: oklch(0.86 0.07 55);
+  --r3: oklch(0.9 0.06 82);
+  --r4: oklch(0.88 0.06 120);
+  --r5: oklch(0.84 0.07 150);
+  --r6: oklch(0.8 0.08 156);
+  color-scheme: light;
+}
+
+/* ============================================================
+   COLOR SCHEMES — accent + readiness bands + heatmap ramp.
+   Layer on top of light/dark (which own bg/text/surfaces).
+   Applied via [data-scheme] on .phone-screen. Placed last so
+   they win over the theme blocks' default band colors.
+   ============================================================ */
+
+/* — Lagoon: fresh teal · coral · cream (default) — */
+[data-scheme="lagoon"] {
+  --accent: oklch(0.64 0.12 202);
+  --accent-2: oklch(0.66 0.16 28);
+  --go: oklch(0.68 0.12 192);
+  --modify: oklch(0.74 0.12 62);
+  --back: oklch(0.64 0.16 26);
+  --r1: oklch(0.7 0.15 27);
+  --r2: oklch(0.81 0.11 52);
+  --r3: oklch(0.9 0.09 92);
+  --r4: oklch(0.81 0.09 178);
+  --r5: oklch(0.72 0.12 196);
+  --r6: oklch(0.63 0.13 205);
+}
+/* — Pop: electric blue · amber · magenta · violet — */
+/* — Pop: electric violet · blue · magenta · green (purple-forward, no orange) — */
+[data-scheme="pop"] {
+  --accent: oklch(0.56 0.2 288);
+  --accent-2: oklch(0.64 0.18 248);
+  --go: oklch(0.7 0.17 152);
+  --modify: oklch(0.6 0.2 300);
+  --back: oklch(0.6 0.25 356);
+  --r1: oklch(0.6 0.25 356);
+  --r2: oklch(0.58 0.21 322);
+  --r3: oklch(0.59 0.2 296);
+  --r4: oklch(0.62 0.19 268);
+  --r5: oklch(0.66 0.17 232);
+  --r6: oklch(0.71 0.17 152);
+}
+/* — Savanna: pine · sea-green · saffron · terracotta — */
+[data-scheme="savanna"] {
+  --accent: oklch(0.58 0.11 188);
+  --accent-2: oklch(0.74 0.13 78);
+  --go: oklch(0.6 0.11 178);
+  --modify: oklch(0.74 0.12 80);
+  --back: oklch(0.6 0.16 36);
+  --r1: oklch(0.61 0.15 34);
+  --r2: oklch(0.74 0.13 58);
+  --r3: oklch(0.83 0.12 86);
+  --r4: oklch(0.71 0.1 150);
+  --r5: oklch(0.6 0.11 184);
+  --r6: oklch(0.47 0.08 212);
+}
+/* — Calm: muted sage · honey · clay (the quiet option) — */
+[data-scheme="calm"] {
+  --accent: oklch(0.62 0.075 205);
+  --accent-2: oklch(0.6 0.1 33);
+  --go: oklch(0.62 0.09 155);
+  --modify: oklch(0.68 0.1 72);
+  --back: oklch(0.6 0.12 33);
+  --r1: oklch(0.82 0.07 35);
+  --r2: oklch(0.86 0.07 55);
+  --r3: oklch(0.9 0.06 82);
+  --r4: oklch(0.88 0.06 120);
+  --r5: oklch(0.84 0.07 150);
+  --r6: oklch(0.8 0.08 156);
+}
+/* — Neon: acid lime · cyan · hot magenta (made for dark) — */
+[data-scheme="neon"] {
+  --accent: oklch(0.74 0.17 195);
+  --accent-2: oklch(0.7 0.22 350);
+  --go: oklch(0.8 0.21 140);
+  --modify: oklch(0.87 0.18 92);
+  --back: oklch(0.66 0.23 18);
+  --r1: oklch(0.66 0.23 18);
+  --r2: oklch(0.76 0.2 56);
+  --r3: oklch(0.88 0.19 92);
+  --r4: oklch(0.82 0.22 140);
+  --r5: oklch(0.78 0.18 172);
+  --r6: oklch(0.74 0.17 195);
+}
+/* — Sunset: crimson · coral · amber · gold (warm monochrome ramp, no green) — */
+[data-scheme="sunset"] {
+  --accent: oklch(0.63 0.17 28);
+  --accent-2: oklch(0.8 0.14 84);
+  --go: oklch(0.8 0.14 84);
+  --modify: oklch(0.68 0.18 40);
+  --back: oklch(0.57 0.2 12);
+  --r1: oklch(0.55 0.2 10);
+  --r2: oklch(0.61 0.19 22);
+  --r3: oklch(0.67 0.18 34);
+  --r4: oklch(0.73 0.16 50);
+  --r5: oklch(0.79 0.15 68);
+  --r6: oklch(0.84 0.14 85);
+}
+
+/* Pop is intense — soften + darken the verdict band on the LIGHT calendar */
+[data-theme="light"][data-scheme="pop"] {
+  --accent: oklch(0.5 0.2 288);
+  --modify: oklch(0.52 0.2 300);
+  --r1: oklch(0.58 0.23 356);
+  --r2: oklch(0.56 0.2 322);
+  --r3: oklch(0.57 0.19 296);
+  --r4: oklch(0.6 0.18 268);
+  --r5: oklch(0.64 0.16 232);
+  --r6: oklch(0.68 0.16 152);
+}
+/* Neon is built for dark — on light, darken text-bearing colors so they stay legible */
+[data-theme="light"][data-scheme="neon"] {
+  --accent: oklch(0.56 0.14 200);
+  --go: oklch(0.58 0.17 142);
+  --modify: oklch(0.72 0.16 78);
+  --back: oklch(0.57 0.21 18);
+  --r1: oklch(0.62 0.18 20);
+  --r2: oklch(0.74 0.16 58);
+  --r3: oklch(0.82 0.16 90);
+  --r4: oklch(0.78 0.16 142);
+  --r5: oklch(0.7 0.14 175);
+  --r6: oklch(0.62 0.13 196);
+}
+
+/* in dark mode, lift the band/accent lightness a touch so vivid hues read on charcoal */
+[data-theme="dark"][data-scheme="lagoon"] {
+  --accent: oklch(0.74 0.12 202);
+  --back: oklch(0.7 0.16 26);
+}
+[data-theme="dark"][data-scheme="pop"] {
+  --accent: oklch(0.68 0.18 262);
+  --back: oklch(0.66 0.24 8);
+}
+[data-theme="dark"][data-scheme="savanna"] {
+  --accent: oklch(0.68 0.11 184);
+  --go: oklch(0.68 0.11 178);
+}
+[data-theme="dark"][data-scheme="calm"] {
+  --accent: oklch(0.74 0.075 200);
+}
+[data-theme="dark"][data-scheme="sunset"] {
+  --accent: oklch(0.72 0.16 30);
+  --back: oklch(0.66 0.2 10);
+}
+
+/* metric accents — declared on .phone-screen so var(--accent/go/back) resolve
+   against the element's SCHEME-overridden values (not :root's defaults) */
+/* metric accents — declared on the app root (.phone-screen / .desktop) so
+   var(--accent/go/back) resolve against the SCHEME-overridden values */
+.phone-screen,
+.desktop {
+  --accent-dim: color-mix(in oklch, var(--accent) 16%, transparent);
+  --accent-line: color-mix(in oklch, var(--accent) 40%, transparent);
+  --m-hrv: var(--accent);
+  --m-rhr: var(--accent-2);
+  --m-batt: var(--go);
+  --m-deep: color-mix(in oklch, var(--accent) 68%, var(--text) 16%);
+  --m-rem: var(--accent-2);
+  --m-light: color-mix(in oklch, var(--accent) 40%, var(--surface-2));
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: oklch(0.155 0.008 66);
+  font-family: var(--font-body);
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 28px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/* numerals: tabular everywhere they matter */
+.mono {
+  font-family: var(--font-mono);
+  font-feature-settings: "tnum" 1;
+  letter-spacing: -0.01em;
+}
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

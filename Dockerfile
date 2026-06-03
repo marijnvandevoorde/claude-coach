@@ -10,9 +10,10 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 # --ignore-scripts skips the `prepare`→husky git-hook step (no .git / no husky in CI).
 RUN npm ci --ignore-scripts
-COPY tsconfig.json ./
+COPY tsconfig.json vite.config.app.ts ./
 COPY src ./src
-RUN npx tsc && cp src/db/schema.sql src/db/schema.mysql.sql dist/db/
+RUN npx tsc && cp src/db/schema.sql src/db/schema.mysql.sql dist/db/ \
+ && npx vite build --config vite.config.app.ts
 
 # ---------- runtime: prod deps + dist only ----------
 FROM node:22-alpine AS runtime
