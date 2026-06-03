@@ -1,0 +1,50 @@
+name: Dependabot auto-merge
+
+# Auto-merges Dependabot PRs for minor + patch updates once a test gate passes.
+# Major updates are skipped so they can be reviewed manually.
+#
+# The test job runs in this same workflow and the merge job `needs` it, so a bump
+# is only merged after typecheck + tests are green. This keeps the merge safe
+# without requiring branch protection (which would interfere with direct pushes
+# to main). Uses a direct squash merge — the auto-merge queue needs branch
+# protection / repo settings we deliberately avoid here.
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  test:
+    # Only spend CI on Dependabot PRs.
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run test:run
+
+  auto-merge:
+    needs: test
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Merge minor and patch updates
+        if: |
+          steps.metadata.outputs.update-type == 'version-update:semver-minor' ||
+          steps.metadata.outputs.update-type == 'version-update:semver-patch'
+        run: gh pr merge --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

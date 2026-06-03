@@ -15,11 +15,12 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Native arm64 runner — the deploy target is arm64, so this avoids slow QEMU
+    # emulation entirely. We build arm64 only (amd64 isn't used) and cache layers
+    # in the GitHub Actions cache for fast incremental rebuilds.
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
-
-      - uses: docker/setup-qemu-action@v3 # emulation for cross-building arm64
 
       - uses: docker/setup-buildx-action@v3
 
@@ -35,7 +36,7 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/arm64
           push: true
           tags: |
             ghcr.io/${{ github.repository }}:${{ inputs.tag }}
