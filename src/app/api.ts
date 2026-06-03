@@ -59,7 +59,19 @@ export const api = {
       gpx,
       ...opts,
     }),
+  // Kick off a server-side Garmin sync (returns immediately; poll garminRefreshStatus).
+  refreshGarmin: (date?: string) =>
+    post<{ status: "started" | "running"; startedAt?: string }>("/garmin/refresh", { date }),
+  garminRefreshStatus: () => get<GarminRefreshStatus>("/garmin/refresh"),
 };
+
+export interface GarminRefreshStatus {
+  running: boolean;
+  startedAt: string | null;
+  finishedAt: string | null;
+  ok: boolean | null;
+  error?: string;
+}
 
 // --- response shapes (loose; refined as screens land) ---
 export interface Contribution {

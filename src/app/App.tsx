@@ -5,6 +5,7 @@ import { band, todayISO, isoOf, parseISO, DAY_MIN } from "./lib/coach";
 import { api } from "./api";
 import { adaptSummary, type DayView } from "./lib/adapt";
 import { useAsync } from "./lib/useAsync";
+import { PullToRefresh } from "./components/PullToRefresh";
 import { Dashboard, DashboardLoading } from "./screens/Dashboard";
 import { Calendar } from "./screens/Calendar";
 import { Trends } from "./screens/Trends";
@@ -147,12 +148,17 @@ export function App() {
 
   const today = todayISO();
 
+  // Bumping reloadKey re-runs the summary/trends fetches in place — the live-update
+  // mechanism the Garmin pull-to-refresh polls on.
+  const [reloadKey, setReloadKey] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+
   // today's summary — drives dashboard + sidebar readiness + hydration seed
-  const summaryState = useAsync(() => api.summary(), []);
+  const summaryState = useAsync(() => api.summary(), [reloadKey]);
   const day: DayView | null = summaryState.data ? adaptSummary(summaryState.data) : null;
 
   // recent window for tile sparklines (HRV / RHR)
-  const trendsState = useAsync(() => api.trends(30), []);
+  const trendsState = useAsync(() => api.trends(30), [reloadKey]);
   const recent = trendsState.data?.series ?? [];
   const numOrNull = (v: unknown) => (v == null || v === "" ? null : Number(v));
   const hrvSeries = recent.map((r) => numOrNull((r as Record<string, unknown>).hrv_weekly_avg));
@@ -172,7 +178,8 @@ export function App() {
   // subjective (today) — seed from summary, override locally
   const [subjective, setSubjective] = useState<{ energy?: number; mood?: number }>({});
   useEffect(() => {
-    if (day?.subjective) setSubjective({ energy: day.subjective.energy, mood: day.subjective.mood });
+    if (day?.subjective)
+      setSubjective({ energy: day.subjective.energy, mood: day.subjective.mood });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [summaryState.data]);
 
@@ -255,6 +262,29 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Pull-to-refresh → kick off a server-side Garmin sync, then poll a few times,
+  // re-fetching the dashboard so fresh wellness/activities appear live as they land.
+  async function runGarminRefresh() {
+    if (syncing) return;
+    setSyncing(true);
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    try {
+      await api.refreshGarmin();
+      // Poll up to ~40s; each tick re-fetches summary/trends (live update).
+      for (let i = 0; i < 10; i++) {
+        await sleep(4000);
+        setReloadKey((k) => k + 1);
+        const st = await api.garminRefreshStatus().catch(() => null);
+        if (st && !st.running && st.finishedAt) break;
+      }
+    } catch {
+      /* best effort — the dashboard just keeps the last-known data */
+    } finally {
+      setReloadKey((k) => k + 1);
+      setSyncing(false);
+    }
+  }
+
   function onSubj(k: "energy" | "mood", v: number) {
     setSubjective((s) => {
       const next = { ...s, [k]: s[k] === v ? undefined : v };
@@ -288,22 +318,28 @@ export function App() {
 
   let screen: React.ReactNode;
   if (tab === "today") {
-    screen = summaryState.loading ? (
-      <DashboardLoading theme={theme} />
-    ) : (
-      <Dashboard
-        day={dashDay ?? EMPTY_DAY(today)}
-        hrvSeries={hrvSeries}
-        rhrSeries={rhrSeries}
-        water={water}
-        goal={goal}
-        onWater={addWater}
-        onOpenDay={setDaySheet}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-        showThemeToggle={!wide}
-      />
-    );
+    // Show the skeleton only on the very first load; a refresh/poll keeps the
+    // current dashboard up and updates it in place (no flash to the loader).
+    screen =
+      summaryState.loading && !summaryState.data ? (
+        <DashboardLoading theme={theme} />
+      ) : (
+        <PullToRefresh onRefresh={runGarminRefresh} refreshing={syncing}>
+          <Dashboard
+            day={dashDay ?? EMPTY_DAY(today)}
+            hrvSeries={hrvSeries}
+            rhrSeries={rhrSeries}
+            water={water}
+            goal={goal}
+            onWater={addWater}
+            onOpenDay={setDaySheet}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+            showThemeToggle={!wide}
+            refreshing={syncing}
+          />
+        </PullToRefresh>
+      );
   } else if (tab === "calendar") {
     screen = <Calendar metric={metric} onMetric={setMetric} onPick={setDaySheet} />;
   } else if (tab === "trends") {

@@ -8,10 +8,12 @@ export function ReadinessRing({
   value,
   size = 196,
   stroke = 13,
+  refreshing = false,
 }: {
   value: number | null;
   size?: number;
   stroke?: number;
+  refreshing?: boolean;
 }) {
   const r = (size - stroke) / 2;
   const cx = size / 2;
@@ -50,6 +52,22 @@ export function ReadinessRing({
             filter: `drop-shadow(0 0 7px color-mix(in oklch, ${b.color} 45%, transparent))`,
           }}
         />
+        {refreshing && (
+          // A bright short arc that orbits the ring while a Garmin sync runs —
+          // a subtle "alive" glow rather than a spinner.
+          <circle
+            className="ring-glow"
+            cx={cx}
+            cy={cx}
+            r={r}
+            fill="none"
+            stroke={b.color}
+            strokeWidth={stroke}
+            strokeLinecap="round"
+            strokeDasharray={`${circ * 0.06} ${circ}`}
+            style={{ filter: `drop-shadow(0 0 8px ${b.color})` }}
+          />
+        )}
       </svg>
       <div className="center">
         {value == null ? (
@@ -446,9 +464,7 @@ export function SportChip({
         width: size,
         height: size,
         color: race ? "var(--modify)" : "var(--accent)",
-        background: race
-          ? "color-mix(in oklch, var(--modify) 15%, var(--surface-2))"
-          : undefined,
+        background: race ? "color-mix(in oklch, var(--modify) 15%, var(--surface-2))" : undefined,
       }}
     >
       <Icon name={sportIcon(sport)} size={size * 0.5} />
