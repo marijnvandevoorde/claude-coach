@@ -184,8 +184,7 @@ export function Trends({
           ))}
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 12 }}>
-          <ChartCard
+        <ChartCard
             title="Readiness"
             sub={`avg ${avgReady}`}
             screenReader={`Readiness over ${win} days, averaging ${avgReady} out of 100.`}
@@ -275,7 +274,6 @@ export function Trends({
               <div className="ctx-note">No volume recorded.</div>
             )}
           </ChartCard>
-        </div>
       </div>
     </div>
   );
