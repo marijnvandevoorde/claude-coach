@@ -36,7 +36,11 @@ decision; calendar, trends, activities, and journal serve exploration.
 4. **Trends** — charts with a time-window selector (7d / 6 weeks / season; default 6 weeks) and a
    metric/compare picker. Key charts: readiness over time, HRV vs baseline band, acute-vs-chronic
    load, weekly volume.
-5. **Activities** — a workout list → activity detail (pace/HR over the session, splits).
+5. **Activities** — a workout list → activity detail whose fields **adapt to the sport**: runs show
+   pace / cadence / elevation / per-km splits + HR; outdoor & indoor cycling show power (avg/NP/max);
+   swims show pace /100m; strength & machine cardio (treadmill / stairmaster / elliptical) show only
+   duration + HR (+ calories) — shown honestly, with a prompt to log extra detail (sets/reps, incline,
+   level) as a **day-linked journal note**, not as per-activity fields.
 6. **Journal** — entries with tags + a compose box; entries also surface as annotations elsewhere.
 
 Design these **states** for each: loading, empty/no-data (common — the 1900-day span has gaps),
