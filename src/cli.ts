@@ -91,11 +91,13 @@ interface ExportCalendarArgs {
   inputFile: string;
   outputFile?: string;
   json: boolean;
+  stdin?: boolean;
 }
 
 interface ExportGarminArgs {
   command: "export-garmin";
   inputFile: string;
+  stdin?: boolean;
 }
 
 interface QueryArgs {
@@ -290,13 +292,16 @@ function parseArgs(): CliArgs {
   }
 
   if (args[0] === "export-calendar") {
-    if (!args[1]) {
-      log.error("export-calendar requires a plan JSON file");
+    // --stdin reads the plan JSON from stdin (used by the MCP to pass inline content).
+    const fromStdin = args.includes("--stdin");
+    if (!fromStdin && !args[1]) {
+      log.error("export-calendar requires a plan JSON file or --stdin");
       process.exit(1);
     }
     const calArgs: ExportCalendarArgs = {
       command: "export-calendar",
-      inputFile: args[1],
+      stdin: fromStdin,
+      inputFile: fromStdin ? "" : args[1],
       json: args.includes("--json"),
     };
     for (let i = 2; i < args.length; i++) {
@@ -311,16 +316,25 @@ function parseArgs(): CliArgs {
   }
 
   if (args[0] === "export-garmin") {
-    if (!args[1]) {
-      log.error("export-garmin requires a plan JSON file");
+    // --stdin reads the plan JSON from stdin (used by the MCP to pass inline content).
+    const fromStdin = args.includes("--stdin");
+    if (!fromStdin && !args[1]) {
+      log.error("export-garmin requires a plan JSON file or --stdin");
       process.exit(1);
     }
-    return { command: "export-garmin", inputFile: args[1] };
+    return { command: "export-garmin", stdin: fromStdin, inputFile: fromStdin ? "" : args[1] };
   }
 
   if (args[0] === "garmin-push") {
+    const rest = args.slice(1);
+    // --stdin reads the plan JSON from stdin (used by the MCP to pass inline content).
+    if (rest.includes("--stdin")) {
+      return { command: "garmin-push", inputFile: "", flags: parseFlags(rest) };
+    }
     if (!args[1] || args[1].startsWith("--")) {
-      log.error("garmin-push requires a plan JSON file (e.g. garmin-push plan.json --dry-run)");
+      log.error(
+        "garmin-push requires a plan JSON file or --stdin (e.g. garmin-push plan.json --dry-run)"
+      );
       process.exit(1);
     }
     return { command: "garmin-push", inputFile: args[1], flags: parseFlags(args.slice(2)) };
@@ -913,14 +927,39 @@ function planToEvents(plan: TrainingPlan): CalendarEvent[] {
   return events;
 }
 
-function runExportCalendar(args: ExportCalendarArgs): void {
-  let plan: TrainingPlan;
+/**
+ * Read a plan JSON document either inline from stdin (--stdin, how the MCP passes
+ * content generated in-conversation) or from a file path, and parse it. Centralizes
+ * the read so every plan command (export-calendar, export-garmin, garmin-push,
+ * checkin) works over MCP without the file having to live on the server.
+ */
+function readPlanJson(inputFile: string, fromStdin: boolean): TrainingPlan {
+  let raw: string;
+  if (fromStdin) {
+    try {
+      raw = readFileSync(0, "utf-8"); // fd 0 = stdin (plan content piped in, e.g. by the MCP)
+    } catch {
+      log.error("--stdin: could not read plan JSON from stdin");
+      process.exit(1);
+    }
+  } else {
+    try {
+      raw = readFileSync(inputFile, "utf-8");
+    } catch {
+      log.error(`Could not read plan JSON: ${inputFile}`);
+      process.exit(1);
+    }
+  }
   try {
-    plan = JSON.parse(readFileSync(args.inputFile, "utf-8"));
+    return JSON.parse(raw) as TrainingPlan;
   } catch {
-    log.error(`Could not read/parse plan JSON: ${args.inputFile}`);
+    log.error("Could not parse plan JSON (invalid JSON).");
     process.exit(1);
   }
+}
+
+function runExportCalendar(args: ExportCalendarArgs): void {
+  const plan = readPlanJson(args.inputFile, Boolean(args.stdin));
 
   // --json: emit a clean event list for an agent to push via the Google Calendar MCP.
   if (args.json) {
@@ -930,7 +969,8 @@ function runExportCalendar(args: ExportCalendarArgs): void {
 
   // Default: write an .ics the user can import into any calendar.
   const ics = generateIcs(plan);
-  const outPath = args.outputFile ?? args.inputFile.replace(/\.json$/i, "") + ".ics";
+  const outPath =
+    args.outputFile ?? (args.inputFile ? args.inputFile.replace(/\.json$/i, "") : "plan") + ".ics";
   writeFileSync(outPath, ics);
   log.success(`Wrote ${planToEvents(plan).length} workouts to ${outPath}`);
   log.info(
@@ -983,26 +1023,14 @@ function planToGarminWorkouts(plan: TrainingPlan): GarminWorkoutExport[] {
 }
 
 function runExportGarmin(args: ExportGarminArgs): void {
-  let plan: TrainingPlan;
-  try {
-    plan = JSON.parse(readFileSync(args.inputFile, "utf-8"));
-  } catch {
-    log.error(`Could not read/parse plan JSON: ${args.inputFile}`);
-    process.exit(1);
-  }
+  const plan = readPlanJson(args.inputFile, Boolean(args.stdin));
   // A structured workout feed (also consumed by `garmin-push` to create + schedule
   // these on Garmin Connect natively, which then syncs them to the watch).
   console.log(JSON.stringify(planToGarminWorkouts(plan), null, 2));
 }
 
 async function runGarminPush(args: GarminPushArgs): Promise<void> {
-  let plan: TrainingPlan;
-  try {
-    plan = JSON.parse(readFileSync(args.inputFile, "utf-8"));
-  } catch {
-    log.error(`Could not read/parse plan JSON: ${args.inputFile}`);
-    process.exit(1);
-  }
+  const plan = readPlanJson(args.inputFile, Boolean(args.flags["stdin"]));
 
   const inputs: WorkoutInput[] = planToGarminWorkouts(plan).map((w) => ({
     date: w.date,
@@ -1885,7 +1913,7 @@ interface PlanWorkout {
 }
 
 /** Find the day entry matching `date` in a rendered plan JSON file. */
-function findTodaysWorkout(planPath: string, date: string): PlanWorkout | null {
+function findTodaysWorkout(planText: string, date: string): PlanWorkout | null {
   let plan: {
     weeks?: Array<{
       weekNumber?: number;
@@ -1895,9 +1923,9 @@ function findTodaysWorkout(planPath: string, date: string): PlanWorkout | null {
     }>;
   };
   try {
-    plan = JSON.parse(readFileSync(planPath, "utf-8"));
+    plan = JSON.parse(planText);
   } catch {
-    log.warn(`Could not read plan file: ${planPath}`);
+    log.warn("Could not parse plan JSON.");
     return null;
   }
   for (const week of plan.weeks ?? []) {
@@ -2041,8 +2069,26 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
   const reminders: Reminder[] = [];
 
   // Today's plan + a training-load-aware hydration goal (more fluid on big days).
+  // The plan comes either inline via stdin (--plan-stdin, how the MCP passes content)
+  // or from a file path (--plan=…). Missing/unreadable plans degrade to no workout.
+  const planFromStdin = Boolean(args.flags["plan-stdin"]);
   const planPath = flagStr(args.flags, "plan");
-  const workout = planPath ? findTodaysWorkout(planPath, date) : null;
+  let workout: PlanWorkout | null = null;
+  if (planFromStdin || planPath) {
+    let planText: string | null = null;
+    try {
+      planText = planFromStdin
+        ? readFileSync(0, "utf-8")
+        : readFileSync(planPath as string, "utf-8");
+    } catch {
+      log.warn(
+        planFromStdin
+          ? "checkin --plan-stdin: could not read plan from stdin"
+          : `Could not read plan file: ${planPath}`
+      );
+    }
+    if (planText != null) workout = findTodaysWorkout(planText, date);
+  }
   let trainingMinutes = flagNum(args.flags, "training-minutes");
   if (trainingMinutes === undefined && workout) {
     trainingMinutes = (workout.workouts as Array<{ durationMinutes?: number }>).reduce(
