@@ -9,6 +9,7 @@ import {
   EmptyState,
   Skeleton,
 } from "../components/primitives";
+import { NotifyToggle } from "../components/NotifyToggle";
 import { band, verdict, fmtDate, parseISO } from "../lib/coach";
 import type { DayView, SleepStages as Stages } from "../lib/adapt";
 
@@ -24,7 +25,11 @@ export function SleepStageBar({ stages }: { stages: Stages }) {
     <div>
       <div style={{ display: "flex", height: 10, borderRadius: 5, overflow: "hidden", gap: 1.5 }}>
         {seg.map((s) => (
-          <div key={s.k} style={{ width: `${(s.v / total) * 100}%`, background: s.c }} title={s.k} />
+          <div
+            key={s.k}
+            style={{ width: `${(s.v / total) * 100}%`, background: s.c }}
+            title={s.k}
+          />
         ))}
       </div>
       <div style={{ display: "flex", gap: 12, marginTop: 9, flexWrap: "wrap" }}>
@@ -50,8 +55,12 @@ const joinList = (a: string[]) =>
 function FactorCard({ day }: { day: DayView }) {
   const [open, setOpen] = useState(false);
   const fs = day.factors;
-  const helped = fs.filter((f) => f.v > 1).map((f) => f.label.toLowerCase().replace(" vs baseline", ""));
-  const hurt = fs.filter((f) => f.v < -1).map((f) => f.label.toLowerCase().replace(" vs baseline", ""));
+  const helped = fs
+    .filter((f) => f.v > 1)
+    .map((f) => f.label.toLowerCase().replace(" vs baseline", ""));
+  const hurt = fs
+    .filter((f) => f.v < -1)
+    .map((f) => f.label.toLowerCase().replace(" vs baseline", ""));
   const plain = () => {
     const h = helped.length ? `${cap(joinList(helped))} lifted your score` : "";
     const d = hurt.length ? `${joinList(hurt)} held it back` : "";
@@ -67,7 +76,8 @@ function FactorCard({ day }: { day: DayView }) {
           onClick={() => setOpen(!open)}
           style={{ textTransform: "none", letterSpacing: 0 }}
         >
-          {open ? "Hide numbers" : "Show numbers"} <Icon name={open ? "chevD" : "chevR"} size={12} />
+          {open ? "Hide numbers" : "Show numbers"}{" "}
+          <Icon name={open ? "chevD" : "chevR"} size={12} />
         </button>
       </div>
       <p
@@ -124,7 +134,10 @@ function ReadinessInfoPop({ day, onClose }: { day: DayView; onClose: () => void 
         <div className="coverage">
           {items.map((i) => (
             <div className="crow" key={i.k}>
-              <span className="cdot" style={{ background: cov[i.k] ? "var(--go)" : "var(--track)" }} />
+              <span
+                className="cdot"
+                style={{ background: cov[i.k] ? "var(--go)" : "var(--track)" }}
+              />
               <span style={{ color: cov[i.k] ? "var(--text)" : "var(--text-3)" }}>{i.label}</span>
               <span className="ctx-note" style={{ marginLeft: "auto" }}>
                 {cov[i.k] ? "synced" : "missing"}
@@ -239,7 +252,13 @@ export function DashboardLoading({ theme }: { theme: string }) {
       <div className="page" style={{ paddingTop: 0 }}>
         <div
           className="card"
-          style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, padding: 26 }}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 16,
+            padding: 26,
+          }}
         >
           <div className="skel" style={{ width: 168, height: 168, borderRadius: "50%" }} />
           <Skeleton h={18} w={160} />
@@ -500,6 +519,9 @@ export function Dashboard({
             </div>
           </div>
         </div>
+
+        {/* NOTIFICATIONS */}
+        <NotifyToggle />
       </div>
 
       {info && <ReadinessInfoPop day={day} onClose={() => setInfo(false)} />}

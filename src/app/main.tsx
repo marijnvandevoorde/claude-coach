@@ -9,3 +9,12 @@ createRoot(document.getElementById("root")!).render(
     <App />
   </React.StrictMode>
 );
+
+// Register the PWA service worker (handles Web Push). Safe to call repeatedly.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/app/sw.js", { scope: "/app/" }).catch(() => {
+      /* push just stays unavailable if registration fails */
+    });
+  });
+}
