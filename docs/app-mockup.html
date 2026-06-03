@@ -624,7 +624,46 @@
         a.cal = Math.round(
           a.durMin * (t.kind === "strength" ? 6 : t.kind === "swim" ? 9 : 9 + R() * 4)
         );
+        if (t.kind === "run" || t.kind === "ride" || t.kind === "hike") {
+          a.track = genTrack(R);
+        }
         return a;
+      }
+      // Fake GPS route as normalized [x,y] points (0..1). Deterministic via R().
+      // Shapes a wandering loop (run/hike) or a larger out-and-back-ish ride.
+      function genTrack(R) {
+        const n = Math.round(70 + R() * 40); // ~70-110 points
+        const loop = R() > 0.4; // most are loops, some out-and-back
+        const cx = 0.5,
+          cy = 0.5;
+        const baseR = 0.26 + R() * 0.08;
+        const ph1 = R() * Math.PI * 2,
+          ph2 = R() * Math.PI * 2,
+          ph3 = R() * Math.PI * 2;
+        const w1 = 2 + Math.floor(R() * 3),
+          w2 = 3 + Math.floor(R() * 4);
+        const pts = [];
+        for (let i = 0; i < n; i++) {
+          let p; // path parameter 0..1
+          if (loop) {
+            p = i / n; // full revolution closes the loop
+          } else {
+            // out-and-back: go out then retrace
+            const half = i / (n - 1);
+            p = (half <= 0.5 ? half : 1 - half) * 0.5;
+          }
+          const ang = p * Math.PI * 2 + ph1;
+          // wandering radius so it isn't a clean circle
+          const rad =
+            baseR * (0.78 + 0.32 * Math.sin(w1 * ang + ph2) + 0.16 * Math.cos(w2 * ang + ph3));
+          let x = cx + rad * Math.cos(ang) * 1.25; // slightly wider than tall
+          let y = cy + rad * Math.sin(ang);
+          // small high-freq jitter for a hand-drawn GPS feel
+          x += 0.012 * Math.sin(i * 0.9 + ph2);
+          y += 0.012 * Math.cos(i * 1.1 + ph3);
+          pts.push([clamp(x, 0.04, 0.96), clamp(y, 0.06, 0.94)]);
+        }
+        return pts;
       }
       function fmtDur(min) {
         const h = Math.floor(min / 60),
@@ -667,6 +706,43 @@
           .map((v, i) => `${(i * sx).toFixed(1)},${(h - 3 - (v - min) * sy).toFixed(1)}`)
           .join(" ");
         return `<svg viewBox="0 0 ${w} ${h}" height="${h}"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2"/></svg>`;
+      }
+      // Inline-SVG map preview from a normalized [x,y] track. No tiles/network.
+      function routeSvg(track) {
+        const w = 320,
+          h = 150,
+          pad = 12;
+        // normalize the track's own bounds so it fills the panel nicely
+        let minX = 1,
+          maxX = 0,
+          minY = 1,
+          maxY = 0;
+        for (const [x, y] of track) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+        const sx = maxX - minX || 1,
+          sy = maxY - minY || 1;
+        const px = (x) => (pad + ((x - minX) / sx) * (w - 2 * pad)).toFixed(1);
+        const py = (y) => (pad + ((y - minY) / sy) * (h - 2 * pad)).toFixed(1);
+        const pts = track.map(([x, y]) => `${px(x)},${py(y)}`).join(" ");
+        const first = track[0],
+          last = track[track.length - 1];
+        // faint grid lines for a map-ish backdrop
+        let grid = "";
+        for (let i = 1; i < 5; i++)
+          grid += `<line x1="${(w / 5) * i}" y1="0" x2="${(w / 5) * i}" y2="${h}" stroke="var(--line)" stroke-width="1"/>`;
+        for (let i = 1; i < 3; i++)
+          grid += `<line x1="0" y1="${(h / 3) * i}" x2="${w}" y2="${(h / 3) * i}" stroke="var(--line)" stroke-width="1"/>`;
+        return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="display:block;border-radius:10px">
+            <rect x="0" y="0" width="${w}" height="${h}" rx="10" fill="var(--card2)"/>
+            <g opacity="0.5">${grid}</g>
+            <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+            <circle cx="${px(first[0])}" cy="${py(first[1])}" r="5" fill="var(--green)" stroke="var(--card)" stroke-width="1.5"/>
+            <circle cx="${px(last[0])}" cy="${py(last[1])}" r="5" fill="#f85149" stroke="var(--card)" stroke-width="1.5"/>
+          </svg>`;
       }
       const NDAYS = 140;
       const today = new Date();
@@ -1161,11 +1237,19 @@
         const splits = a.splits
           ? `<div class="card"><h3>Splits</h3><table style="width:100%;font-size:13px;border-collapse:collapse">${a.splits.map((s) => `<tr><td class="muted">km ${s.km}</td><td style="text-align:right">${fmtPace(s.pace)}</td><td style="text-align:right" class="muted">${Math.round(s.hr)} bpm</td></tr>`).join("")}</table></div>`
           : "";
+        const route = a.track
+          ? `<div class="card"><h3>Route</h3>${routeSvg(a.track)}<div class="tiny muted" style="margin-top:6px">Route preview</div></div>`
+          : "";
+        const course = a.track
+          ? `<div class="card tap" id="courseCard" onclick="createCourse('${d.date}')"><b style="color:var(--accent)">⛰ Create Garmin course from this activity ›</b></div>`
+          : "";
         document.getElementById("sheetBody").innerHTML = `
           <div class="card" style="margin-top:4px"><div class="tiny muted">${fmtDate(d.dObj)}</div>
             <div class="kv" style="gap:14px 18px;margin-top:8px">${g.join("")}</div></div>
+          ${route}
           <div class="card"><h3>Heart rate (sample)</h3>${miniSeries(a.hrSeries, "#f85149")}<div class="tiny muted">avg ${a.avgHr} · max ${a.maxHr} bpm</div></div>
           ${power}${splits}
+          ${course}
           ${minimal ? `<div class="card tiny muted">This session records <b>duration & heart rate</b>${a.dist ? " (and distance)" : ""} only. Sets/reps, incline or level aren't part of the activity record — log them as a note for this day.</div>` : ""}
           <div class="card tap" onclick="openSheet('${d.date}')"><b style="color:var(--accent)">View full day ›</b></div>
           <div class="card tap" onclick="addNoteForDay('${d.date}')"><b style="color:var(--accent)">＋ Log extra for this day (journal) ›</b></div>
@@ -1205,6 +1289,24 @@
       }
       function hideToast() {
         document.getElementById("toast").classList.remove("show");
+      }
+      // Simulated, client-only: pretend to build a Garmin course from the route.
+      function createCourse(date) {
+        const d = byDate[date];
+        const name = d && d.act ? d.act.name : "activity";
+        showToast("Creating course…");
+        const card = document.getElementById("courseCard");
+        if (card) {
+          card.onclick = null;
+          card.classList.remove("tap");
+          card.innerHTML = `<b style="color:var(--muted)">⛰ Creating course…</b>`;
+        }
+        setTimeout(() => {
+          const c = document.getElementById("courseCard");
+          if (c)
+            c.innerHTML = `<b style="color:var(--green)">✓ Course created — it'll sync to your watch</b><div class="tiny muted" style="margin-top:4px">From “${name}” · ready for your next session</div>`;
+          showToast("✓ Course created from " + name);
+        }, 700);
       }
       function pick(span, grp) {
         document.querySelectorAll("#" + grp + " span").forEach((s) => s.classList.remove("sel"));
