@@ -212,6 +212,29 @@ npx claude-coach garmin-backfill --days=35 --full --force # re-fetch even alread
 Run one big historical `--full` by hand, then let a nightly job keep recent days complete (set
 `COACH_BACKFILL_CRON` in the container — see [`REMINDERS.md`](REMINDERS.md) and `.env.example`).
 
+### Per-activity detail: GPS tracks + splits/HR streams
+
+The activity-detail view (map, per-split pace, heart-rate line) reads **stored** per-activity data —
+never a live fetch. `garmin-fetch` already pulls streams for each newly-ingested activity; these two
+commands backfill history. Both are resumable (skip activities already populated unless `--force`)
+and throttled (429 backoff).
+
+```bash
+npx claude-coach garmin-tracks               # GPS polyline per activity (map + course-from-activity)
+npx claude-coach garmin-streams              # real splits + downsampled HR stream per activity
+npx claude-coach garmin-streams --limit=200  # most-recent 200 only
+npx claude-coach garmin-streams --id=1234567 # a single activity
+```
+
+| Flag         | Meaning                                         |
+| ------------ | ----------------------------------------------- |
+| `--limit=N`  | Only the N most-recent activities               |
+| `--id=`      | A single activity id                            |
+| `--force`    | Re-fetch even activities that already have data |
+| `--delay-ms` | Throttle between calls (default 600)            |
+
+(`garmin-fetch --no-streams` skips the per-activity stream pull for a fast wellness-only refresh.)
+
 ### Push workouts to the watch
 
 Turn a plan's sessions into structured workouts **created and scheduled** on Garmin Connect (they
