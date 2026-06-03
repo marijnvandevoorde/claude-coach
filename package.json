@@ -65,7 +65,7 @@
     "svelte": "^5.43.12",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
-    "vite": "^7.2.6",
+    "vite": "^7.3.5",
     "vite-plugin-singlefile": "^2.3.0",
     "vitest": "^3.2.4"
   }
