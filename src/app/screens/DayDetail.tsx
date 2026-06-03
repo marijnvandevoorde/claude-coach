@@ -368,7 +368,6 @@ export function DaySheet({
   if (!shown) return null;
   return (
     <DayDetailInner
-      key={shown}
       date={shown}
       open={!!date}
       onStep={onStep}
