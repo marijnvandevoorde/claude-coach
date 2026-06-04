@@ -259,7 +259,8 @@ export function LineChart({
   const gid = "g" + Math.round(lo * 100 + hi);
   const lastIdx = data.length - 1;
 
-  const tipFmt = (v: number) => (fmtTip ? fmtTip(v) : fmtY ? String(fmtY(v)) : String(Math.round(v))) + unit;
+  const tipFmt = (v: number) =>
+    (fmtTip ? fmtTip(v) : fmtY ? String(fmtY(v)) : String(Math.round(v))) + unit;
   const resolve = useCallback(
     (px: number): TooltipState | null => {
       if (!data.length) return null;
@@ -283,7 +284,10 @@ export function LineChart({
   );
   const { tip, svgRef, handlers } = useChartHover(resolve);
   const hi_i = tip
-    ? Math.max(0, Math.min(data.length - 1, Math.round(((tip.x - padL) / (iw || 1)) * (data.length - 1))))
+    ? Math.max(
+        0,
+        Math.min(data.length - 1, Math.round(((tip.x - padL) / (iw || 1)) * (data.length - 1)))
+      )
     : -1;
 
   return (
@@ -316,7 +320,14 @@ export function LineChart({
           ))}
         {yTicks.map((t, i) => (
           <g key={i}>
-            <line x1={padL} y1={Y(t)} x2={w - padR} y2={Y(t)} stroke="var(--hairline)" strokeWidth="1" />
+            <line
+              x1={padL}
+              y1={Y(t)}
+              x2={w - padR}
+              y2={Y(t)}
+              stroke="var(--hairline)"
+              strokeWidth="1"
+            />
             <text
               x={padL - 6}
               y={Y(t) + 3.5}
@@ -342,7 +353,13 @@ export function LineChart({
         )}
         {band && <path d={bandTop + bandBot + "Z"} fill="var(--accent-dim)" stroke="none" />}
         {band && (
-          <path d={bandTop} fill="none" stroke="var(--accent-line)" strokeWidth="1" strokeDasharray="2 3" />
+          <path
+            d={bandTop}
+            fill="none"
+            stroke="var(--accent-line)"
+            strokeWidth="1"
+            strokeDasharray="2 3"
+          />
         )}
         {area && <path d={areaD} fill={`url(#${gid})`} />}
         {line2 && (
@@ -403,10 +420,24 @@ export function LineChart({
               strokeOpacity="0.5"
             />
             {line2 && line2[hi_i] != null && (
-              <circle cx={X(hi_i)} cy={Y(line2[hi_i] as number)} r="3.6" fill={line2Color} stroke="var(--surface)" strokeWidth="1.5" />
+              <circle
+                cx={X(hi_i)}
+                cy={Y(line2[hi_i] as number)}
+                r="3.6"
+                fill={line2Color}
+                stroke="var(--surface)"
+                strokeWidth="1.5"
+              />
             )}
             {data[hi_i]?.v != null && (
-              <circle cx={X(hi_i)} cy={Y(data[hi_i].v as number)} r="4" fill={color} stroke="var(--surface)" strokeWidth="1.5" />
+              <circle
+                cx={X(hi_i)}
+                cy={Y(data[hi_i].v as number)}
+                r="4"
+                fill={color}
+                stroke="var(--surface)"
+                strokeWidth="1.5"
+              />
             )}
           </g>
         )}
@@ -453,7 +484,10 @@ export function ACWRGauge({ value }: { value: number }) {
       x: X(value),
       y: yBar,
       title: "acute : chronic",
-      rows: [{ label: "ratio", value: value.toFixed(2), color: zone.c }, { label: "zone", value: zone.label }],
+      rows: [
+        { label: "ratio", value: value.toFixed(2), color: zone.c },
+        { label: "zone", value: zone.label },
+      ],
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [value, w]
@@ -487,7 +521,15 @@ export function ACWRGauge({ value }: { value: number }) {
           />
         ))}
         {[0.8, 1.3, 1.5].map((t, i) => (
-          <line key={i} x1={X(t)} y1={yBar - 3} x2={X(t)} y2={yBar + 13} stroke="var(--bg-2)" strokeWidth="1.5" />
+          <line
+            key={i}
+            x1={X(t)}
+            y1={yBar - 3}
+            x2={X(t)}
+            y2={yBar + 13}
+            stroke="var(--bg-2)"
+            strokeWidth="1.5"
+          />
         ))}
         <g transform={`translate(${X(value)},0)`}>
           <path d="M0 32 L-5 42 L5 42 Z" fill="var(--text)" />
@@ -556,14 +598,22 @@ export function VolumeBars({
         x,
         y: padT + ih - bh,
         title: d.label,
-        rows: [{ label: seriesLabel, value: (fmtTip ? fmtTip(d.v) : d.v.toFixed(1)) + unit, color: "var(--accent)" }],
+        rows: [
+          {
+            label: seriesLabel,
+            value: (fmtTip ? fmtTip(d.v) : d.v.toFixed(1)) + unit,
+            color: "var(--accent)",
+          },
+        ],
       };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [data, bw, ih, max, unit, fmtTip, seriesLabel]
   );
   const { tip, svgRef, handlers } = useChartHover(resolve);
-  const hi_i = tip ? Math.max(0, Math.min(data.length - 1, Math.floor((tip.x - padL) / (bw || 1)))) : -1;
+  const hi_i = tip
+    ? Math.max(0, Math.min(data.length - 1, Math.floor((tip.x - padL) / (bw || 1))))
+    : -1;
 
   return (
     <div ref={ref} className="chart-wrap" style={{ width: "100%" }}>
@@ -631,7 +681,10 @@ export interface HeatDay {
 export type MetricKey = "readiness" | "load" | "sleep" | "hrv";
 
 // Returns a CSS color, or the sentinel strings "gap" / "empty".
-export function metricColor(metric: MetricKey, d: (HeatDay & { missing?: boolean }) | null): string {
+export function metricColor(
+  metric: MetricKey,
+  d: (HeatDay & { missing?: boolean }) | null
+): string {
   if (!d || d.missing) return "empty";
   if (d.gap) return "gap";
   if (metric === "readiness") return readinessColor(d.readiness);
@@ -724,11 +777,27 @@ export function RouteMap({ track, height = 168 }: { track: number[][]; height?: 
   const grid: React.ReactNode[] = [];
   for (let i = 1; i < 6; i++)
     grid.push(
-      <line key={"v" + i} x1={(w / 6) * i} y1="0" x2={(w / 6) * i} y2={height} stroke="var(--hairline)" strokeWidth="1" />
+      <line
+        key={"v" + i}
+        x1={(w / 6) * i}
+        y1="0"
+        x2={(w / 6) * i}
+        y2={height}
+        stroke="var(--hairline)"
+        strokeWidth="1"
+      />
     );
   for (let i = 1; i < 4; i++)
     grid.push(
-      <line key={"h" + i} x1="0" y1={(height / 4) * i} x2={w} y2={(height / 4) * i} stroke="var(--hairline)" strokeWidth="1" />
+      <line
+        key={"h" + i}
+        x1="0"
+        y1={(height / 4) * i}
+        x2={w}
+        y2={(height / 4) * i}
+        stroke="var(--hairline)"
+        strokeWidth="1"
+      />
     );
   return (
     <div ref={ref} style={{ width: "100%" }}>
@@ -746,8 +815,22 @@ export function RouteMap({ track, height = 168 }: { track: number[][]; height?: 
           strokeLinejoin="round"
           strokeLinecap="round"
         />
-        <circle cx={px(first[1] ?? first[0])} cy={py(first[0])} r="5" fill="var(--go)" stroke="var(--bg-2)" strokeWidth="1.5" />
-        <circle cx={px(last[1] ?? last[0])} cy={py(last[0])} r="5" fill="var(--back)" stroke="var(--bg-2)" strokeWidth="1.5" />
+        <circle
+          cx={px(first[1] ?? first[0])}
+          cy={py(first[0])}
+          r="5"
+          fill="var(--go)"
+          stroke="var(--bg-2)"
+          strokeWidth="1.5"
+        />
+        <circle
+          cx={px(last[1] ?? last[0])}
+          cy={py(last[0])}
+          r="5"
+          fill="var(--back)"
+          stroke="var(--bg-2)"
+          strokeWidth="1.5"
+        />
       </svg>
     </div>
   );

@@ -34,7 +34,7 @@
     "prepublishOnly": "npm run build"
   },
   "lint-staged": {
-    "*.{js,ts,json,md,html,css,svelte}": "prettier --write"
+    "*.{js,jsx,ts,tsx,json,md,html,css,svelte}": "prettier --write"
   },
   "dependencies": {
     "@garmin/fitsdk": "^21.205.0",

@@ -30,7 +30,10 @@ function LevelSlider({
     <div>
       <div className="row between" style={{ marginBottom: 9 }}>
         <span style={{ fontSize: 14, fontWeight: 500 }}>{field.label}</span>
-        <span className="mono" style={{ fontSize: 13, color: set ? "var(--accent)" : "var(--text-3)" }}>
+        <span
+          className="mono"
+          style={{ fontSize: 13, color: set ? "var(--accent)" : "var(--text-3)" }}
+        >
           {set ? `${value} / 5` : "—"}
         </span>
       </div>
@@ -151,7 +154,11 @@ export function Journal({
                   key={t}
                   onClick={() => setTag(t)}
                   className={`chip tag-${t}`}
-                  style={{ cursor: "pointer", opacity: tag === t ? 1 : 0.5, borderWidth: tag === t ? 1.5 : 1 }}
+                  style={{
+                    cursor: "pointer",
+                    opacity: tag === t ? 1 : 0.5,
+                    borderWidth: tag === t ? 1.5 : 1,
+                  }}
                 >
                   <span className="tag-dot" style={{ background: TAG_DOTS[t] }} />
                   {t}
@@ -160,7 +167,12 @@ export function Journal({
             </div>
             <button
               className="step-btn"
-              style={{ flex: "none", padding: "0 16px", height: 38, opacity: text.trim() && !posting ? 1 : 0.4 }}
+              style={{
+                flex: "none",
+                padding: "0 16px",
+                height: 38,
+                opacity: text.trim() && !posting ? 1 : 0.4,
+              }}
               onClick={submit}
             >
               {posting ? "…" : "Add"}
@@ -185,7 +197,11 @@ export function Journal({
         ) : error ? (
           <EmptyState icon="info" title="Couldn't load journal" body={error} />
         ) : list.length === 0 ? (
-          <EmptyState icon="journal" title="No entries" body="Nothing tagged here yet. Jot a note above." />
+          <EmptyState
+            icon="journal"
+            title="No entries"
+            body="Nothing tagged here yet. Jot a note above."
+          />
         ) : (
           <div className="list" style={{ marginTop: 6 }}>
             {list.map((j) => (
