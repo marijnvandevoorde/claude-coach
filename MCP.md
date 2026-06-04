@@ -127,9 +127,13 @@ default; `full=true` fetches a per-day complete snapshot. Rate-limited (429 back
 ### `schedule_workouts`
 
 Create + schedule a training plan's workouts directly on Garmin Connect (they sync to the
-athlete's watch). Builds each workout, creates it, and schedules it on its date.
+athlete's watch). Builds each workout, creates it, and schedules it on its date, and links each
+pushed workout back to its plan day. Returns an explicit `{pushed, failed, …}` summary (never a
+silent no-op).
 
-- `plan` _(required, path to a plan JSON)_
+- Plan source (in order): `plan` _(inline TrainingPlan JSON)_, `file` _(path)_, or **neither →
+  the stored active plan** (the usual case).
+- `from` / `to` _(YYYY-MM-DD)_ — push only workouts in that window.
 - `dryRun` _(boolean)_ — build + return the payloads without pushing anything.
 
 ### `upload_route`
@@ -145,39 +149,66 @@ snap-to-roads). Provide the GPX one of two ways:
 
 ## Plans
 
+The coach persists training plans (one **active** plan at a time). These tools, and the
+export/push tools above, default to the active plan when given no `plan`/`file`.
+
+### `save_plan`
+
+Save (create or update) a plan and make it the **active** plan — the one the app shows and
+Garmin/calendar push use. Keyed by `meta.id`, so re-saving updates in place.
+
+- `plan` _(required, the full TrainingPlan JSON, inline)_.
+
+### `list_plans` / `get_plan` / `activate_plan` / `delete_plan`
+
+Manage saved plans. `list_plans` (no args) returns id/event/dates/active; `get_plan` _(`id`,
+default active)_ returns the full JSON; `activate_plan` _(`id`)_ switches the active plan;
+`delete_plan` _(`id`)_ removes one.
+
+### `plan_today` / `plan_upcoming`
+
+`plan_today` _(`date`, default today)_ — the active plan's session(s) for a day (rest dropped).
+`plan_upcoming` _(`days`, default 14)_ — upcoming sessions over the next N days.
+
 ### `export_calendar`
 
-Turn a training plan JSON into a calendar event list (JSON) for pushing to Google Calendar.
+Turn the plan into a calendar event list (JSON) for pushing to Google Calendar.
 
-- `plan` _(required)_.
+- Plan source: `plan` _(inline)_, `file` _(path)_, or **neither → the active plan**.
 
 ### `export_garmin`
 
-Turn a training plan JSON into structured Garmin workout records (inspect, or feed to
-`schedule_workouts`).
+Turn the plan into structured Garmin workout records (inspect, or feed to `schedule_workouts`).
 
-- `plan` _(required)_.
+- Plan source: `plan` _(inline)_, `file` _(path)_, or **neither → the active plan**.
 
 ---
 
 ## Tool ↔ CLI map
 
-| MCP tool            | CLI command               |
-| ------------------- | ------------------------- |
-| `wellness`          | `wellness`                |
-| `log`               | `log <type> <value>`      |
-| `journal`           | `journal add "<text>"`    |
-| `journal_list`      | `journal list`            |
-| `summary`           | `summary`                 |
-| `config`            | `config`                  |
-| `notify`            | `notify <message>`        |
-| `checkin`           | `checkin`                 |
-| `garmin_refresh`    | `garmin-fetch`            |
-| `garmin_sync`       | `garmin-sync`             |
-| `backfill`          | `garmin-backfill`         |
-| `schedule_workouts` | `garmin-push <plan>`      |
-| `upload_route`      | `garmin-route <file.gpx>` |
-| `export_calendar`   | `export-calendar <plan>`  |
-| `export_garmin`     | `export-garmin <plan>`    |
+| MCP tool            | CLI command                |
+| ------------------- | -------------------------- |
+| `wellness`          | `wellness`                 |
+| `log`               | `log <type> <value>`       |
+| `journal`           | `journal add "<text>"`     |
+| `journal_list`      | `journal list`             |
+| `summary`           | `summary`                  |
+| `config`            | `config`                   |
+| `notify`            | `notify <message>`         |
+| `checkin`           | `checkin`                  |
+| `garmin_refresh`    | `garmin-fetch`             |
+| `garmin_sync`       | `garmin-sync`              |
+| `backfill`          | `garmin-backfill`          |
+| `schedule_workouts` | `garmin-push --active`     |
+| `upload_route`      | `garmin-route <file.gpx>`  |
+| `save_plan`         | `plan save --stdin`        |
+| `list_plans`        | `plan list`                |
+| `get_plan`          | `plan get [id]`            |
+| `activate_plan`     | `plan activate <id>`       |
+| `delete_plan`       | `plan delete <id>`         |
+| `plan_today`        | `plan show-today`          |
+| `plan_upcoming`     | `plan upcoming`            |
+| `export_calendar`   | `export-calendar --active` |
+| `export_garmin`     | `export-garmin --active`   |
 
 See [`CLI.md`](CLI.md) for the full flag-by-flag detail of each underlying command.

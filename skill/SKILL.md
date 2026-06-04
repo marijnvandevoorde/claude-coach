@@ -373,7 +373,7 @@ If the goal event is a **trail or ultra race**, activate trail mode: the volume 
 ### Phase 5: Plan Delivery
 
 11. Read `skill/reference/race-day.md` for race execution section
-12. Write the plan as JSON, then render to HTML (see output format below)
+12. Write the plan as JSON, **save it to the coach** (`save_plan` — it becomes the active plan the app + push use), then render to HTML (see output format below)
 
 ---
 
@@ -589,7 +589,16 @@ Here's the structure:
 }
 ```
 
-### Step 2: Render to HTML
+### Step 2: Save the plan to the coach
+
+Persist the plan so it becomes the **active plan** — the single source of truth the web app reads (today's session, "Next up", the Activity screen's Upcoming list) and that Garmin/calendar push operate on. **Always do this for a plan the athlete is keeping** — don't leave it as a loose JSON file the rest of the system can't see.
+
+- **MCP (preferred):** `mcp__coach__save_plan` with `{ plan: "<the full plan JSON>" }` — pass the JSON **inline**.
+- **CLI:** `cat plan.json | npx claude-coach plan save --stdin` (or `npx claude-coach plan save plan.json`).
+
+Saving upserts by `meta.id` and marks it active, so re-saving an edited plan replaces it in place. Manage saved plans with `list_plans` / `get_plan` / `activate_plan` / `delete_plan` (CLI: `plan list|get|activate|delete`), and inspect what's scheduled with `plan_today` / `plan_upcoming`.
+
+### Step 3: Render to HTML
 
 After writing the JSON file, render it to an interactive HTML viewer:
 
@@ -605,15 +614,14 @@ This creates a beautiful, interactive training plan with:
 - Week summaries with hours by sport
 - Dark mode, mobile responsive
 
-### Step 3: Tell the User
+### Step 4: Tell the User
 
-After both files are created, tell the user:
+After the plan is saved and rendered, tell the user:
 
-1. The JSON file path (for data)
-2. The HTML file path (for viewing)
-3. Suggest opening the HTML file in a browser
-4. **Offer to put it on their calendar** — push the workouts straight into their Google Calendar (via the Google Calendar MCP) or export an `.ics`. See `skill/reference/calendar.md`.
-5. **Offer to push workouts to their Garmin/watch** — the coach does this **natively**: `npx claude-coach garmin-push <plan>.json` (or `mcp__coach__schedule_workouts`) creates **and** schedules each session on Garmin so it syncs to the device (e.g. a Fenix); add `--dry-run` / `dryRun:true` to preview first. You can also upload a route/course from a GPX with `garmin-route` / `mcp__coach__upload_route`. No standalone Garmin MCP needed. See `skill/reference/garmin-workouts.md`.
+1. That the plan is **saved and active** — it now shows up in the web app (today's session + upcoming).
+2. The HTML file path (for viewing); suggest opening it in a browser.
+3. **Offer to put it on their calendar** — push the workouts straight into their Google Calendar (via the Google Calendar MCP, fed by `export_calendar`) or export an `.ics`. See `skill/reference/calendar.md`.
+4. **Offer to push workouts to their Garmin/watch** — the coach does this **natively** against the active plan, so no path/JSON is needed: `mcp__coach__schedule_workouts` (no args → pushes the active plan; add `dryRun:true` to preview, or `from`/`to` to push just a window) or `npx claude-coach garmin-push --active`. It creates **and** schedules each session on Garmin so it syncs to the device (e.g. a Fenix), and links each pushed workout back to its plan day (the app marks it "✓ on watch"). You can also upload a route/course from a GPX with `garmin-route` / `mcp__coach__upload_route`. No standalone Garmin MCP needed. See `skill/reference/garmin-workouts.md`.
 
 ---
 
@@ -691,8 +699,8 @@ The coach is also available as **MCP tools** (`mcp__coach__*`) when the remote c
 
 - **Wellness & journaling:** `mcp__coach__wellness`, `mcp__coach__log`, `mcp__coach__journal`, `mcp__coach__journal_list`, `mcp__coach__summary`
 - **Reminders:** `mcp__coach__config`, `mcp__coach__checkin`, `mcp__coach__notify`
-- **Garmin:** `mcp__coach__garmin_refresh` (live pull), `mcp__coach__garmin_sync` (cache values you pass), `mcp__coach__backfill` (historical), `mcp__coach__schedule_workouts` (push workouts), `mcp__coach__upload_route` (GPX course)
-- **Plans:** `mcp__coach__export_calendar`, `mcp__coach__export_garmin`
+- **Garmin:** `mcp__coach__garmin_refresh` (live pull), `mcp__coach__garmin_sync` (cache values you pass), `mcp__coach__backfill` (historical), `mcp__coach__schedule_workouts` (push the active plan's workouts), `mcp__coach__upload_route` (GPX course)
+- **Plans:** `mcp__coach__save_plan` (create/update + activate), `mcp__coach__list_plans`, `mcp__coach__get_plan`, `mcp__coach__activate_plan`, `mcp__coach__delete_plan`, `mcp__coach__plan_today`, `mcp__coach__plan_upcoming`, `mcp__coach__export_calendar`, `mcp__coach__export_garmin`. The plan tools and push/export default to the **stored active plan**, so once a plan is saved you rarely pass JSON again.
 
 A full tool-by-tool reference lives in [`MCP.md`](../MCP.md); the CLI equivalents are in [`CLI.md`](../CLI.md).
 

@@ -6,13 +6,14 @@ When the athlete wants their plan in their calendar, **push the workouts straigh
 
 Use this when the `mcp__claude_ai_Google_Calendar__*` tools are available.
 
-1. **Get the event list** from the plan (rest days already removed):
+1. **Get the event list** from the plan (rest days already removed). This reads the stored
+   **active plan** by default (save it first with `save_plan` / `plan save`):
 
    ```bash
-   npx claude-coach export-calendar <plan>.json --json
+   npx claude-coach export-calendar --active --json   # or pass a <plan>.json / --stdin
    ```
 
-   → an array of `{ date, title, sport, durationMinutes, description }`. (You can also read the plan JSON directly, but this is the reliable, de-duped source.)
+   → an array of `{ date, title, sport, durationMinutes, description }`. (`mcp__coach__export_calendar` with no args does the same.)
 
 2. **Pick the calendar.** Call `list_calendars`; default to the primary calendar, or ask if they keep a separate "Training" calendar.
 

@@ -238,16 +238,20 @@ npx claude-coach garmin-streams --id=1234567 # a single activity
 ### Push workouts to the watch
 
 Turn a plan's sessions into structured workouts **created and scheduled** on Garmin Connect (they
-sync to the watch). This is native — no `mcp__garmin__*` server required.
+sync to the watch). This is native — no `mcp__garmin__*` server required. The plan comes from the
+stored **active plan** (`--active`), a file, or `--stdin`.
 
 ```bash
-npx claude-coach garmin-push plan.json --dry-run   # preview the exact payloads, push nothing
-npx claude-coach garmin-push plan.json             # create + schedule on each workout's date
+npx claude-coach garmin-push --active --dry-run    # preview the active plan's payloads, push nothing
+npx claude-coach garmin-push --active              # create + schedule on each workout's date
+npx claude-coach garmin-push --active --from=2026-06-08 --to=2026-06-14   # just one week
+npx claude-coach garmin-push plan.json             # or push a specific file
 ```
 
 Re-running is idempotent: an existing same-name workout for that date is updated in place rather
-than duplicated. (`export-garmin plan.json` just emits the structured-workout feed as JSON without
-pushing — useful for inspection.)
+than duplicated, and each pushed workout is linked back to its plan day. An empty/all-rest window
+returns an explicit `{pushed:0, reason}` rather than failing silently. (`export-garmin --active`
+just emits the structured-workout feed as JSON without pushing — useful for inspection.)
 
 ### Upload a route/course
 
@@ -276,13 +280,24 @@ npx claude-coach sync                  # later: incremental refresh with cached 
 
 ---
 
-## Plans: render & export
+## Plans: store, render & export
+
+The coach persists training plans (one **active** at a time); the app and Garmin/calendar push
+read the active plan.
 
 ```bash
-npx claude-coach render plan.json --output plan.html       # interactive HTML viewer
-npx claude-coach export-calendar plan.json                 # → .ics file
-npx claude-coach export-calendar plan.json --json          # → event list for the Google Calendar MCP
-npx claude-coach export-garmin plan.json                   # → structured-workout JSON (see garmin-push)
+cat plan.json | npx claude-coach plan save --stdin   # save (or update) + make active
+npx claude-coach plan list                           # id / event / dates / which is active
+npx claude-coach plan get [id]                       # full JSON (default: the active plan)
+npx claude-coach plan activate <id>                  # switch the active plan
+npx claude-coach plan delete <id>                    # remove a plan
+npx claude-coach plan show-today                     # the active plan's session(s) today
+npx claude-coach plan upcoming --days=14             # upcoming sessions
+
+npx claude-coach render plan.json --output plan.html # interactive HTML viewer
+npx claude-coach export-calendar --active            # → .ics file (or a file path)
+npx claude-coach export-calendar --active --json     # → event list for the Google Calendar MCP
+npx claude-coach export-garmin --active              # → structured-workout JSON (see garmin-push)
 ```
 
 ---
@@ -301,24 +316,26 @@ Handy views/tables: `activities`, `athlete`, `goals`, `wellness_state`, `hydrati
 
 ## Command summary
 
-| Command                   | What it does                                          |
-| ------------------------- | ----------------------------------------------------- |
-| `log <type> <val>`        | Log water/sleep/energy/soreness/mood/weight           |
-| `wellness`                | Today's hydration + wellness snapshot                 |
-| `journal add "<text>"`    | Add a free-text journal entry                         |
-| `journal list`            | List journal entries                                  |
-| `summary`                 | Bundle the week's journal + wellness as JSON          |
-| `config`                  | Show/set reminder preferences                         |
-| `notify <message>`        | Send a push notification                              |
-| `checkin`                 | Assemble plan + Garmin + wellness; send due reminders |
-| `garmin-fetch`            | Pull today's live data from Garmin into `coach.db`    |
-| `garmin-sync`             | Cache Garmin metrics you already have                 |
-| `garmin-backfill`         | Backfill historical Garmin data (range or `--full`)   |
-| `garmin-push <plan>`      | Create + schedule a plan's workouts on Garmin         |
-| `garmin-route <file.gpx>` | Upload a GPX as a Garmin course                       |
-| `sync` / `auth`           | Strava activity history                               |
-| `render <plan>`           | Render a plan JSON to an HTML viewer                  |
-| `export-calendar <plan>`  | Plan → `.ics` / calendar events                       |
-| `export-garmin <plan>`    | Plan → structured-workout JSON                        |
-| `query <sql>`             | Run a SQL query against the database                  |
-| `help`                    | Full built-in help                                    |
+| Command                                  | What it does                                           |
+| ---------------------------------------- | ------------------------------------------------------ |
+| `log <type> <val>`                       | Log water/sleep/energy/soreness/mood/weight            |
+| `wellness`                               | Today's hydration + wellness snapshot                  |
+| `journal add "<text>"`                   | Add a free-text journal entry                          |
+| `journal list`                           | List journal entries                                   |
+| `summary`                                | Bundle the week's journal + wellness as JSON           |
+| `config`                                 | Show/set reminder preferences                          |
+| `notify <message>`                       | Send a push notification                               |
+| `checkin`                                | Assemble plan + Garmin + wellness; send due reminders  |
+| `garmin-fetch`                           | Pull today's live data from Garmin into `coach.db`     |
+| `garmin-sync`                            | Cache Garmin metrics you already have                  |
+| `garmin-backfill`                        | Backfill historical Garmin data (range or `--full`)    |
+| `garmin-push --active`                   | Create + schedule the active plan's workouts on Garmin |
+| `garmin-route <file.gpx>`                | Upload a GPX as a Garmin course                        |
+| `plan save\|list\|get\|activate\|delete` | Manage stored plans (one active at a time)             |
+| `plan show-today\|upcoming`              | Active plan's sessions today / upcoming                |
+| `sync` / `auth`                          | Strava activity history                                |
+| `render <plan>`                          | Render a plan JSON to an HTML viewer                   |
+| `export-calendar --active`               | Plan → `.ics` / calendar events                        |
+| `export-garmin --active`                 | Plan → structured-workout JSON                         |
+| `query <sql>`                            | Run a SQL query against the database                   |
+| `help`                                   | Full built-in help                                     |
