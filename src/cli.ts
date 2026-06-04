@@ -51,6 +51,8 @@ import {
   deriveTodaysWorkout,
   sessionsForDate,
   upcomingWorkouts,
+  planDays,
+  normalizeWorkout,
   type PlanDay,
 } from "./db/plans.js";
 import { uploadRoute, COURSE_TYPES } from "./garmin/routes.js";
@@ -933,25 +935,25 @@ interface CalendarEvent {
   description: string;
 }
 
-/** Flatten a training plan into one calendar event per non-rest workout. */
+/** Flatten a training plan into one calendar event per non-rest workout.
+ *  Goes through planDays/normalizeWorkout so it handles both plan shapes. */
 function planToEvents(plan: TrainingPlan): CalendarEvent[] {
   const events: CalendarEvent[] = [];
-  for (const week of plan.weeks ?? []) {
-    for (const day of week.days ?? []) {
-      for (const w of day.workouts ?? []) {
-        if (w.sport === "rest") continue;
-        const parts: string[] = [];
-        if (w.description) parts.push(w.description);
-        if (w.humanReadable) parts.push(w.humanReadable);
-        if (w.primaryZone) parts.push(`Primary zone: ${w.primaryZone}`);
-        events.push({
-          date: day.date,
-          title: `${getSportIcon(w.sport)} ${w.name}`.trim(),
-          sport: w.sport,
-          durationMinutes: w.durationMinutes,
-          description: parts.join("\n\n"),
-        });
-      }
+  for (const day of planDays(plan)) {
+    for (const w of day.workouts) {
+      if (!w.sport || w.sport === "rest") continue;
+      const n = normalizeWorkout(w);
+      const parts: string[] = [];
+      if (n.description) parts.push(n.description);
+      if (n.humanReadable) parts.push(n.humanReadable);
+      if (n.primaryZone) parts.push(`Primary zone: ${n.primaryZone}`);
+      events.push({
+        date: day.date,
+        title: `${getSportIcon(n.sport as Parameters<typeof getSportIcon>[0])} ${n.name}`.trim(),
+        sport: n.sport,
+        durationMinutes: n.durationMinutes,
+        description: parts.join("\n\n"),
+      });
     }
   }
   return events;
@@ -1043,29 +1045,29 @@ interface GarminWorkoutExport {
   humanReadable?: string;
 }
 
-/** Normalize a plan into per-workout records an agent can feed to the Garmin workout builders. */
+/** Normalize a plan into per-workout records an agent can feed to the Garmin workout
+ *  builders. Goes through planDays/normalizeWorkout so it handles both plan shapes. */
 function planToGarminWorkouts(plan: TrainingPlan): GarminWorkoutExport[] {
   const out: GarminWorkoutExport[] = [];
-  for (const week of plan.weeks ?? []) {
-    for (const day of week.days ?? []) {
-      for (const w of day.workouts ?? []) {
-        if (w.sport === "rest") continue;
-        out.push({
-          date: day.date,
-          sport: w.sport,
-          type: w.type,
-          name: w.name,
-          durationMinutes: w.durationMinutes,
-          distanceMeters: w.distanceMeters,
-          primaryZone: w.primaryZone,
-          targetHR: w.targetHR,
-          targetPace: w.targetPace,
-          targetPower: w.targetPower,
-          rpe: w.rpe,
-          structure: w.structure,
-          humanReadable: w.humanReadable,
-        });
-      }
+  for (const day of planDays(plan)) {
+    for (const w of day.workouts) {
+      if (!w.sport || w.sport === "rest") continue;
+      const n = normalizeWorkout(w);
+      out.push({
+        date: day.date,
+        sport: n.sport,
+        type: n.type ?? "",
+        name: n.name,
+        durationMinutes: n.durationMinutes,
+        distanceMeters: n.distanceMeters,
+        primaryZone: n.primaryZone,
+        targetHR: n.targetHR,
+        targetPace: n.targetPace,
+        targetPower: n.targetPower,
+        rpe: n.rpe,
+        structure: n.structure,
+        humanReadable: n.humanReadable,
+      });
     }
   }
   return out;
