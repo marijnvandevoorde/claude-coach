@@ -10,8 +10,9 @@ import {
   Skeleton,
 } from "../components/primitives";
 import { NotifyToggle } from "../components/NotifyToggle";
-import { band, verdict, fmtDate, parseISO } from "../lib/coach";
+import { band, verdict, fmtDate, normSport } from "../lib/coach";
 import type { DayView, SleepStages as Stages } from "../lib/adapt";
+import type { PlannedSession } from "../api";
 
 export function SleepStageBar({ stages }: { stages: Stages }) {
   const total = stages.deep + stages.light + stages.rem + stages.awake || 1;
@@ -225,18 +226,36 @@ export function QuickAdd({
   );
 }
 
-function planFor(date: string) {
-  const dow = parseISO(date).getDay();
-  const map: Record<number, { sport: string; title: string; detail: string }> = {
-    0: { sport: "run", title: "Long run · 18 km", detail: "Z2 aerobic, finish steady" },
-    1: { sport: "run", title: "Rest or mobility", detail: "Optional 20 min easy spin" },
-    2: { sport: "run", title: "Intervals · 6×800m", detail: "5k pace, 2 min jog recovery" },
-    3: { sport: "ride", title: "Endurance ride · 90 min", detail: "Z2, cadence focus" },
-    4: { sport: "run", title: "Tempo · 40 min", detail: "20 min @ threshold" },
-    5: { sport: "run", title: "Rest", detail: "Stretch, hydrate, prep for weekend" },
-    6: { sport: "ride", title: "Long ride · 3 hr", detail: "Z2 with 3×8 min tempo" },
-  };
-  return map[dow];
+/** A one-line summary of a planned session (e.g. "45 min · Z2"). */
+function sessionDetail(s: PlannedSession): string {
+  const bits: string[] = [];
+  if (s.durationMinutes) bits.push(`${s.durationMinutes} min`);
+  if (s.distanceMeters)
+    bits.push(`${(s.distanceMeters / 1000).toFixed(s.distanceMeters % 1000 === 0 ? 0 : 1)} km`);
+  if (s.primaryZone) bits.push(s.primaryZone);
+  else if (s.type) bits.push(s.type);
+  return bits.join(" · ") || s.description || "Planned session";
+}
+
+/** One planned-session row in the dashboard plan card. */
+function PlanSessionRow({ s }: { s: PlannedSession }) {
+  return (
+    <div className="plan-item">
+      <SportChip sport={normSport(s.sport)} />
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 500, fontSize: 15 }}>{s.name}</div>
+        <div className="ctx-note" style={{ marginTop: 2 }}>
+          {sessionDetail(s)}
+        </div>
+      </div>
+      {s.syncedToGarmin && (
+        <span className="chip" style={{ color: "var(--go)", whiteSpace: "nowrap" }}>
+          <Icon name="check" size={12} style={{ verticalAlign: -1, marginRight: 3 }} />
+          on watch
+        </span>
+      )}
+    </div>
+  );
 }
 
 export function DashboardLoading({ theme }: { theme: string }) {
@@ -357,7 +376,9 @@ export function Dashboard({
 
   const v = verdict(day.readiness);
   const b = band(day.readiness);
-  const plan = planFor(day.date);
+  const plan = day.plan;
+  const todaySessions = plan?.today ?? [];
+  const nextUp = todaySessions.length === 0 ? (plan?.next ?? null) : null;
   const hasSleep = day.sleep_hours != null;
 
   return (
@@ -488,21 +509,36 @@ export function Dashboard({
           </div>
         </div>
 
-        {/* PLAN */}
+        {/* PLAN — real data from the active plan (today's sessions, or the next up) */}
         <div className="card fade-in" style={{ marginTop: 12 }}>
           <div className="row between" style={{ marginBottom: 4 }}>
-            <span className="lbl">Today's plan</span>
-            <span className="ctx-note">from training log</span>
+            <span className="lbl">{todaySessions.length > 0 ? "Today's plan" : "Next up"}</span>
+            {nextUp && <span className="ctx-note">{fmtDate(nextUp.date, { weekday: "short", month: "short", day: "numeric" })}</span>}
           </div>
-          <div className="plan-item">
-            <SportChip sport={plan.sport} />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 500, fontSize: 15 }}>{plan.title}</div>
-              <div className="ctx-note" style={{ marginTop: 2 }}>
-                {plan.detail}
+
+          {todaySessions.length > 0 ? (
+            todaySessions.map((s, i) => <PlanSessionRow key={`${s.name}-${i}`} s={s} />)
+          ) : nextUp ? (
+            <PlanSessionRow s={nextUp} />
+          ) : (
+            <div className="plan-item">
+              <div className="sport-chip" style={{ background: "var(--surface-2)", color: "var(--text-3)" }}>
+                <Icon name="calendar" size={18} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 500, fontSize: 15 }}>
+                  {plan?.hasActivePlan ? "Nothing scheduled" : "No active plan"}
+                </div>
+                <div className="ctx-note" style={{ marginTop: 2 }}>
+                  {plan?.hasActivePlan
+                    ? "No upcoming sessions in your plan."
+                    : "Ask Coach to build a training plan."}
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* Coach suggestion (readiness-based, not plan data) */}
           <div className="plan-item" style={{ paddingBottom: 2 }}>
             <div
               className="sport-chip"
