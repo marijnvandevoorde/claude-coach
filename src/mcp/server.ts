@@ -81,6 +81,14 @@ function flags(a: Args, keys: string[]): string[] {
   return out;
 }
 
+/** Plan source args for the plan-consuming CLI commands: inline `plan` via stdin,
+ *  a `file` path, or — the default — `--active` (the stored active plan). */
+function planSource(a: Args): string[] {
+  if (typeof a.plan === "string") return ["--stdin"];
+  if (typeof a.file === "string") return [String(a.file)];
+  return ["--active"];
+}
+
 const TOOLS: Record<string, ToolDef> = {
   wellness: {
     description: "Today's hydration + wellness snapshot (water vs goal, sleep, readiness, energy).",
@@ -235,70 +243,118 @@ const TOOLS: Record<string, ToolDef> = {
   },
   export_calendar: {
     description:
-      "Turn a training plan JSON into a calendar event list (JSON) for pushing to Google Calendar. Pass the plan inline as `plan` (preferred for plans built in chat) or as a server-readable `file` path.",
+      "Turn a training plan into a calendar event list (JSON) for pushing to Google Calendar. Defaults to the stored ACTIVE plan (no args needed); or pass the plan inline as `plan`, or a server-readable `file` path.",
     inputSchema: {
       type: "object",
       properties: {
         plan: {
           type: "string",
-          description: "inline training plan JSON content (preferred)",
+          description: "inline training plan JSON (omit to use the active plan)",
         },
-        file: {
-          type: "string",
-          description:
-            "path to a plan JSON file readable by the coach server (alternative to plan)",
-        },
+        file: { type: "string", description: "path to a plan JSON file (alternative to plan)" },
       },
     },
-    toArgs: (a) =>
-      typeof a.plan === "string"
-        ? ["export-calendar", "--stdin", "--json"]
-        : ["export-calendar", String(a.file), "--json"],
+    toArgs: (a) => ["export-calendar", ...planSource(a), "--json"],
     stdin: (a) => (typeof a.plan === "string" ? a.plan : undefined),
   },
   export_garmin: {
     description:
-      "Turn a training plan JSON into structured Garmin workout records (to create + schedule on the watch). Pass the plan inline as `plan` (preferred for plans built in chat) or as a server-readable `file` path.",
+      "Turn a training plan into structured Garmin workout records (to create + schedule on the watch). Defaults to the stored ACTIVE plan; or pass `plan` inline or a `file` path.",
     inputSchema: {
       type: "object",
       properties: {
-        plan: { type: "string", description: "inline training plan JSON content (preferred)" },
-        file: {
+        plan: {
           type: "string",
-          description:
-            "path to a plan JSON file readable by the coach server (alternative to plan)",
+          description: "inline training plan JSON (omit to use the active plan)",
         },
+        file: { type: "string", description: "path to a plan JSON file (alternative to plan)" },
       },
     },
-    toArgs: (a) =>
-      typeof a.plan === "string" ? ["export-garmin", "--stdin"] : ["export-garmin", String(a.file)],
+    toArgs: (a) => ["export-garmin", ...planSource(a)],
     stdin: (a) => (typeof a.plan === "string" ? a.plan : undefined),
   },
   schedule_workouts: {
     description:
-      "Create + schedule a training plan's workouts directly on Garmin Connect (they sync to the athlete's watch). Builds each workout, creates it, and schedules it on its date. Pass the plan inline as `plan` (preferred for plans built in chat) or as a server-readable `file` path. Pass dryRun:true to preview the exact workout payloads without pushing anything.",
+      "Create + schedule a training plan's workouts directly on Garmin Connect (they sync to the athlete's watch). Defaults to the stored ACTIVE plan, so 'push the plan to Garmin' needs no arguments; or pass `plan` inline / a `file` path. Optional from/to limit the date window. dryRun:true previews payloads without pushing. Returns an explicit {pushed,failed,...} summary.",
     inputSchema: {
       type: "object",
       properties: {
-        plan: { type: "string", description: "inline training plan JSON content (preferred)" },
-        file: {
+        plan: {
           type: "string",
-          description:
-            "path to a plan JSON file readable by the coach server (alternative to plan)",
+          description: "inline training plan JSON (omit to use the active plan)",
         },
+        file: { type: "string", description: "path to a plan JSON file (alternative to plan)" },
+        from: { type: "string", description: "only push workouts on/after this date (YYYY-MM-DD)" },
+        to: { type: "string", description: "only push workouts on/before this date (YYYY-MM-DD)" },
         dryRun: { type: "boolean", description: "build payloads only; push nothing" },
       },
     },
     toArgs: (a) => {
-      // Inline content goes via stdin (--stdin); a path is passed positionally.
-      const f =
-        typeof a.plan === "string"
-          ? ["garmin-push", "--stdin", "--json"]
-          : ["garmin-push", String(a.file), "--json"];
+      const f = ["garmin-push", ...planSource(a), "--json"];
       if (a.dryRun === true) f.push("--dry-run");
+      if (typeof a.from === "string") f.push(`--from=${a.from}`);
+      if (typeof a.to === "string") f.push(`--to=${a.to}`);
       return f;
     },
     stdin: (a) => (typeof a.plan === "string" ? a.plan : undefined),
+  },
+  save_plan: {
+    description:
+      "Save (create or update) a training plan and make it the ACTIVE plan — the one the app shows and Garmin/calendar push use. Pass the full TrainingPlan JSON inline as `plan`; it's keyed by meta.id, so re-saving the same id updates it in place.",
+    inputSchema: {
+      type: "object",
+      required: ["plan"],
+      properties: { plan: { type: "string", description: "the full TrainingPlan JSON" } },
+    },
+    toArgs: () => ["plan", "save", "--stdin", "--json"],
+    stdin: (a) => (typeof a.plan === "string" ? a.plan : undefined),
+  },
+  list_plans: {
+    description: "List saved training plans (id, event, dates, and which is active).",
+    inputSchema: { type: "object", properties: {} },
+    toArgs: () => ["plan", "list", "--json"],
+  },
+  get_plan: {
+    description: "Fetch a saved plan's full JSON. Omit `id` to get the active plan.",
+    inputSchema: {
+      type: "object",
+      properties: { id: { type: "string", description: "plan id (default: the active plan)" } },
+    },
+    toArgs: (a) =>
+      typeof a.id === "string"
+        ? ["plan", "get", String(a.id), "--json"]
+        : ["plan", "get", "--json"],
+  },
+  activate_plan: {
+    description: "Make a saved plan the active one (the app + Garmin/calendar push target).",
+    inputSchema: { type: "object", required: ["id"], properties: { id: { type: "string" } } },
+    toArgs: (a) => ["plan", "activate", String(a.id), "--json"],
+  },
+  delete_plan: {
+    description: "Delete a saved training plan by id.",
+    inputSchema: { type: "object", required: ["id"], properties: { id: { type: "string" } } },
+    toArgs: (a) => ["plan", "delete", String(a.id), "--json"],
+  },
+  plan_today: {
+    description:
+      "The active plan's session(s) for a date (default today) — what's scheduled, rest days dropped.",
+    inputSchema: {
+      type: "object",
+      properties: { date: { type: "string", description: "YYYY-MM-DD (default today)" } },
+    },
+    toArgs: (a) => ["plan", "show-today", "--json", ...flags(a, ["date"])],
+  },
+  plan_upcoming: {
+    description:
+      "Upcoming planned sessions from the active plan over the next N days (default 14).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        days: { type: "number", description: "window size in days (default 14)" },
+        date: { type: "string", description: "start date (default today)" },
+      },
+    },
+    toArgs: (a) => ["plan", "upcoming", "--json", ...flags(a, ["days", "date"])],
   },
   upload_route: {
     description:
