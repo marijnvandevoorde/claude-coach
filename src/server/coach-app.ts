@@ -36,13 +36,7 @@ import { fetchActivityStreams, toCompactStreams, type ActivityStreams } from "..
 import { fetchActivityTrack, decimate, toCompactTrack } from "../garmin/tracks.js";
 import { courseTypeFromSport, trackToGpx } from "./course-gpx.js";
 import { saveSubscription, deleteSubscription, countSubscriptions } from "../db/pushSubs.js";
-import {
-  getActivePlan,
-  sessionsForDate,
-  upcomingWorkouts,
-  type PlannedSession,
-} from "../db/plans.js";
-import { pushedWorkoutsForPlan } from "../db/garminPush.js";
+import { planForDate, upcomingForApp, allPlanSessions } from "./plan-api.js";
 import { vapidPublicKey, webPushConfigured, sendWebPush } from "../lib/webpush.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -187,68 +181,6 @@ function optDate(v: unknown): string | undefined | null {
   if (v === undefined || v === null) return undefined;
   if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
   return null;
-}
-
-export interface DashboardPlan {
-  hasActivePlan: boolean;
-  today: PlannedSession[]; // today's planned sessions (rest days dropped)
-  next: PlannedSession | null; // the next upcoming session strictly after `date`
-}
-
-/** Set of `${date}|${name}` keys for a plan's workouts already pushed to Garmin. */
-async function syncedKeySet(planId: string): Promise<Set<string>> {
-  return new Set(
-    (await pushedWorkoutsForPlan(planId)).map((p) => `${p.date ?? ""}|${p.name ?? ""}`)
-  );
-}
-
-/** The active plan's sessions for the dashboard — today's plus the next upcoming —
- *  each flagged whether it's been pushed to Garmin (push_key = `${date}|${name}`). */
-async function planForDate(date: string): Promise<DashboardPlan> {
-  const plan = await getActivePlan();
-  if (!plan) return { hasActivePlan: false, today: [], next: null };
-  const synced = await syncedKeySet(plan.meta.id);
-  const mark = (s: PlannedSession): PlannedSession => ({
-    ...s,
-    syncedToGarmin: synced.has(`${s.date}|${s.name}`),
-  });
-  const today = sessionsForDate(plan, date).map(mark);
-  const next = upcomingWorkouts(plan, date, 60).find((s) => s.date > date) ?? null;
-  return { hasActivePlan: true, today, next: next ? mark(next) : null };
-}
-
-/** Upcoming planned sessions over the next `days` days (active plan), each flagged
- *  whether it's been pushed to Garmin. Powers the Activity screen's Upcoming list. */
-async function upcomingForApp(
-  days: number
-): Promise<{ hasActivePlan: boolean; sessions: PlannedSession[] }> {
-  const plan = await getActivePlan();
-  if (!plan) return { hasActivePlan: false, sessions: [] };
-  const from = localDate();
-  const cutoff = new Date(Date.parse(`${from}T00:00:00Z`) + days * 86_400_000)
-    .toISOString()
-    .slice(0, 10);
-  const synced = await syncedKeySet(plan.meta.id);
-  const sessions = upcomingWorkouts(plan, from, 200)
-    .filter((s) => s.date <= cutoff)
-    .map((s) => ({ ...s, syncedToGarmin: synced.has(`${s.date}|${s.name}`) }));
-  return { hasActivePlan: true, sessions };
-}
-
-/** Every planned session in the active plan (any date), synced-flagged — for the
- *  calendar's planned-day markers. */
-async function allPlanSessions(): Promise<{
-  hasActivePlan: boolean;
-  sessions: PlannedSession[];
-}> {
-  const plan = await getActivePlan();
-  if (!plan) return { hasActivePlan: false, sessions: [] };
-  const synced = await syncedKeySet(plan.meta.id);
-  const sessions = upcomingWorkouts(plan, "0000-01-01", 1000).map((s) => ({
-    ...s,
-    syncedToGarmin: synced.has(`${s.date}|${s.name}`),
-  }));
-  return { hasActivePlan: true, sessions };
 }
 
 function api(): express.Router {
