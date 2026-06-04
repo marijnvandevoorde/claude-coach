@@ -1130,7 +1130,7 @@ async function runGarminPush(args: GarminPushArgs): Promise<void> {
       await ensureDb();
       store = { lookup: lookupPushedWorkout, save: savePushedWorkout };
     }
-    results = await pushWorkouts(inputs, { dryRun, store });
+    results = await pushWorkouts(inputs, { dryRun, store, planId: plan.meta?.id });
   } catch (e) {
     log.error(`garmin-push: ${e instanceof Error ? e.message : String(e)}`);
     process.exit(1);

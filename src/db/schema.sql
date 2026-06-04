@@ -161,6 +161,7 @@ CREATE TABLE IF NOT EXISTS garmin_pushed_workouts (
   push_key TEXT PRIMARY KEY,       -- stable per plan day-workout: `${date}|${name}`
   workout_id INTEGER NOT NULL,     -- Garmin workoutId
   schedule_id INTEGER,             -- Garmin workoutScheduleId (when scheduled on a date)
+  plan_id TEXT,                    -- the training_plans.id this workout came from (link-back)
   name TEXT,
   date TEXT,
   updated_at TEXT DEFAULT (datetime('now'))

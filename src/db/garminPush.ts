@@ -21,12 +21,13 @@ export interface PushedWorkout {
   schedule_id: number | null;
   name: string | null;
   date: string | null;
+  plan_id?: string | null;
 }
 
 export async function lookupPushedWorkout(key: string): Promise<PushedWorkout | undefined> {
   return (
     await queryJson<PushedWorkout>(
-      `SELECT push_key, workout_id, schedule_id, name, date
+      `SELECT push_key, workout_id, schedule_id, name, date, plan_id
        FROM garmin_pushed_workouts WHERE push_key = ${esc(key)};`
     )
   )[0];
@@ -34,15 +35,24 @@ export async function lookupPushedWorkout(key: string): Promise<PushedWorkout | 
 
 export async function savePushedWorkout(p: PushedWorkout): Promise<void> {
   const dialect = getDialect();
-  const cols = ["push_key", "workout_id", "schedule_id", "name", "date", "updated_at"];
-  const vals = `(${esc(p.push_key)}, ${num(p.workout_id)}, ${num(p.schedule_id)}, ${esc(p.name)}, ${esc(p.date)}, ${dialect.now()})`;
+  const cols = ["push_key", "workout_id", "schedule_id", "plan_id", "name", "date", "updated_at"];
+  const vals = `(${esc(p.push_key)}, ${num(p.workout_id)}, ${num(p.schedule_id)}, ${esc(p.plan_id)}, ${esc(p.name)}, ${esc(p.date)}, ${dialect.now()})`;
   await execute(
     dialect.upsert("garmin_pushed_workouts", cols, vals, "push_key", [
       "workout_id",
       "schedule_id",
+      "plan_id",
       "name",
       "date",
       "updated_at",
     ])
+  );
+}
+
+/** Pushed-workout link rows for a plan's days (for "synced to Garmin" markers). */
+export async function pushedWorkoutsForPlan(planId: string): Promise<PushedWorkout[]> {
+  return queryJson<PushedWorkout>(
+    `SELECT push_key, workout_id, schedule_id, name, date, plan_id
+     FROM garmin_pushed_workouts WHERE plan_id = ${esc(planId)};`
   );
 }
