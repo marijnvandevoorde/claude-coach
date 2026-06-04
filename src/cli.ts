@@ -312,19 +312,21 @@ function parseArgs(): CliArgs {
   }
 
   if (args[0] === "export-calendar") {
-    // --stdin reads the plan JSON from stdin (used by the MCP to pass inline content).
+    // Plan source: a file path, --stdin (MCP inline), or --active (stored plan).
     const fromStdin = args.includes("--stdin");
-    if (!fromStdin && !args[1]) {
-      log.error("export-calendar requires a plan JSON file or --stdin");
+    const active = args.includes("--active");
+    const hasFile = !!(args[1] && !args[1].startsWith("--"));
+    if (!fromStdin && !active && !hasFile) {
+      log.error("export-calendar requires a plan JSON file, --stdin, or --active");
       process.exit(1);
     }
     const calArgs: ExportCalendarArgs = {
       command: "export-calendar",
       stdin: fromStdin,
-      inputFile: fromStdin ? "" : args[1],
+      inputFile: hasFile ? args[1] : "",
       json: args.includes("--json"),
     };
-    for (let i = 2; i < args.length; i++) {
+    for (let i = hasFile ? 2 : 1; i < args.length; i++) {
       if (args[i] === "--output" || args[i] === "-o") {
         calArgs.outputFile = args[i + 1];
         i++;
@@ -336,24 +338,25 @@ function parseArgs(): CliArgs {
   }
 
   if (args[0] === "export-garmin") {
-    // --stdin reads the plan JSON from stdin (used by the MCP to pass inline content).
     const fromStdin = args.includes("--stdin");
-    if (!fromStdin && !args[1]) {
-      log.error("export-garmin requires a plan JSON file or --stdin");
+    const active = args.includes("--active");
+    const hasFile = !!(args[1] && !args[1].startsWith("--"));
+    if (!fromStdin && !active && !hasFile) {
+      log.error("export-garmin requires a plan JSON file, --stdin, or --active");
       process.exit(1);
     }
-    return { command: "export-garmin", stdin: fromStdin, inputFile: fromStdin ? "" : args[1] };
+    return { command: "export-garmin", stdin: fromStdin, inputFile: hasFile ? args[1] : "" };
   }
 
   if (args[0] === "garmin-push") {
     const rest = args.slice(1);
-    // --stdin reads the plan JSON from stdin (used by the MCP to pass inline content).
-    if (rest.includes("--stdin")) {
+    // Plan source: a file path, --stdin (MCP inline), or --active (stored plan).
+    if (rest.includes("--stdin") || rest.includes("--active")) {
       return { command: "garmin-push", inputFile: "", flags: parseFlags(rest) };
     }
     if (!args[1] || args[1].startsWith("--")) {
       log.error(
-        "garmin-push requires a plan JSON file or --stdin (e.g. garmin-push plan.json --dry-run)"
+        "garmin-push requires a plan JSON file, --stdin, or --active (e.g. garmin-push --active --dry-run)"
       );
       process.exit(1);
     }
@@ -985,8 +988,27 @@ function readPlanJson(inputFile: string, fromStdin: boolean): TrainingPlan {
   }
 }
 
-function runExportCalendar(args: ExportCalendarArgs): void {
-  const plan = readPlanJson(args.inputFile, Boolean(args.stdin));
+/**
+ * Resolve a plan for the plan-consuming commands (export-calendar/-garmin,
+ * garmin-push, checkin): inline stdin, a file path, or — the default, and what
+ * `--active` selects — the stored active plan. Exits clearly if none is found.
+ */
+async function resolvePlan(opts: { inputFile?: string; stdin?: boolean }): Promise<TrainingPlan> {
+  if (opts.stdin) return readPlanJson("", true);
+  if (opts.inputFile) return readPlanJson(opts.inputFile, false);
+  await ensureDb();
+  const plan = await getActivePlan();
+  if (!plan) {
+    log.error(
+      "No plan given and no active plan stored — save one with `plan save`, or pass a file / --stdin."
+    );
+    process.exit(1);
+  }
+  return plan;
+}
+
+async function runExportCalendar(args: ExportCalendarArgs): Promise<void> {
+  const plan = await resolvePlan({ inputFile: args.inputFile, stdin: args.stdin });
 
   // --json: emit a clean event list for an agent to push via the Google Calendar MCP.
   if (args.json) {
@@ -1049,17 +1071,23 @@ function planToGarminWorkouts(plan: TrainingPlan): GarminWorkoutExport[] {
   return out;
 }
 
-function runExportGarmin(args: ExportGarminArgs): void {
-  const plan = readPlanJson(args.inputFile, Boolean(args.stdin));
+async function runExportGarmin(args: ExportGarminArgs): Promise<void> {
+  const plan = await resolvePlan({ inputFile: args.inputFile, stdin: args.stdin });
   // A structured workout feed (also consumed by `garmin-push` to create + schedule
   // these on Garmin Connect natively, which then syncs them to the watch).
   console.log(JSON.stringify(planToGarminWorkouts(plan), null, 2));
 }
 
 async function runGarminPush(args: GarminPushArgs): Promise<void> {
-  const plan = readPlanJson(args.inputFile, Boolean(args.flags["stdin"]));
+  const plan = await resolvePlan({
+    inputFile: args.inputFile,
+    stdin: Boolean(args.flags["stdin"]),
+  });
 
-  const inputs: WorkoutInput[] = planToGarminWorkouts(plan).map((w) => ({
+  // Optional date window so a request can push just an upcoming block.
+  const from = flagStr(args.flags, "from");
+  const to = flagStr(args.flags, "to");
+  let inputs: WorkoutInput[] = planToGarminWorkouts(plan).map((w) => ({
     date: w.date,
     sport: w.sport,
     name: w.name,
@@ -1071,13 +1099,29 @@ async function runGarminPush(args: GarminPushArgs): Promise<void> {
     structure: w.structure as WorkoutInput["structure"],
     zones: plan.zones,
   }));
+  if (from) inputs = inputs.filter((i) => !i.date || i.date >= from);
+  if (to) inputs = inputs.filter((i) => !i.date || i.date <= to);
 
+  const dryRun = Boolean(args.flags["dry-run"]);
+
+  // Never fail silently: report an explicit, structured "nothing to push".
   if (inputs.length === 0) {
-    log.warn("No workouts in the plan to push.");
+    const reason =
+      from || to
+        ? `the active plan has no workouts in ${from ?? "…"}..${to ?? "…"}`
+        : "the plan has no non-rest workouts to push";
+    const summary = {
+      pushed: 0,
+      failed: 0,
+      planId: plan.meta?.id ?? null,
+      dateRange: { from: from ?? null, to: to ?? null },
+      reason,
+    };
+    if (args.flags["json"] || dryRun) console.log(JSON.stringify(summary, null, 2));
+    else log.warn(`Nothing to push — ${reason}.`);
     return;
   }
 
-  const dryRun = Boolean(args.flags["dry-run"]);
   let results;
   try {
     // Live pushes use coach.db to dedup (update in place instead of duplicating).
@@ -1093,8 +1137,24 @@ async function runGarminPush(args: GarminPushArgs): Promise<void> {
   }
 
   if (args.flags["json"] || dryRun) {
-    console.log(JSON.stringify(results, null, 2));
-    if (dryRun) log.info(`Dry run — built ${results.length} workout payload(s), pushed nothing.`);
+    const pushed = results.filter((r) => !r.error).length;
+    const failed = results.filter((r) => r.error).length;
+    console.log(
+      JSON.stringify(
+        {
+          pushed,
+          failed,
+          dryRun,
+          planId: plan.meta?.id ?? null,
+          dateRange: { from: from ?? null, to: to ?? null },
+          results,
+        },
+        null,
+        2
+      )
+    );
+    if (dryRun && !args.flags["json"])
+      log.info(`Dry run — built ${results.length} workout payload(s), pushed nothing.`);
     return;
   }
 
@@ -2067,8 +2127,8 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
   const reminders: Reminder[] = [];
 
   // Today's plan + a training-load-aware hydration goal (more fluid on big days).
-  // The plan comes either inline via stdin (--plan-stdin, how the MCP passes content)
-  // or from a file path (--plan=…). Missing/unreadable plans degrade to no workout.
+  // The plan comes from --plan-stdin (MCP inline), --plan=<file>, or — the default —
+  // the stored active plan. Missing/unreadable plans degrade to no workout.
   const planFromStdin = Boolean(args.flags["plan-stdin"]);
   const planPath = flagStr(args.flags, "plan");
   let workout: PlanDay | null = null;
@@ -2086,6 +2146,9 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
       );
     }
     if (planText != null) workout = findTodaysWorkout(planText, date);
+  } else {
+    const active = await getActivePlan();
+    if (active) workout = deriveTodaysWorkout(active, date);
   }
   let trainingMinutes = flagNum(args.flags, "training-minutes");
   if (trainingMinutes === undefined && workout) {
@@ -2417,10 +2480,10 @@ async function main() {
       runRender(args);
       break;
     case "export-calendar":
-      runExportCalendar(args);
+      await runExportCalendar(args);
       break;
     case "export-garmin":
-      runExportGarmin(args);
+      await runExportGarmin(args);
       break;
     case "garmin-route":
       await runGarminRoute(args);
