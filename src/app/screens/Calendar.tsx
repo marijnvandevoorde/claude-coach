@@ -61,7 +61,9 @@ function YearHeatmap({
                   height: 10,
                 }}
               >
-                {showLabel ? parseISO(first!.date).toLocaleDateString("en-US", { month: "short" }) : ""}
+                {showLabel
+                  ? parseISO(first!.date).toLocaleDateString("en-US", { month: "short" })
+                  : ""}
               </div>
             );
           })}
@@ -152,7 +154,9 @@ function MonthGrid({
               <span
                 className="pmark"
                 title={planned.map((s) => s.name).join(", ")}
-                style={{ background: planned.some((s) => s.syncedToGarmin) ? "var(--go)" : "var(--accent)" }}
+                style={{
+                  background: planned.some((s) => s.syncedToGarmin) ? "var(--go)" : "var(--accent)",
+                }}
               />
             ) : null;
           if (future)
@@ -170,7 +174,8 @@ function MonthGrid({
           const col = d ? metricColor(metric, d) : "empty";
           const isGap = !!(d && d.gap);
           const bg = isGap ? undefined : col === "empty" ? "var(--track)" : col;
-          const valText = d && !d.gap && metric === "readiness" && d.readiness != null ? d.readiness : "";
+          const valText =
+            d && !d.gap && metric === "readiness" && d.readiness != null ? d.readiness : "";
           const tag = journalTags.get(date);
           return (
             <div
@@ -182,7 +187,9 @@ function MonthGrid({
               <span className="mday" style={{ position: "absolute", top: 4, left: 6 }}>
                 {dd}
               </span>
-              {tag && <span className="jmark" style={{ background: DOT_COLOR[tag] ?? "var(--text-2)" }} />}
+              {tag && (
+                <span className="jmark" style={{ background: DOT_COLOR[tag] ?? "var(--text-2)" }} />
+              )}
               {valText !== "" && (
                 <span style={{ color: readinessTextColor(valText as number), fontWeight: 600 }}>
                   {valText}
@@ -200,8 +207,10 @@ function MonthGrid({
 
 function Legend({ metric }: { metric: MetricKey }) {
   const sample = (a: number): HeatDay => {
-    if (metric === "load") return { readiness: null, load: a * 160, sleep: null, hrv: null, gap: false };
-    if (metric === "sleep") return { readiness: null, load: null, sleep: 40 + a * 55, hrv: null, gap: false };
+    if (metric === "load")
+      return { readiness: null, load: a * 160, sleep: null, hrv: null, gap: false };
+    if (metric === "sleep")
+      return { readiness: null, load: null, sleep: 40 + a * 55, hrv: null, gap: false };
     return { readiness: null, load: null, sleep: null, hrv: 40 + a * 50, gap: false };
   };
   const samples: [string, string][] =
@@ -312,7 +321,18 @@ export function Calendar({
       for (let i = 0; i < 7; i++) {
         const ds = isoOf(cur);
         if (cur > todayDate) wk.push(null);
-        else wk.push(byDate.get(ds) ?? { date: ds, readiness: null, load: null, sleep: null, hrv: null, gap: false, missing: true });
+        else
+          wk.push(
+            byDate.get(ds) ?? {
+              date: ds,
+              readiness: null,
+              load: null,
+              sleep: null,
+              hrv: null,
+              gap: false,
+              missing: true,
+            }
+          );
         cur.setDate(cur.getDate() + 1);
       }
       out.push(wk);
@@ -399,12 +419,16 @@ export function Calendar({
                 className="ctx-note"
                 style={{ display: "flex", alignItems: "center", gap: 5 }}
               >
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: DOT_COLOR[t] }} />
+                <span
+                  style={{ width: 6, height: 6, borderRadius: "50%", background: DOT_COLOR[t] }}
+                />
                 {t}
               </span>
             ))}
             <span className="ctx-note" style={{ display: "flex", alignItems: "center", gap: 5 }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)" }} />
+              <span
+                style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)" }}
+              />
               planned
             </span>
             <span className="ctx-note" style={{ display: "flex", alignItems: "center", gap: 5 }}>

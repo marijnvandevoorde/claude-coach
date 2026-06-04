@@ -1,5 +1,11 @@
 import { useMemo, type ReactNode } from "react";
-import { LineChart, ACWRGauge, VolumeBars, type Annotation, type BandPoint } from "../charts/charts";
+import {
+  LineChart,
+  ACWRGauge,
+  VolumeBars,
+  type Annotation,
+  type BandPoint,
+} from "../charts/charts";
 import { Skeleton, EmptyState } from "../components/primitives";
 import { api, type JournalEntry } from "../api";
 import { useAsync } from "../lib/useAsync";
@@ -44,7 +50,13 @@ function ChartCard({
       {screenReader && (
         <span
           className="sr-only"
-          style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)" }}
+          style={{
+            position: "absolute",
+            width: 1,
+            height: 1,
+            overflow: "hidden",
+            clip: "rect(0 0 0 0)",
+          }}
         >
           {screenReader}
         </span>
@@ -62,7 +74,11 @@ function ZoneLegend() {
         ["Modify", "var(--modify)"],
         ["Back off", "var(--back)"],
       ].map(([l, c]) => (
-        <span key={l} className="ctx-note" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+        <span
+          key={l}
+          className="ctx-note"
+          style={{ display: "flex", alignItems: "center", gap: 5 }}
+        >
           <span style={{ width: 8, height: 8, borderRadius: 2, background: c }} />
           {l}
         </span>
@@ -80,13 +96,7 @@ function lastNonNull(arr: (number | null)[]): number | null {
   return null;
 }
 
-export function Trends({
-  win,
-  onWin,
-}: {
-  win: number;
-  onWin: (w: number) => void;
-}) {
+export function Trends({ win, onWin }: { win: number; onWin: (w: number) => void }) {
   const { data, loading, error } = useAsync(() => api.trends(win), [win]);
 
   const series: TrendPoint[] = useMemo(() => (data ? adaptTrendSeries(data) : []), [data]);
@@ -185,95 +195,99 @@ export function Trends({
         </div>
 
         <ChartCard
-            title="Readiness"
-            sub={`avg ${avgReady}`}
-            screenReader={`Readiness over ${win} days, averaging ${avgReady} out of 100.`}
-          >
-            <LineChart
-              data={readinessData}
-              height={156}
-              color="var(--accent)"
-              annotations={anns}
-              yPad={0.05}
-              seriesLabel="readiness"
-              unit=" / 100"
-              hbands={[
-                { from: 67, to: 100, color: "var(--go)", opacity: 0.07 },
-                { from: 40, to: 67, color: "var(--modify)", opacity: 0.07 },
-                { from: 0, to: 40, color: "var(--back)", opacity: 0.07 },
-              ]}
-            />
-            <ZoneLegend />
-          </ChartCard>
+          title="Readiness"
+          sub={`avg ${avgReady}`}
+          screenReader={`Readiness over ${win} days, averaging ${avgReady} out of 100.`}
+        >
+          <LineChart
+            data={readinessData}
+            height={156}
+            color="var(--accent)"
+            annotations={anns}
+            yPad={0.05}
+            seriesLabel="readiness"
+            unit=" / 100"
+            hbands={[
+              { from: 67, to: 100, color: "var(--go)", opacity: 0.07 },
+              { from: 40, to: 67, color: "var(--modify)", opacity: 0.07 },
+              { from: 0, to: 40, color: "var(--back)", opacity: 0.07 },
+            ]}
+          />
+          <ZoneLegend />
+        </ChartCard>
 
-          <ChartCard
-            title="HRV vs baseline band"
-            sub={latestHrv != null ? `${latestHrv} ms` : "—"}
-            screenReader="Heart-rate variability plotted against its rolling baseline band."
-          >
-            <LineChart
-              data={hrvData}
-              height={150}
-              color="var(--m-hrv)"
-              band={hrvBand}
-              annotations={anns}
-              fmtY={(t) => Math.round(t)}
-              seriesLabel="HRV"
-              unit=" ms"
-            />
-            <div className="ctx-note" style={{ marginTop: 6 }}>
-              Shaded = your normal range. Below the band = under-recovered.
-            </div>
-          </ChartCard>
+        <ChartCard
+          title="HRV vs baseline band"
+          sub={latestHrv != null ? `${latestHrv} ms` : "—"}
+          screenReader="Heart-rate variability plotted against its rolling baseline band."
+        >
+          <LineChart
+            data={hrvData}
+            height={150}
+            color="var(--m-hrv)"
+            band={hrvBand}
+            annotations={anns}
+            fmtY={(t) => Math.round(t)}
+            seriesLabel="HRV"
+            unit=" ms"
+          />
+          <div className="ctx-note" style={{ marginTop: 6 }}>
+            Shaded = your normal range. Below the band = under-recovered.
+          </div>
+        </ChartCard>
 
-          <ChartCard
-            title="Acute vs chronic load"
-            sub={`ACWR ${latestAcwr != null ? latestAcwr.toFixed(2) : "—"}`}
-            screenReader="Acute 7-day load versus chronic 28-day load."
-          >
-            <LineChart
-              data={acuteLine}
-              line2={chronicLine}
-              height={150}
-              color="var(--accent)"
-              area={false}
-              annotations={anns}
-              fmtY={(t) => Math.round(t)}
-              seriesLabel="acute 7d"
-              line2Label="chronic 28d"
-            />
-            <div className="row" style={{ gap: 14, marginTop: 6 }}>
-              <span className="ctx-note" style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ width: 12, height: 2, background: "var(--accent)" }} />
-                acute (7d)
-              </span>
-              <span className="ctx-note" style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ width: 12, height: 0, borderTop: "2px dashed var(--text-3)" }} />
-                chronic (28d)
-              </span>
-            </div>
-          </ChartCard>
+        <ChartCard
+          title="Acute vs chronic load"
+          sub={`ACWR ${latestAcwr != null ? latestAcwr.toFixed(2) : "—"}`}
+          screenReader="Acute 7-day load versus chronic 28-day load."
+        >
+          <LineChart
+            data={acuteLine}
+            line2={chronicLine}
+            height={150}
+            color="var(--accent)"
+            area={false}
+            annotations={anns}
+            fmtY={(t) => Math.round(t)}
+            seriesLabel="acute 7d"
+            line2Label="chronic 28d"
+          />
+          <div className="row" style={{ gap: 14, marginTop: 6 }}>
+            <span className="ctx-note" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ width: 12, height: 2, background: "var(--accent)" }} />
+              acute (7d)
+            </span>
+            <span className="ctx-note" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ width: 12, height: 0, borderTop: "2px dashed var(--text-3)" }} />
+              chronic (28d)
+            </span>
+          </div>
+        </ChartCard>
 
-          <ChartCard
-            title="ACWR sweet-spot"
-            sub="acute : chronic"
-            screenReader={`Current acute-to-chronic workload ratio is ${
-              latestAcwr != null ? latestAcwr.toFixed(2) : "unknown"
-            }.`}
-          >
-            <ACWRGauge value={latestAcwr ?? 1} />
-            <div className="ctx-note" style={{ marginTop: 2 }}>
-              0.8–1.3 balances fitness gain against injury risk.
-            </div>
-          </ChartCard>
+        <ChartCard
+          title="ACWR sweet-spot"
+          sub="acute : chronic"
+          screenReader={`Current acute-to-chronic workload ratio is ${
+            latestAcwr != null ? latestAcwr.toFixed(2) : "unknown"
+          }.`}
+        >
+          <ACWRGauge value={latestAcwr ?? 1} />
+          <div className="ctx-note" style={{ marginTop: 2 }}>
+            0.8–1.3 balances fitness gain against injury risk.
+          </div>
+        </ChartCard>
 
-          <ChartCard title="Weekly volume" sub="training hours" screenReader="Training hours per week.">
-            {weeks.length ? (
-              <VolumeBars data={weeks} height={120} />
-            ) : (
-              <div className="ctx-note">No volume recorded.</div>
-            )}
-          </ChartCard>
+        <ChartCard
+          title="Weekly volume"
+          sub="training hours"
+          screenReader="Training hours per week."
+        >
+          {weeks.length ? (
+            <VolumeBars data={weeks} height={120} />
+          ) : (
+            <div className="ctx-note">No volume recorded.</div>
+          )}
+        </ChartCard>
       </div>
     </div>
   );

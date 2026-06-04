@@ -164,7 +164,11 @@ export function Activities({ onOpenActivity }: { onOpenActivity: (id: number) =>
           </div>
         )}
         {!error && !loading && filtered.length === 0 && (
-          <EmptyState icon="activity" title="No activities" body="No workouts match this filter yet." />
+          <EmptyState
+            icon="activity"
+            title="No activities"
+            body="No workouts match this filter yet."
+          />
         )}
 
         {Object.keys(groups).map((g) => (
@@ -180,7 +184,9 @@ export function Activities({ onOpenActivity }: { onOpenActivity: (id: number) =>
                     <div className="aname">
                       {a.name}
                       {a.race && (
-                        <span style={{ color: "var(--modify)", marginLeft: 6, fontSize: 12 }}>● PB</span>
+                        <span style={{ color: "var(--modify)", marginLeft: 6, fontSize: 12 }}>
+                          ● PB
+                        </span>
                       )}
                     </div>
                     <div className="asub">
@@ -261,13 +267,29 @@ export function GpxImport() {
         marginBottom: 4,
       }}
     >
-      <input ref={inputRef} type="file" accept=".gpx" style={{ display: "none" }} onChange={onFile} />
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".gpx"
+        style={{ display: "none" }}
+        onChange={onFile}
+      />
       {state === "idle" && (
         <button
           onClick={pick}
-          style={{ all: "unset", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, width: "100%" }}
+          style={{
+            all: "unset",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            width: "100%",
+          }}
         >
-          <div className="sport-chip" style={{ background: "var(--accent-dim)", color: "var(--accent)" }}>
+          <div
+            className="sport-chip"
+            style={{ background: "var(--accent-dim)", color: "var(--accent)" }}
+          >
             <Icon name="plus" size={18} />
           </div>
           <div style={{ flex: 1 }}>
@@ -283,7 +305,10 @@ export function GpxImport() {
       )}
       {state === "uploading" && (
         <div className="row" style={{ gap: 12 }}>
-          <div className="sport-chip" style={{ background: "var(--surface-2)", color: "var(--text-2)" }}>
+          <div
+            className="sport-chip"
+            style={{ background: "var(--surface-2)", color: "var(--text-2)" }}
+          >
             <Icon name="layers" size={18} />
           </div>
           <div style={{ flex: 1, fontWeight: 500, fontSize: 14.5, color: "var(--text-2)" }}>
@@ -297,7 +322,9 @@ export function GpxImport() {
             <Icon name="check" size={18} />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 600, fontSize: 14.5, color: "var(--go)" }}>Pushed to Garmin</div>
+            <div style={{ fontWeight: 600, fontSize: 14.5, color: "var(--go)" }}>
+              Pushed to Garmin
+            </div>
             <div className="ctx-note" style={{ marginTop: 2 }}>
               {name} · available as a course on your watch
             </div>
@@ -310,9 +337,19 @@ export function GpxImport() {
       {state === "error" && (
         <button
           onClick={reset}
-          style={{ all: "unset", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, width: "100%" }}
+          style={{
+            all: "unset",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            width: "100%",
+          }}
         >
-          <div className="sport-chip" style={{ background: "var(--back-dim)", color: "var(--back)" }}>
+          <div
+            className="sport-chip"
+            style={{ background: "var(--back-dim)", color: "var(--back)" }}
+          >
             <Icon name="info" size={18} />
           </div>
           <div style={{ flex: 1 }}>

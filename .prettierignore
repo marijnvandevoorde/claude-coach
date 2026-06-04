@@ -1,3 +1,6 @@
 dist/
 node_modules/
 *.db
+# External design handoff artifacts (not project source — not ours to reformat)
+design/
+responsive-design/

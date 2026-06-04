@@ -99,9 +99,19 @@ function RouteCard({ a }: { a: ActivityDetailView }) {
         {status === "idle" && (
           <button
             onClick={create}
-            style={{ all: "unset", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, width: "100%" }}
+            style={{
+              all: "unset",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              width: "100%",
+            }}
           >
-            <div className="sport-chip" style={{ background: "var(--accent-dim)", color: "var(--accent)" }}>
+            <div
+              className="sport-chip"
+              style={{ background: "var(--accent-dim)", color: "var(--accent)" }}
+            >
               <Icon name="hike" size={18} />
             </div>
             <div style={{ flex: 1 }}>
@@ -117,7 +127,10 @@ function RouteCard({ a }: { a: ActivityDetailView }) {
         )}
         {status === "creating" && (
           <div className="row" style={{ gap: 12 }}>
-            <div className="sport-chip" style={{ background: "var(--surface-2)", color: "var(--text-2)" }}>
+            <div
+              className="sport-chip"
+              style={{ background: "var(--surface-2)", color: "var(--text-2)" }}
+            >
               <Icon name="hike" size={18} />
             </div>
             <div style={{ flex: 1, fontWeight: 500, fontSize: 14.5, color: "var(--text-2)" }}>
@@ -143,9 +156,19 @@ function RouteCard({ a }: { a: ActivityDetailView }) {
         {status === "error" && (
           <button
             onClick={create}
-            style={{ all: "unset", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, width: "100%" }}
+            style={{
+              all: "unset",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              width: "100%",
+            }}
           >
-            <div className="sport-chip" style={{ background: "var(--back-dim)", color: "var(--back)" }}>
+            <div
+              className="sport-chip"
+              style={{ background: "var(--back-dim)", color: "var(--back)" }}
+            >
               <Icon name="info" size={18} />
             </div>
             <div style={{ flex: 1 }}>
@@ -228,7 +251,13 @@ export function useActivityDetail(id: number): { head: ReactNode; body: ReactNod
             <div className="lbl" style={{ marginBottom: 6 }}>
               Heart rate · session
             </div>
-            <LineChart data={hr} height={140} color="var(--m-rhr)" yPad={0.15} fmtY={(t) => Math.round(t)} />
+            <LineChart
+              data={hr}
+              height={140}
+              color="var(--m-rhr)"
+              yPad={0.15}
+              fmtY={(t) => Math.round(t)}
+            />
           </div>
         )}
 

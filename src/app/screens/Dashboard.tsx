@@ -513,7 +513,11 @@ export function Dashboard({
         <div className="card fade-in" style={{ marginTop: 12 }}>
           <div className="row between" style={{ marginBottom: 4 }}>
             <span className="lbl">{todaySessions.length > 0 ? "Today's plan" : "Next up"}</span>
-            {nextUp && <span className="ctx-note">{fmtDate(nextUp.date, { weekday: "short", month: "short", day: "numeric" })}</span>}
+            {nextUp && (
+              <span className="ctx-note">
+                {fmtDate(nextUp.date, { weekday: "short", month: "short", day: "numeric" })}
+              </span>
+            )}
           </div>
 
           {todaySessions.length > 0 ? (
@@ -522,7 +526,10 @@ export function Dashboard({
             <PlanSessionRow s={nextUp} />
           ) : (
             <div className="plan-item">
-              <div className="sport-chip" style={{ background: "var(--surface-2)", color: "var(--text-3)" }}>
+              <div
+                className="sport-chip"
+                style={{ background: "var(--surface-2)", color: "var(--text-3)" }}
+              >
                 <Icon name="calendar" size={18} />
               </div>
               <div style={{ flex: 1 }}>

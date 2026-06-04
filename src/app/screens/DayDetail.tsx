@@ -1,6 +1,14 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { Icon } from "../components/Icon";
-import { ReadinessRing, BandPill, FactorBars, EmptyState, Skeleton, TagChip, Sheet } from "../components/primitives";
+import {
+  ReadinessRing,
+  BandPill,
+  FactorBars,
+  EmptyState,
+  Skeleton,
+  TagChip,
+  Sheet,
+} from "../components/primitives";
 import { SleepStageBar } from "./Dashboard";
 import { fmtDate, verdict } from "../lib/coach";
 import { api, type JournalEntry } from "../api";
@@ -49,7 +57,9 @@ function JournalInline({ j, bare }: { j: JournalEntry; bare?: boolean }) {
           {fmtDate(j.local_date)}
         </span>
       </div>
-      <p style={{ margin: "8px 0 0", fontSize: 14, lineHeight: 1.5, textWrap: "pretty" }}>{j.entry}</p>
+      <p style={{ margin: "8px 0 0", fontSize: 14, lineHeight: 1.5, textWrap: "pretty" }}>
+        {j.entry}
+      </p>
     </>
   );
   return bare ? (
