@@ -1,4 +1,30 @@
 // Read/write client for the coach-app JSON API (same-origin, behind Cloudflare Access).
+// Response shapes are the shared wire contract (src/shared/api-types) — re-exported
+// here so screens keep importing them from "../api".
+export type {
+  Contribution,
+  PlannedSession,
+  DashboardPlan,
+  Summary,
+  CalendarDay,
+  Trends,
+  ActivityRow,
+  ActivitySplit,
+  ActivityDetail,
+  JournalEntry,
+  GarminRefreshStatus,
+} from "../shared/api-types";
+import type {
+  Summary,
+  CalendarDay,
+  Trends,
+  ActivityRow,
+  ActivityDetail,
+  JournalEntry,
+  PlannedSession,
+  GarminRefreshStatus,
+} from "../shared/api-types";
+
 const BASE = "/api";
 
 async function get<T>(path: string): Promise<T> {
@@ -69,94 +95,3 @@ export const api = {
     post<{ status: "started" | "running"; startedAt?: string }>("/garmin/refresh", { date }),
   garminRefreshStatus: () => get<GarminRefreshStatus>("/garmin/refresh"),
 };
-
-export interface GarminRefreshStatus {
-  running: boolean;
-  startedAt: string | null;
-  finishedAt: string | null;
-  ok: boolean | null;
-  error?: string;
-}
-
-// --- response shapes (loose; refined as screens land) ---
-export interface Contribution {
-  key: "sleep" | "hrv" | "load" | "stress" | "subjective";
-  label: string;
-  points: number;
-}
-export interface PlannedSession {
-  date: string;
-  sport: string;
-  type?: string;
-  name: string;
-  durationMinutes?: number;
-  distanceMeters?: number;
-  primaryZone?: string;
-  description?: string;
-  syncedToGarmin?: boolean;
-}
-export interface DashboardPlan {
-  hasActivePlan: boolean;
-  today: PlannedSession[];
-  next: PlannedSession | null;
-}
-export interface Summary {
-  date: string;
-  wellness: Record<string, number | string | null> | null;
-  hydration: { total_ml: number; goal_ml?: number };
-  lastActivity: Record<string, unknown> | null;
-  readiness?: {
-    score: number | null;
-    level: string;
-    contributions: Contribution[];
-    coverage: Record<string, boolean>;
-  };
-  sleep?: { hours: number | null; score: number | null; stages: Record<string, number> | null };
-  plan?: DashboardPlan;
-}
-export interface CalendarDay {
-  date: string;
-  readiness: number | null;
-  load: number | null;
-  sleep: number | null;
-  hrv: number | null;
-  gap: boolean;
-}
-export interface Trends {
-  days: number;
-  series: Array<Record<string, number | string | null>>;
-  weeklyVolume: Array<Record<string, unknown>>;
-}
-export interface ActivityRow {
-  id: number;
-  name: string | null;
-  sport_type: string | null;
-  start_date: string | null;
-  distance: number | null;
-  moving_time: number | null;
-  average_heartrate: number | null;
-  suffer_score: number | null;
-  has_track: number;
-}
-export interface ActivitySplit {
-  idx: number;
-  distanceM: number;
-  durationS: number;
-  paceSecPerKm: number | null;
-  avgHr: number | null;
-}
-export interface ActivityDetail extends ActivityRow {
-  track: number[][] | null;
-  average_watts: number | null;
-  total_elevation_gain: number | null;
-  calories: number | null;
-  splits: ActivitySplit[];
-  hrSeries: number[];
-}
-export interface JournalEntry {
-  id: number;
-  local_date: string;
-  entry: string;
-  tag: string | null;
-  created_at: string | null;
-}

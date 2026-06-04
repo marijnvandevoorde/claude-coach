@@ -7,6 +7,10 @@
 import { execute, queryJson } from "./client.js";
 import { getDialect } from "./dialect.js";
 import type { TrainingPlan } from "../schema/training-plan.js";
+import type { PlannedSession } from "../shared/api-types.js";
+
+// Re-export so server modules can keep importing PlannedSession from the plan store.
+export type { PlannedSession };
 
 function esc(value: string | null | undefined): string {
   if (value == null) return "NULL";
@@ -72,19 +76,6 @@ export interface PlanDay {
   phase?: string;
   isRecoveryWeek?: boolean;
   workouts: WorkoutLike[];
-}
-
-/** One planned session, flattened for the app (rest days dropped). */
-export interface PlannedSession {
-  date: string;
-  sport: string;
-  type?: string;
-  name: string;
-  durationMinutes?: number;
-  distanceMeters?: number;
-  primaryZone?: string;
-  description?: string;
-  syncedToGarmin?: boolean;
 }
 
 /** Upsert a plan (keyed by meta.id) and make it the active plan. The single write
