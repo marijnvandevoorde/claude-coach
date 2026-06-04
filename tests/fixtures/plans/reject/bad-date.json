@@ -1,0 +1,5 @@
+{
+  "_comment": "Non-ISO date — must be rejected so it can't silently miss every date match.",
+  "meta": { "id": "fix-baddate" },
+  "workouts": [{ "date": "06/06/2026", "sport": "run", "title": "Long run", "durationMin": 90 }]
+}

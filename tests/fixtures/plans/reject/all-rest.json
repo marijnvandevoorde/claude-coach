@@ -1,0 +1,8 @@
+{
+  "_comment": "Only rest days — nothing to schedule. Must be rejected.",
+  "meta": { "id": "fix-allrest" },
+  "workouts": [
+    { "date": "2026-06-06", "sport": "rest", "title": "Rest" },
+    { "date": "2026-06-07", "sport": "rest", "title": "Rest" }
+  ]
+}
