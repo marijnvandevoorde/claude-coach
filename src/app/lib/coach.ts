@@ -1,5 +1,17 @@
 // View-only derivations: band color, verdict text, formatting, sport icons.
 import type { IconName } from "../components/Icon";
+import type { PlannedSession } from "../../shared/api-types";
+
+/** One-line summary of a planned session, e.g. "45 min · 8 km · Z2". */
+export function sessionDetail(s: PlannedSession): string {
+  const bits: string[] = [];
+  if (s.durationMinutes) bits.push(`${s.durationMinutes} min`);
+  if (s.distanceMeters)
+    bits.push(`${(s.distanceMeters / 1000).toFixed(s.distanceMeters % 1000 === 0 ? 0 : 1)} km`);
+  if (s.primaryZone) bits.push(s.primaryZone);
+  else if (s.type) bits.push(s.type);
+  return bits.join(" · ") || s.description || "Planned session";
+}
 
 export interface Band {
   key: "go" | "modify" | "back" | "none";

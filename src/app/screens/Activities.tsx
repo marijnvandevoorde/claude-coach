@@ -1,20 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../components/Icon";
 import { SportChip, EmptyState, Skeleton } from "../components/primitives";
-import { fmtDate, fmtDur, normSport } from "../lib/coach";
+import { fmtDate, fmtDur, normSport, sessionDetail } from "../lib/coach";
 import { api, type ActivityRow, type PlannedSession } from "../api";
 import { adaptActivityRow, type ActivityView } from "../lib/adapt";
-
-/** One-line summary of a planned session (e.g. "45 min · Z2"). */
-function planDetail(s: PlannedSession): string {
-  const bits: string[] = [];
-  if (s.durationMinutes) bits.push(`${s.durationMinutes} min`);
-  if (s.distanceMeters)
-    bits.push(`${(s.distanceMeters / 1000).toFixed(s.distanceMeters % 1000 === 0 ? 0 : 1)} km`);
-  if (s.primaryZone) bits.push(s.primaryZone);
-  else if (s.type) bits.push(s.type);
-  return bits.join(" · ") || s.description || "Planned session";
-}
 
 const SPORTS = [
   { k: "all", label: "All" },
@@ -137,7 +126,7 @@ export function Activities({ onOpenActivity }: { onOpenActivity: (id: number) =>
                         </span>
                       </div>
                       <div className="asub">
-                        {s.date ? fmtDate(s.date) : "—"} · {planDetail(s)}
+                        {s.date ? fmtDate(s.date) : "—"} · {sessionDetail(s)}
                       </div>
                     </div>
                     <div className="astat">
