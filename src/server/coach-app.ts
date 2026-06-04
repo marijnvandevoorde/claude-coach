@@ -195,14 +195,19 @@ export interface DashboardPlan {
   next: PlannedSession | null; // the next upcoming session strictly after `date`
 }
 
+/** Set of `${date}|${name}` keys for a plan's workouts already pushed to Garmin. */
+async function syncedKeySet(planId: string): Promise<Set<string>> {
+  return new Set(
+    (await pushedWorkoutsForPlan(planId)).map((p) => `${p.date ?? ""}|${p.name ?? ""}`)
+  );
+}
+
 /** The active plan's sessions for the dashboard — today's plus the next upcoming —
  *  each flagged whether it's been pushed to Garmin (push_key = `${date}|${name}`). */
 async function planForDate(date: string): Promise<DashboardPlan> {
   const plan = await getActivePlan();
   if (!plan) return { hasActivePlan: false, today: [], next: null };
-  const synced = new Set(
-    (await pushedWorkoutsForPlan(plan.meta.id)).map((p) => `${p.date ?? ""}|${p.name ?? ""}`)
-  );
+  const synced = await syncedKeySet(plan.meta.id);
   const mark = (s: PlannedSession): PlannedSession => ({
     ...s,
     syncedToGarmin: synced.has(`${s.date}|${s.name}`),
@@ -223,12 +228,26 @@ async function upcomingForApp(
   const cutoff = new Date(Date.parse(`${from}T00:00:00Z`) + days * 86_400_000)
     .toISOString()
     .slice(0, 10);
-  const synced = new Set(
-    (await pushedWorkoutsForPlan(plan.meta.id)).map((p) => `${p.date ?? ""}|${p.name ?? ""}`)
-  );
+  const synced = await syncedKeySet(plan.meta.id);
   const sessions = upcomingWorkouts(plan, from, 200)
     .filter((s) => s.date <= cutoff)
     .map((s) => ({ ...s, syncedToGarmin: synced.has(`${s.date}|${s.name}`) }));
+  return { hasActivePlan: true, sessions };
+}
+
+/** Every planned session in the active plan (any date), synced-flagged — for the
+ *  calendar's planned-day markers. */
+async function allPlanSessions(): Promise<{
+  hasActivePlan: boolean;
+  sessions: PlannedSession[];
+}> {
+  const plan = await getActivePlan();
+  if (!plan) return { hasActivePlan: false, sessions: [] };
+  const synced = await syncedKeySet(plan.meta.id);
+  const sessions = upcomingWorkouts(plan, "0000-01-01", 1000).map((s) => ({
+    ...s,
+    syncedToGarmin: synced.has(`${s.date}|${s.name}`),
+  }));
   return { hasActivePlan: true, sessions };
 }
 
@@ -542,6 +561,15 @@ function api(): express.Router {
     try {
       const days = Math.max(1, Math.min(120, intParam(req.query.days, 21)));
       res.json(await upcomingForApp(days));
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // All planned sessions in the active plan (for the calendar's planned-day markers).
+  r.get("/plan/sessions", async (_req, res, next) => {
+    try {
+      res.json(await allPlanSessions());
     } catch (e) {
       next(e);
     }
