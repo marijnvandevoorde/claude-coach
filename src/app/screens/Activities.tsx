@@ -1,9 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../components/Icon";
 import { SportChip, EmptyState, Skeleton } from "../components/primitives";
-import { fmtDate, fmtDur } from "../lib/coach";
-import { api, type ActivityRow } from "../api";
+import { fmtDate, fmtDur, normSport } from "../lib/coach";
+import { api, type ActivityRow, type PlannedSession } from "../api";
 import { adaptActivityRow, type ActivityView } from "../lib/adapt";
+
+/** One-line summary of a planned session (e.g. "45 min · Z2"). */
+function planDetail(s: PlannedSession): string {
+  const bits: string[] = [];
+  if (s.durationMinutes) bits.push(`${s.durationMinutes} min`);
+  if (s.distanceMeters)
+    bits.push(`${(s.distanceMeters / 1000).toFixed(s.distanceMeters % 1000 === 0 ? 0 : 1)} km`);
+  if (s.primaryZone) bits.push(s.primaryZone);
+  else if (s.type) bits.push(s.type);
+  return bits.join(" · ") || s.description || "Planned session";
+}
 
 const SPORTS = [
   { k: "all", label: "All" },
@@ -30,7 +41,16 @@ export function Activities({ onOpenActivity }: { onOpenActivity: (id: number) =>
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [upcoming, setUpcoming] = useState<PlannedSession[]>([]);
   const reqId = useRef(0);
+
+  // Upcoming planned sessions from the active plan (shown above completed activities).
+  useEffect(() => {
+    api
+      .upcoming(21)
+      .then((r) => setUpcoming(r.sessions))
+      .catch(() => setUpcoming([]));
+  }, []);
 
   const load = (reset: boolean) => {
     const before = reset ? undefined : rows[rows.length - 1]?.date || undefined;
@@ -91,6 +111,49 @@ export function Activities({ onOpenActivity }: { onOpenActivity: (id: number) =>
         <div style={{ marginTop: 12 }}>
           <GpxImport />
         </div>
+
+        {/* Upcoming planned sessions — clearly not completed activities. */}
+        {(() => {
+          const ups = upcoming.filter((s) => sport === "all" || normSport(s.sport) === sport);
+          if (ups.length === 0) return null;
+          return (
+            <div className="fade-in">
+              <div className="lbl" style={{ margin: "20px 4px 4px" }}>
+                Upcoming
+              </div>
+              <div className="list">
+                {ups.map((s, i) => (
+                  <div
+                    className="arow"
+                    key={`up-${s.date}-${i}`}
+                    style={{ borderLeft: "2px dashed var(--accent-line)", opacity: 0.95 }}
+                  >
+                    <SportChip sport={normSport(s.sport)} />
+                    <div className="ameta">
+                      <div className="aname">
+                        {s.name}
+                        <span style={{ color: "var(--accent)", marginLeft: 6, fontSize: 12 }}>
+                          ● planned
+                        </span>
+                      </div>
+                      <div className="asub">
+                        {s.date ? fmtDate(s.date) : "—"} · {planDetail(s)}
+                      </div>
+                    </div>
+                    <div className="astat">
+                      <div
+                        className="ctx-note"
+                        style={{ color: s.syncedToGarmin ? "var(--go)" : "var(--text-3)" }}
+                      >
+                        {s.syncedToGarmin ? "on watch" : "scheduled"}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {error && <EmptyState icon="info" title="Couldn't load activities" body={error} />}
         {!error && loading && rows.length === 0 && (
