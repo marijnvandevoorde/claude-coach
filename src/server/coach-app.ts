@@ -36,6 +36,13 @@ import { fetchActivityStreams, toCompactStreams, type ActivityStreams } from "..
 import { fetchActivityTrack, decimate, toCompactTrack } from "../garmin/tracks.js";
 import { courseTypeFromSport, trackToGpx } from "./course-gpx.js";
 import { saveSubscription, deleteSubscription, countSubscriptions } from "../db/pushSubs.js";
+import {
+  getActivePlan,
+  sessionsForDate,
+  upcomingWorkouts,
+  type PlannedSession,
+} from "../db/plans.js";
+import { pushedWorkoutsForPlan } from "../db/garminPush.js";
 import { vapidPublicKey, webPushConfigured, sendWebPush } from "../lib/webpush.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -180,6 +187,29 @@ function optDate(v: unknown): string | undefined | null {
   if (v === undefined || v === null) return undefined;
   if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
   return null;
+}
+
+export interface DashboardPlan {
+  hasActivePlan: boolean;
+  today: PlannedSession[]; // today's planned sessions (rest days dropped)
+  next: PlannedSession | null; // the next upcoming session strictly after `date`
+}
+
+/** The active plan's sessions for the dashboard — today's plus the next upcoming —
+ *  each flagged whether it's been pushed to Garmin (push_key = `${date}|${name}`). */
+async function planForDate(date: string): Promise<DashboardPlan> {
+  const plan = await getActivePlan();
+  if (!plan) return { hasActivePlan: false, today: [], next: null };
+  const synced = new Set(
+    (await pushedWorkoutsForPlan(plan.meta.id)).map((p) => `${p.date ?? ""}|${p.name ?? ""}`)
+  );
+  const mark = (s: PlannedSession): PlannedSession => ({
+    ...s,
+    syncedToGarmin: synced.has(`${s.date}|${s.name}`),
+  });
+  const today = sessionsForDate(plan, date).map(mark);
+  const next = upcomingWorkouts(plan, date, 60).find((s) => s.date > date) ?? null;
+  return { hasActivePlan: true, today, next: next ? mark(next) : null };
 }
 
 function api(): express.Router {
@@ -468,6 +498,7 @@ function api(): express.Router {
         lastActivity: act[0] ?? null,
         readiness,
         sleep,
+        plan: await planForDate(date),
       });
     } catch (e) {
       res.status(500).json({ error: e instanceof Error ? e.message : String(e) });

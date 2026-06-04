@@ -79,6 +79,22 @@ export interface Contribution {
   label: string;
   points: number;
 }
+export interface PlannedSession {
+  date: string;
+  sport: string;
+  type?: string;
+  name: string;
+  durationMinutes?: number;
+  distanceMeters?: number;
+  primaryZone?: string;
+  description?: string;
+  syncedToGarmin?: boolean;
+}
+export interface DashboardPlan {
+  hasActivePlan: boolean;
+  today: PlannedSession[];
+  next: PlannedSession | null;
+}
 export interface Summary {
   date: string;
   wellness: Record<string, number | string | null> | null;
@@ -91,6 +107,7 @@ export interface Summary {
     coverage: Record<string, boolean>;
   };
   sleep?: { hours: number | null; score: number | null; stages: Record<string, number> | null };
+  plan?: DashboardPlan;
 }
 export interface CalendarDay {
   date: string;

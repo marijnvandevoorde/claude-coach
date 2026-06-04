@@ -7,6 +7,7 @@ import type {
   ActivityDetail,
   ActivitySplit,
   Contribution,
+  DashboardPlan,
 } from "../api";
 import { normSport } from "./coach";
 
@@ -46,6 +47,7 @@ export interface DayView {
   stress: number | null;
   steps: number | null;
   subjective: { energy?: number; mood?: number; soreness?: number } | null;
+  plan: DashboardPlan | null;
   hasData: boolean;
 }
 
@@ -91,6 +93,7 @@ export function adaptSummary(s: Summary): DayView {
     stress: num(w.avg_stress),
     steps: num(w.total_steps),
     subjective,
+    plan: s.plan ?? null,
     hasData: !!s.wellness,
   };
 }
