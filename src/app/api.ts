@@ -59,6 +59,9 @@ export const api = {
       gpx,
       ...opts,
     }),
+  // Upcoming planned sessions from the active plan (for the Activity screen).
+  upcoming: (days = 21) =>
+    get<{ hasActivePlan: boolean; sessions: PlannedSession[] }>(`/plan/upcoming${qs({ days })}`),
   // Kick off a server-side Garmin sync (returns immediately; poll garminRefreshStatus).
   refreshGarmin: (date?: string) =>
     post<{ status: "started" | "running"; startedAt?: string }>("/garmin/refresh", { date }),

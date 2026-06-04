@@ -212,6 +212,26 @@ async function planForDate(date: string): Promise<DashboardPlan> {
   return { hasActivePlan: true, today, next: next ? mark(next) : null };
 }
 
+/** Upcoming planned sessions over the next `days` days (active plan), each flagged
+ *  whether it's been pushed to Garmin. Powers the Activity screen's Upcoming list. */
+async function upcomingForApp(
+  days: number
+): Promise<{ hasActivePlan: boolean; sessions: PlannedSession[] }> {
+  const plan = await getActivePlan();
+  if (!plan) return { hasActivePlan: false, sessions: [] };
+  const from = localDate();
+  const cutoff = new Date(Date.parse(`${from}T00:00:00Z`) + days * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  const synced = new Set(
+    (await pushedWorkoutsForPlan(plan.meta.id)).map((p) => `${p.date ?? ""}|${p.name ?? ""}`)
+  );
+  const sessions = upcomingWorkouts(plan, from, 200)
+    .filter((s) => s.date <= cutoff)
+    .map((s) => ({ ...s, syncedToGarmin: synced.has(`${s.date}|${s.name}`) }));
+  return { hasActivePlan: true, sessions };
+}
+
 function api(): express.Router {
   const r = express.Router();
 
@@ -502,6 +522,16 @@ function api(): express.Router {
       });
     } catch (e) {
       res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+    }
+  });
+
+  // Upcoming planned sessions (active plan) for the Activity screen's Upcoming list.
+  r.get("/plan/upcoming", async (req, res, next) => {
+    try {
+      const days = Math.max(1, Math.min(120, intParam(req.query.days, 21)));
+      res.json(await upcomingForApp(days));
+    } catch (e) {
+      next(e);
     }
   });
 
