@@ -4,20 +4,12 @@
  * the active plan through the shared plans.ts readers and annotates whether a
  * session has been pushed to Garmin (push_key = `${date}|${name}`).
  */
-import {
-  getActivePlan,
-  sessionsForDate,
-  upcomingWorkouts,
-  type PlannedSession,
-} from "../db/plans.js";
+import { getActivePlan, sessionsForDate, upcomingWorkouts } from "../db/plans.js";
 import { pushedWorkoutsForPlan } from "../db/garminPush.js";
 import { localDate } from "../db/wellness.js";
+import type { PlannedSession, DashboardPlan } from "../shared/api-types.js";
 
-export interface DashboardPlan {
-  hasActivePlan: boolean;
-  today: PlannedSession[]; // today's planned sessions (rest days dropped)
-  next: PlannedSession | null; // the next upcoming session strictly after `date`
-}
+export type { DashboardPlan };
 
 /** Set of `${date}|${name}` keys for a plan's workouts already pushed to Garmin. */
 async function syncedKeySet(planId: string): Promise<Set<string>> {
