@@ -37,6 +37,7 @@ const EMPTY_DAY = (date: string): DayView => ({
   stress: null,
   steps: null,
   subjective: null,
+  plan: null,
   hasData: false,
 });
 
