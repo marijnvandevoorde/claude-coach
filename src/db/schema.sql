@@ -166,6 +166,24 @@ CREATE TABLE IF NOT EXISTS garmin_pushed_workouts (
   updated_at TEXT DEFAULT (datetime('now'))
 );
 
+-- Persisted training plans — the single source of truth the web app and the
+-- coach MCP both read/write. One row per plan (full TrainingPlan JSON in
+-- plan_json); `active` marks the one the app surfaces and Garmin/calendar push
+-- operate on (at most one). Blob stored as TEXT (the data layer escapes '' and
+-- runs NO_BACKSLASH_ESCAPES), not native JSON — same as garmin_raw.
+CREATE TABLE IF NOT EXISTS training_plans (
+  id TEXT PRIMARY KEY,              -- plan meta.id
+  athlete TEXT,
+  event TEXT,
+  event_date TEXT,                  -- 'YYYY-MM-DD'
+  start_date TEXT,
+  end_date TEXT,
+  active INTEGER DEFAULT 0,         -- 1 = the active plan (at most one)
+  plan_json TEXT NOT NULL,          -- full TrainingPlan JSON
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
 -- Free-text journal entries (athlete feedback / notes). One row per entry; a day
 -- can have several. Complements the structured mood/energy/soreness `log`.
 CREATE TABLE IF NOT EXISTS journal (

@@ -156,6 +156,21 @@ CREATE TABLE IF NOT EXISTS garmin_pushed_workouts (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Persisted training plans (see schema.sql for the rationale). plan_json holds
+-- the full TrainingPlan JSON; `active` marks the one the app/MCP operate on.
+CREATE TABLE IF NOT EXISTS training_plans (
+  id VARCHAR(191) PRIMARY KEY,
+  athlete TEXT,
+  event TEXT,
+  event_date VARCHAR(10),
+  start_date VARCHAR(10),
+  end_date VARCHAR(10),
+  active TINYINT DEFAULT 0,
+  plan_json LONGTEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS journal (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   local_date VARCHAR(10),
