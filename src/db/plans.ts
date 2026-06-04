@@ -87,8 +87,13 @@ export interface PlannedSession {
   syncedToGarmin?: boolean;
 }
 
-/** Upsert a plan (keyed by meta.id) and make it the active plan. */
+/** Upsert a plan (keyed by meta.id) and make it the active plan. The single write
+ *  gate: both `plan save` and `garmin-push`'s auto-register go through here, so a
+ *  structurally-dead plan is refused before it can be stored or pushed. The raw
+ *  blob is stored verbatim (normalization stays a read-time projection). */
 export async function savePlan(plan: TrainingPlan): Promise<void> {
+  const v = validatePlan(plan);
+  if (!v.ok) throw new Error(`plan rejected:\n- ${v.errors.join("\n- ")}`);
   const dialect = getDialect();
   const m = plan.meta;
   const json = JSON.stringify(plan);
@@ -275,4 +280,56 @@ export function planDateRange(plan: PlanLike): { start: string | null; end: stri
   return days.length
     ? { start: days[0].date, end: days[days.length - 1].date }
     : { start: null, end: null };
+}
+
+export interface PlanValidation {
+  ok: boolean;
+  errors: string[]; // structural failures — reject the plan
+  warnings: string[]; // recoverable slop — accept, but surface so the agent can self-correct
+  workoutCount: number;
+}
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * The write-side contract for a plan. Reuses the same planDays/normalizeWorkout
+ * the readers use, so "valid" means exactly "the readers can render it". Rejects
+ * only structural death (no id, no dated workouts, nothing to schedule); warns on
+ * field slop the normalizer can paper over. Hand-rolled to match the project's
+ * no-validation-lib ethos and keep src/schema/training-plan.ts the single source.
+ */
+export function validatePlan(plan: unknown): PlanValidation {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  if (!plan || typeof plan !== "object") {
+    return { ok: false, errors: ["plan is not a JSON object"], warnings, workoutCount: 0 };
+  }
+  const p = plan as PlanLike & { meta?: { id?: unknown } };
+  if (typeof p.meta?.id !== "string" || p.meta.id.trim() === "") {
+    errors.push("meta.id is required (a stable plan identifier)");
+  }
+  const days = planDays(p);
+  if (days.length === 0) {
+    errors.push(
+      "no workout days found — expected weeks[].days[] or a top-level workouts[] with dates"
+    );
+  }
+  let workoutCount = 0;
+  for (const day of days) {
+    if (!DATE_RE.test(day.date)) {
+      errors.push(`invalid day date ${JSON.stringify(day.date)} (want YYYY-MM-DD)`);
+    }
+    for (const w of day.workouts) {
+      if ((w.sport ?? "") === "rest") continue;
+      workoutCount++;
+      const n = normalizeWorkout(w);
+      if (n.durationMinutes == null && n.distanceMeters == null && !n.structure) {
+        warnings.push(`${day.date} "${n.name}" has no duration, distance, or structure`);
+      }
+    }
+  }
+  if (days.length > 0 && workoutCount === 0) {
+    errors.push("plan has no non-rest workouts to schedule");
+  }
+  return { ok: errors.length === 0, errors, warnings, workoutCount };
 }

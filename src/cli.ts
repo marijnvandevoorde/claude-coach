@@ -53,6 +53,7 @@ import {
   upcomingWorkouts,
   planDays,
   normalizeWorkout,
+  validatePlan,
   type PlanDay,
 } from "./db/plans.js";
 import { uploadRoute, COURSE_TYPES } from "./garmin/routes.js";
@@ -2378,13 +2379,20 @@ async function runPlan(args: PlanArgs): Promise<void> {
     case "save": {
       const fromStdin = Boolean(args.flags["stdin"]);
       const plan = readPlanJson(args.pos ?? "", fromStdin);
-      if (!plan?.meta?.id) {
-        log.error("plan save: the plan needs a meta.id");
+      const v = validatePlan(plan);
+      if (!v.ok) {
+        log.error(`plan save rejected:\n- ${v.errors.join("\n- ")}`);
         process.exit(1);
       }
       await savePlan(plan);
-      if (json) console.log(JSON.stringify({ saved: plan.meta.id, active: true }, null, 2));
-      else log.success(`Saved plan ${plan.meta.id} (${plan.meta.event ?? "—"}) and set it active.`);
+      if (json) {
+        console.log(
+          JSON.stringify({ saved: plan.meta.id, active: true, warnings: v.warnings }, null, 2)
+        );
+      } else {
+        log.success(`Saved plan ${plan.meta.id} (${plan.meta.event ?? "—"}) and set it active.`);
+        for (const w of v.warnings) log.warn(w);
+      }
       break;
     }
     case "list": {
