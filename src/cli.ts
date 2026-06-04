@@ -41,6 +41,18 @@ import { readFileSync, writeFileSync } from "fs";
 import { getDataSource, type DailySnapshot } from "./datasource/index.js";
 import { pushWorkouts, type WorkoutInput, type PushStore } from "./garmin/workouts.js";
 import { lookupPushedWorkout, savePushedWorkout } from "./db/garminPush.js";
+import {
+  savePlan,
+  getActivePlan,
+  getPlan,
+  listPlans,
+  setActivePlan,
+  deletePlan,
+  deriveTodaysWorkout,
+  sessionsForDate,
+  upcomingWorkouts,
+  type PlanDay,
+} from "./db/plans.js";
 import { uploadRoute, COURSE_TYPES } from "./garmin/routes.js";
 import { runBackfill, type BackfillSink } from "./garmin/backfill.js";
 import { GarminClient } from "./garmin/client.js";
@@ -194,6 +206,13 @@ interface WellnessArgs {
   flags: Flags;
 }
 
+interface PlanArgs {
+  command: "plan";
+  sub: string; // save | list | get | activate | delete | show-today | upcoming
+  pos?: string; // positional arg after the subcommand (a plan id, or a file path for save)
+  flags: Flags;
+}
+
 type CliArgs =
   | SyncArgs
   | RenderArgs
@@ -215,7 +234,8 @@ type CliArgs =
   | GarminStreamsArgs
   | JournalArgs
   | SummaryArgs
-  | WellnessArgs;
+  | WellnessArgs
+  | PlanArgs;
 
 type Flags = Record<string, string | boolean>;
 
@@ -374,6 +394,13 @@ function parseArgs(): CliArgs {
 
   if (args[0] === "summary") {
     return { command: "summary", flags: parseFlags(args.slice(1)) };
+  }
+
+  if (args[0] === "plan") {
+    // plan <sub> [<id|file>] [--flags]. Default sub = list.
+    const sub = args[1] && !args[1].startsWith("--") ? args[1] : "list";
+    const pos = args[2] && !args[2].startsWith("--") ? args[2] : undefined;
+    return { command: "plan", sub, pos, flags: parseFlags(args.slice(2)) };
   }
 
   if (args[0] === "query") {
@@ -1903,46 +1930,17 @@ async function runWellness(args: WellnessArgs): Promise<void> {
   );
 }
 
-interface PlanWorkout {
-  date: string;
-  dayOfWeek?: string;
-  weekNumber?: number;
-  phase?: string;
-  isRecoveryWeek?: boolean;
-  workouts: unknown[];
-}
-
-/** Find the day entry matching `date` in a rendered plan JSON file. */
-function findTodaysWorkout(planText: string, date: string): PlanWorkout | null {
-  let plan: {
-    weeks?: Array<{
-      weekNumber?: number;
-      phase?: string;
-      isRecoveryWeek?: boolean;
-      days?: Array<{ date: string; dayOfWeek?: string; workouts?: unknown[] }>;
-    }>;
-  };
+/** Find the day entry matching `date` in a plan JSON string. Delegates to the
+ *  shared deriveTodaysWorkout so there's one implementation. */
+function findTodaysWorkout(planText: string, date: string): PlanDay | null {
+  let plan: unknown;
   try {
     plan = JSON.parse(planText);
   } catch {
     log.warn("Could not parse plan JSON.");
     return null;
   }
-  for (const week of plan.weeks ?? []) {
-    for (const day of week.days ?? []) {
-      if (day.date === date) {
-        return {
-          date,
-          dayOfWeek: day.dayOfWeek,
-          weekNumber: week.weekNumber,
-          phase: week.phase,
-          isRecoveryWeek: week.isRecoveryWeek,
-          workouts: day.workouts ?? [],
-        };
-      }
-    }
-  }
-  return null;
+  return deriveTodaysWorkout(plan as Parameters<typeof deriveTodaysWorkout>[0], date);
 }
 
 interface Reminder {
@@ -2073,7 +2071,7 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
   // or from a file path (--plan=…). Missing/unreadable plans degrade to no workout.
   const planFromStdin = Boolean(args.flags["plan-stdin"]);
   const planPath = flagStr(args.flags, "plan");
-  let workout: PlanWorkout | null = null;
+  let workout: PlanDay | null = null;
   if (planFromStdin || planPath) {
     let planText: string | null = null;
     try {
@@ -2298,6 +2296,110 @@ async function runCheckin(args: CheckinArgs): Promise<void> {
 // Main
 // ============================================================================
 
+/** The `plan` command group — CRUD over the persisted training-plan store. */
+async function runPlan(args: PlanArgs): Promise<void> {
+  await ensureDb();
+  const json = Boolean(args.flags["json"]);
+
+  switch (args.sub) {
+    case "save": {
+      const fromStdin = Boolean(args.flags["stdin"]);
+      const plan = readPlanJson(args.pos ?? "", fromStdin);
+      if (!plan?.meta?.id) {
+        log.error("plan save: the plan needs a meta.id");
+        process.exit(1);
+      }
+      await savePlan(plan);
+      if (json) console.log(JSON.stringify({ saved: plan.meta.id, active: true }, null, 2));
+      else log.success(`Saved plan ${plan.meta.id} (${plan.meta.event ?? "—"}) and set it active.`);
+      break;
+    }
+    case "list": {
+      const plans = await listPlans();
+      if (json) {
+        console.log(JSON.stringify(plans, null, 2));
+      } else if (plans.length === 0) {
+        log.info("No plans saved yet.");
+      } else {
+        for (const p of plans) {
+          log.info(`${p.active ? "●" : "○"} ${p.id} — ${p.event ?? "—"} (${p.event_date ?? "?"})`);
+        }
+      }
+      break;
+    }
+    case "get": {
+      const plan = args.pos ? await getPlan(args.pos) : await getActivePlan();
+      if (!plan) {
+        log.error(args.pos ? `No plan with id ${args.pos}` : "No active plan.");
+        process.exit(1);
+      }
+      console.log(JSON.stringify(plan, null, 2));
+      break;
+    }
+    case "activate": {
+      if (!args.pos) {
+        log.error("plan activate requires a plan id");
+        process.exit(1);
+      }
+      if (!(await getPlan(args.pos))) {
+        log.error(`No plan with id ${args.pos}`);
+        process.exit(1);
+      }
+      await setActivePlan(args.pos);
+      if (json) console.log(JSON.stringify({ active: args.pos }, null, 2));
+      else log.success(`Activated plan ${args.pos}.`);
+      break;
+    }
+    case "delete": {
+      if (!args.pos) {
+        log.error("plan delete requires a plan id");
+        process.exit(1);
+      }
+      await deletePlan(args.pos);
+      if (json) console.log(JSON.stringify({ deleted: args.pos }, null, 2));
+      else log.success(`Deleted plan ${args.pos}.`);
+      break;
+    }
+    case "show-today": {
+      const date = flagStr(args.flags, "date") ?? localDate();
+      const plan = await getActivePlan();
+      const day = plan ? deriveTodaysWorkout(plan, date) : null;
+      console.log(
+        JSON.stringify(
+          {
+            date,
+            hasActivePlan: !!plan,
+            planId: plan?.meta?.id ?? null,
+            day,
+            sessions: plan ? sessionsForDate(plan, date) : [],
+          },
+          null,
+          2
+        )
+      );
+      break;
+    }
+    case "upcoming": {
+      const from = flagStr(args.flags, "date") ?? localDate();
+      const days = flagNum(args.flags, "days") ?? 14;
+      const cutoff = new Date(Date.parse(`${from}T00:00:00Z`) + days * 86_400_000)
+        .toISOString()
+        .slice(0, 10);
+      const plan = await getActivePlan();
+      const sessions = plan
+        ? upcomingWorkouts(plan, from, 200).filter((s) => s.date <= cutoff)
+        : [];
+      console.log(JSON.stringify({ from, days, hasActivePlan: !!plan, sessions }, null, 2));
+      break;
+    }
+    default:
+      log.error(
+        `unknown plan subcommand: ${args.sub} (use save|list|get|activate|delete|show-today|upcoming)`
+      );
+      process.exit(1);
+  }
+}
+
 async function main() {
   const args = parseArgs();
 
@@ -2364,6 +2466,9 @@ async function main() {
       break;
     case "checkin":
       await runCheckin(args);
+      break;
+    case "plan":
+      await runPlan(args);
       break;
   }
 }
