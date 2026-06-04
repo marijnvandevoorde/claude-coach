@@ -1,0 +1,5 @@
+{
+  "_comment": "The incident's failure mode: valid meta but no dated workouts. Must be rejected, not stored empty.",
+  "meta": { "id": "fix-empty" },
+  "weeks": []
+}

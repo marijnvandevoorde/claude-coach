@@ -1,0 +1,46 @@
+{
+  "meta": {
+    "id": "fix-canonical",
+    "event": "Marathon",
+    "planStartDate": "2026-06-01",
+    "planEndDate": "2026-06-07"
+  },
+  "weeks": [
+    {
+      "weekNumber": 1,
+      "days": [
+        {
+          "date": "2026-06-01",
+          "dayOfWeek": "Mon",
+          "workouts": [
+            {
+              "sport": "run",
+              "type": "easy",
+              "name": "Easy 8k",
+              "durationMinutes": 45,
+              "primaryZone": "Z2"
+            }
+          ]
+        },
+        {
+          "date": "2026-06-02",
+          "dayOfWeek": "Tue",
+          "workouts": [{ "sport": "rest", "name": "Rest" }]
+        },
+        {
+          "date": "2026-06-03",
+          "dayOfWeek": "Wed",
+          "workouts": [
+            {
+              "sport": "run",
+              "type": "intervals",
+              "name": "6x800m",
+              "durationMinutes": 50,
+              "distanceMeters": 9000
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

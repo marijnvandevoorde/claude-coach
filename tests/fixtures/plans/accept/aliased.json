@@ -1,0 +1,15 @@
+{
+  "_comment": "Flat shape with bike sport and km/min aliases — distanceKm must become distanceMeters.",
+  "meta": { "id": "fix-aliased", "event": "Gran Fondo" },
+  "workouts": [
+    {
+      "date": "2026-07-01",
+      "sport": "bike",
+      "title": "Endurance Ride",
+      "durationMin": 90,
+      "distanceKm": 40,
+      "intensity": "Z2"
+    },
+    { "date": "2026-07-03", "sport": "swim", "title": "Threshold Swim", "durationMin": 45 }
+  ]
+}

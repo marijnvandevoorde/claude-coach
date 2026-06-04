@@ -1,0 +1,27 @@
+{
+  "_comment": "Regression fixture: the real-world FLAT shape that silently showed nothing before the normalizer + gate. Top-level workouts[] with aliased fields (title/durationMin/distanceKm/intensity).",
+  "meta": { "id": "fix-flat-incident", "athlete": "Marijn" },
+  "zones": {},
+  "workouts": [
+    {
+      "date": "2026-06-06",
+      "sport": "running",
+      "type": "long_run",
+      "title": "Long Trail Run + Vertical",
+      "durationMin": 150,
+      "distanceKm": 28,
+      "intensity": "Z2",
+      "terrain": "trail",
+      "description": "Long aerobic trail run"
+    },
+    {
+      "date": "2026-06-09",
+      "sport": "running",
+      "type": "intervals",
+      "title": "Hill Repeats 6x3min",
+      "durationMin": 60,
+      "intensity": "Z4"
+    },
+    { "date": "2026-06-07", "sport": "rest", "title": "Rest" }
+  ]
+}
