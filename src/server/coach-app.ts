@@ -273,6 +273,18 @@ function api(): express.Router {
                 acute_load, chronic_load, acwr, resting_hr, rhr_7day_avg, sleep_hours, sleep_score
          FROM wellness_state ORDER BY local_date DESC LIMIT ${Math.max(1, days)};`
       );
+      // Match the dashboard: /summary reconstructs readiness live when Garmin has no
+      // native score, but the stored readiness_score column is often null for those
+      // days — so Trends showed gaps/mismatches. Reconstruct the missing days the same
+      // way (assembleReadinessSignals + computeReadiness) so the two views agree.
+      await Promise.all(
+        series.map(async (row) => {
+          if (row.readiness_score != null) return;
+          const signals = await assembleReadinessSignals(String(row.local_date));
+          const score = signals ? (computeReadiness(signals)?.score ?? null) : null;
+          if (score != null) row.readiness_score = score;
+        })
+      );
       const volume = await queryJson<Record<string, unknown>>(
         `SELECT * FROM weekly_volume LIMIT 12;`
       ).catch(() => []);
