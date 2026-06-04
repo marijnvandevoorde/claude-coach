@@ -3,7 +3,7 @@ import { Icon } from "../components/Icon";
 import { Skeleton, EmptyState } from "../components/primitives";
 import { metricColor, readinessColor, type MetricKey, type HeatDay } from "../charts/charts";
 import { isoOf, parseISO, fmtDate, todayISO, DAY_MIN } from "../lib/coach";
-import { api, type CalendarDay, type JournalEntry } from "../api";
+import { api, type CalendarDay, type JournalEntry, type PlannedSession } from "../api";
 import { useAsync } from "../lib/useAsync";
 
 const METRICS: { k: MetricKey; label: string }[] = [
@@ -111,6 +111,7 @@ function MonthGrid({
   onPick,
   byDate,
   journalTags,
+  plannedByDate,
 }: {
   year: number;
   month: number;
@@ -118,6 +119,7 @@ function MonthGrid({
   onPick: (d: string) => void;
   byDate: Map<string, HeatCell>;
   journalTags: Map<string, string>;
+  plannedByDate: Map<string, PlannedSession[]>;
 }) {
   const first = new Date(year, month, 1);
   const startDow = first.getDay();
@@ -143,10 +145,26 @@ function MonthGrid({
           const d = byDate.get(date) ?? null;
           const isToday = date === today;
           const future = parseISO(date) > todayDate;
+          const planned = plannedByDate.get(date);
+          // A planned-session marker: green when pushed to the watch, accent otherwise.
+          const plannedMark =
+            planned && planned.length > 0 ? (
+              <span
+                className="pmark"
+                title={planned.map((s) => s.name).join(", ")}
+                style={{ background: planned.some((s) => s.syncedToGarmin) ? "var(--go)" : "var(--accent)" }}
+              />
+            ) : null;
           if (future)
             return (
-              <div key={i} className="mcell" style={{ opacity: 0.3 }}>
+              <div
+                key={i}
+                className="mcell"
+                style={{ opacity: planned ? 0.7 : 0.3 }}
+                onClick={() => onPick(date)}
+              >
                 <span className="mday">{dd}</span>
+                {plannedMark}
               </div>
             );
           const col = d ? metricColor(metric, d) : "empty";
@@ -171,6 +189,7 @@ function MonthGrid({
                 </span>
               )}
               {isGap && <span style={{ fontSize: 9, color: "var(--text-3)" }}>—</span>}
+              {plannedMark}
             </div>
           );
         })}
@@ -242,6 +261,7 @@ export function Calendar({
       Promise.all([
         api.calendar({ from, to: today }),
         api.journal({ since: from, until: today, limit: 2000 }),
+        api.planSessions(),
       ]),
     [from, today]
   );
@@ -265,6 +285,15 @@ export function Calendar({
     const m = new Map<string, string>();
     (data?.[1] ?? []).forEach((j: JournalEntry) => {
       if (j.tag && !m.has(j.local_date)) m.set(j.local_date, j.tag);
+    });
+    return m;
+  }, [data]);
+
+  // Planned sessions by date (active plan) → markers in the month grid.
+  const plannedByDate = useMemo(() => {
+    const m = new Map<string, PlannedSession[]>();
+    (data?.[2]?.sessions ?? []).forEach((s: PlannedSession) => {
+      (m.get(s.date) ?? m.set(s.date, []).get(s.date)!).push(s);
     });
     return m;
   }, [data]);
@@ -361,6 +390,7 @@ export function Calendar({
             onPick={onPick}
             byDate={byDate}
             journalTags={journalTags}
+            plannedByDate={plannedByDate}
           />
           <div className="row" style={{ gap: 14, marginTop: 14, flexWrap: "wrap" }}>
             {["race", "niggle", "travel", "note"].map((t) => (
@@ -373,6 +403,14 @@ export function Calendar({
                 {t}
               </span>
             ))}
+            <span className="ctx-note" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--accent)" }} />
+              planned
+            </span>
+            <span className="ctx-note" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--go)" }} />
+              on watch
+            </span>
           </div>
         </div>
       </div>
