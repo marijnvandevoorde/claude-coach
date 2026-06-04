@@ -7,16 +7,20 @@ tokens) — no `mcp__garmin__*` server required.
 
 ## Preferred path — native coach push
 
-One step builds, creates, and schedules every workout in the plan on its date:
+One step builds, creates, and schedules every workout on its date. It operates on the **stored
+active plan** (`--active`) — so once the plan is saved (`save_plan`), pushing needs no JSON:
 
 ```bash
-npx claude-coach garmin-push <plan>.json --dry-run   # preview the exact payloads, push nothing
-npx claude-coach garmin-push <plan>.json             # create + schedule on Garmin → syncs to the watch
+npx claude-coach garmin-push --active --dry-run    # preview the active plan's payloads, push nothing
+npx claude-coach garmin-push --active              # create + schedule on Garmin → syncs to the watch
+npx claude-coach garmin-push --active --from=2026-06-08 --to=2026-06-14   # just one week
 ```
 
 On the **coach MCP connector** (Desktop / mobile / web), use the equivalent tool:
 
-- `mcp__coach__schedule_workouts` with `{ plan: "<path>.json" }` (add `dryRun: true` to preview).
+- `mcp__coach__schedule_workouts` — **no args pushes the active plan** (add `dryRun: true` to
+  preview, or `from`/`to` for a window). You can still pass `plan` (inline JSON) or `file` to push
+  a specific one.
 
 What it does:
 
@@ -27,6 +31,8 @@ What it does:
   the session to the wrist on its day.
 - **Idempotent:** re-running after a plan change updates an existing same-name workout for that
   date (and re-schedules if the date moved) instead of stacking duplicates.
+- **Links each pushed workout back to its plan day**, so the web app marks that session "✓ on
+  watch". An empty/all-rest window returns an explicit `{pushed:0, reason}` (never a silent no-op).
 
 Confirm to the athlete: "Created and scheduled N workouts on Garmin (`<start>` → `<end>`) — they'll
 appear on your watch on the next sync."
