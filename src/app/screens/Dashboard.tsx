@@ -10,7 +10,7 @@ import {
   Skeleton,
 } from "../components/primitives";
 import { NotifyToggle } from "../components/NotifyToggle";
-import { band, verdict, fmtDate, normSport } from "../lib/coach";
+import { band, verdict, fmtDate, normSport, sessionDetail } from "../lib/coach";
 import type { DayView, SleepStages as Stages } from "../lib/adapt";
 import type { PlannedSession } from "../api";
 
@@ -224,17 +224,6 @@ export function QuickAdd({
       </div>
     </div>
   );
-}
-
-/** A one-line summary of a planned session (e.g. "45 min · Z2"). */
-function sessionDetail(s: PlannedSession): string {
-  const bits: string[] = [];
-  if (s.durationMinutes) bits.push(`${s.durationMinutes} min`);
-  if (s.distanceMeters)
-    bits.push(`${(s.distanceMeters / 1000).toFixed(s.distanceMeters % 1000 === 0 ? 0 : 1)} km`);
-  if (s.primaryZone) bits.push(s.primaryZone);
-  else if (s.type) bits.push(s.type);
-  return bits.join(" · ") || s.description || "Planned session";
 }
 
 /** One planned-session row in the dashboard plan card. */

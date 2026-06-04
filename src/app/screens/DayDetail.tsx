@@ -7,11 +7,12 @@ import {
   EmptyState,
   Skeleton,
   TagChip,
+  SportChip,
   Sheet,
 } from "../components/primitives";
 import { SleepStageBar } from "./Dashboard";
-import { fmtDate, verdict } from "../lib/coach";
-import { api, type JournalEntry } from "../api";
+import { fmtDate, verdict, normSport, sessionDetail } from "../lib/coach";
+import { api, type JournalEntry, type PlannedSession } from "../api";
 import { adaptSummary, type DayView } from "../lib/adapt";
 import { useAsync } from "../lib/useAsync";
 
@@ -71,6 +72,40 @@ function JournalInline({ j, bare }: { j: JournalEntry; bare?: boolean }) {
   );
 }
 
+/** The day's planned session(s) from the active plan (rest days already dropped). */
+function PlannedCard({ sessions }: { sessions: PlannedSession[] }) {
+  if (sessions.length === 0) return null;
+  return (
+    <div className="card">
+      <div className="lbl" style={{ marginBottom: 12 }}>
+        <Icon name="flag" size={12} style={{ verticalAlign: -1, marginRight: 5 }} />
+        Planned
+      </div>
+      {sessions.map((s, i) => (
+        <div
+          className="plan-item"
+          key={`${s.name}-${i}`}
+          style={i > 0 ? { borderTop: "1px solid var(--accent-line)", marginTop: 4 } : undefined}
+        >
+          <SportChip sport={normSport(s.sport)} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 500, fontSize: 15 }}>{s.name}</div>
+            <div className="ctx-note" style={{ marginTop: 2 }}>
+              {sessionDetail(s)}
+            </div>
+          </div>
+          {s.syncedToGarmin && (
+            <span className="chip" style={{ color: "var(--go)", whiteSpace: "nowrap" }}>
+              <Icon name="check" size={12} style={{ verticalAlign: -1, marginRight: 3 }} />
+              on watch
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function useDayDetail({
   date,
   onStep,
@@ -95,6 +130,7 @@ export function useDayDetail({
   );
   const day: DayView | null = data ? adaptSummary(data[0]) : null;
   const jEntries: JournalEntry[] = data ? data[1] : [];
+  const planned: PlannedSession[] = day?.plan?.today ?? [];
 
   const head = (
     <div className="sheet-head">
@@ -126,22 +162,30 @@ export function useDayDetail({
     );
   } else if (error) {
     body = <EmptyState icon="info" title="Couldn't load this day" body={error} />;
-  } else if (!day || (day.readiness == null && !day.hasData && jEntries.length === 0)) {
+  } else if (
+    !day ||
+    (day.readiness == null && !day.hasData && jEntries.length === 0 && planned.length === 0)
+  ) {
     body = (
       <EmptyState
         icon="calendar"
         title="No data for this day"
-        body="Nothing was recorded here — no watch sync, activity, or journal note."
+        body="Nothing here yet — no planned session, watch sync, activity, or journal note."
       />
     );
   } else if (day.readiness == null && day.sleep_hours == null && day.hrv == null) {
+    // No recovery signals — but a future/rest day can still have a planned session.
     body = (
-      <div className="fade-in">
-        <EmptyState
-          icon="moon"
-          title="Watch wasn't worn"
-          body="No recovery signals synced. Readiness can't be estimated without sleep and HRV."
-        />
+      <div className="fade-in" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {planned.length > 0 ? (
+          <PlannedCard sessions={planned} />
+        ) : (
+          <EmptyState
+            icon="moon"
+            title="Watch wasn't worn"
+            body="No recovery signals synced. Readiness can't be estimated without sleep and HRV."
+          />
+        )}
         {jEntries.map((j) => (
           <JournalInline key={j.id} j={j} />
         ))}
@@ -162,6 +206,8 @@ export function useDayDetail({
             </div>
           </div>
         </div>
+
+        <PlannedCard sessions={planned} />
 
         {fs.length > 0 && (
           <div className="card">
