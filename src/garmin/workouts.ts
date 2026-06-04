@@ -330,6 +330,7 @@ type PushRecord = {
   schedule_id: number | null;
   name: string;
   date: string | null;
+  plan_id?: string | null;
 };
 type StoredWorkout = { workout_id: number; schedule_id: number | null; date: string | null };
 
@@ -361,7 +362,7 @@ export interface PushResult {
  */
 export async function pushWorkouts(
   inputs: WorkoutInput[],
-  opts: { dryRun?: boolean; store?: PushStore } = {}
+  opts: { dryRun?: boolean; store?: PushStore; planId?: string } = {}
 ): Promise<PushResult[]> {
   if (opts.dryRun) {
     return inputs.map((i) => ({
@@ -415,6 +416,7 @@ export async function pushWorkouts(
         schedule_id: scheduleId ?? null,
         name: input.name,
         date: input.date ?? null,
+        plan_id: opts.planId ?? null,
       });
       results.push({ name: input.name, date: input.date, workoutId, scheduleId, replaced });
     } catch (e) {

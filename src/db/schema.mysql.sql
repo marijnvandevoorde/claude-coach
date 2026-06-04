@@ -151,6 +151,7 @@ CREATE TABLE IF NOT EXISTS garmin_pushed_workouts (
   push_key VARCHAR(160) PRIMARY KEY,
   workout_id BIGINT NOT NULL,
   schedule_id BIGINT,
+  plan_id VARCHAR(191),
   name TEXT,
   date VARCHAR(10),
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP

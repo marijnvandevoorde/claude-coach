@@ -48,6 +48,12 @@ export async function migrate(silent = false): Promise<void> {
     "last_move_reminder_at",
     dialect.driver === "mysql" ? "VARCHAR(32)" : "TEXT"
   );
+  // Link a pushed Garmin workout back to its training plan (added after prod existed).
+  await ensureColumn(
+    "garmin_pushed_workouts",
+    "plan_id",
+    dialect.driver === "mysql" ? "VARCHAR(191)" : "TEXT"
+  );
 
   // Single-row shared Garmin OAuth token + lease lock (one row, id=1). Portable
   // across both backends. See src/garmin/client.ts for why it lives in the DB.
