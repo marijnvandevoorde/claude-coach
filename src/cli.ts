@@ -1079,10 +1079,20 @@ async function runExportGarmin(args: ExportGarminArgs): Promise<void> {
 }
 
 async function runGarminPush(args: GarminPushArgs): Promise<void> {
+  const explicitPlan = Boolean(args.flags["stdin"]) || Boolean(args.inputFile);
   const plan = await resolvePlan({
     inputFile: args.inputFile,
     stdin: Boolean(args.flags["stdin"]),
   });
+  const dryRun = Boolean(args.flags["dry-run"]);
+
+  // Pushing an explicit plan to Garmin means "this is my plan" — so register it
+  // as the active plan (the app + future pushes read it). Skip on --dry-run (a
+  // preview shouldn't mutate state) and on --active (it's already the stored plan).
+  if (!dryRun && explicitPlan && plan.meta?.id) {
+    await ensureDb();
+    await savePlan(plan);
+  }
 
   // Optional date window so a request can push just an upcoming block.
   const from = flagStr(args.flags, "from");
@@ -1101,8 +1111,6 @@ async function runGarminPush(args: GarminPushArgs): Promise<void> {
   }));
   if (from) inputs = inputs.filter((i) => !i.date || i.date >= from);
   if (to) inputs = inputs.filter((i) => !i.date || i.date <= to);
-
-  const dryRun = Boolean(args.flags["dry-run"]);
 
   // Never fail silently: report an explicit, structured "nothing to push".
   if (inputs.length === 0) {
