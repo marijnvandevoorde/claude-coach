@@ -13,17 +13,34 @@ function esc(value: string | null | undefined): string {
   return `'${String(value).replace(/'/g, "''")}'`;
 }
 
-/** Minimal plan shape we walk. A saved TrainingPlan satisfies it, and so does
- *  the looser JSON the CLI parses from a file/stdin. */
+/**
+ * Minimal plan shape we walk. Tolerant of the two shapes coaching plans come in:
+ *  1. canonical TrainingPlan — `weeks[].days[].workouts[]` (day carries the date), and
+ *  2. a flatter shape some plans use — a top-level `workouts[]` where each workout
+ *     carries its own `date`.
+ * Workout fields also have aliases (LLM-authored plans aren't always canonical):
+ * name/title, durationMinutes/durationMin, distanceMeters/distanceKm, primaryZone/intensity.
+ */
 interface WorkoutLike {
+  date?: string; // present in the flat top-level workouts[] shape
   sport?: string;
   type?: string;
   name?: string;
+  title?: string; // alias for name
   durationMinutes?: number;
+  durationMin?: number; // alias
   distanceMeters?: number;
+  distanceKm?: number; // alias
   primaryZone?: string;
+  intensity?: string; // alias
   description?: string;
   humanReadable?: string;
+  // canonical-only fields, passed through for Garmin push
+  targetHR?: { low: number; high: number };
+  targetPace?: { low: string; high: string };
+  targetPower?: { low: number; high: number };
+  rpe?: number;
+  structure?: unknown;
 }
 interface PlanLike {
   weeks?: Array<{
@@ -32,6 +49,7 @@ interface PlanLike {
     isRecoveryWeek?: boolean;
     days?: Array<{ date: string; dayOfWeek?: string; workouts?: WorkoutLike[] }>;
   }>;
+  workouts?: WorkoutLike[]; // flat shape: each workout carries its own date
 }
 
 /** Plan list-row metadata (no blob). */
@@ -74,6 +92,12 @@ export async function savePlan(plan: TrainingPlan): Promise<void> {
   const dialect = getDialect();
   const m = plan.meta;
   const json = JSON.stringify(plan);
+  // Backfill missing start/end (some plans leave meta dates blank) from the actual
+  // workout dates so the list/table metadata is correct.
+  const range = planDateRange(plan);
+  const startDate = m.planStartDate || range.start;
+  const endDate = m.planEndDate || range.end;
+  const eventDate = m.eventDate || endDate;
   const cols = [
     "id",
     "athlete",
@@ -87,8 +111,8 @@ export async function savePlan(plan: TrainingPlan): Promise<void> {
     "updated_at",
   ];
   const vals =
-    `(${esc(m.id)}, ${esc(m.athlete)}, ${esc(m.event)}, ${esc(m.eventDate)}, ` +
-    `${esc(m.planStartDate)}, ${esc(m.planEndDate)}, 1, ${esc(json)}, ${dialect.now()}, ${dialect.now()})`;
+    `(${esc(m.id)}, ${esc(m.athlete)}, ${esc(m.event)}, ${esc(eventDate)}, ` +
+    `${esc(startDate)}, ${esc(endDate)}, 1, ${esc(json)}, ${dialect.now()}, ${dialect.now()})`;
   // created_at stays put on re-save; active is set explicitly via setActivePlan.
   await execute(
     dialect.upsert("training_plans", cols, vals, "id", [
@@ -136,56 +160,119 @@ export async function listPlans(): Promise<PlanSummary[]> {
   );
 }
 
-/** The plan day matching `date` (exact YYYY-MM-DD), or null. */
-export function deriveTodaysWorkout(plan: PlanLike, date: string): PlanDay | null {
-  for (const week of plan.weeks ?? []) {
-    for (const day of week.days ?? []) {
-      if (day.date === date) {
-        return {
-          date,
+/** Canonical workout fields (aliases resolved), for both the app and Garmin push. */
+export interface NormalizedWorkout {
+  sport: string;
+  type?: string;
+  name: string;
+  durationMinutes?: number;
+  distanceMeters?: number;
+  primaryZone?: string;
+  description?: string;
+  humanReadable?: string;
+  targetHR?: { low: number; high: number };
+  targetPace?: { low: string; high: string };
+  targetPower?: { low: number; high: number };
+  rpe?: number;
+  structure?: unknown;
+}
+
+/** Resolve a (possibly non-canonical) workout's field aliases. */
+export function normalizeWorkout(w: WorkoutLike): NormalizedWorkout {
+  return {
+    sport: String(w.sport ?? "run"),
+    type: w.type,
+    name: w.name ?? w.title ?? "Workout",
+    durationMinutes: w.durationMinutes ?? w.durationMin,
+    distanceMeters:
+      w.distanceMeters ??
+      (typeof w.distanceKm === "number" ? Math.round(w.distanceKm * 1000) : undefined),
+    primaryZone: w.primaryZone ?? w.intensity,
+    description: w.description,
+    humanReadable: w.humanReadable,
+    targetHR: w.targetHR,
+    targetPace: w.targetPace,
+    targetPower: w.targetPower,
+    rpe: w.rpe,
+    structure: w.structure,
+  };
+}
+
+/** Flatten a plan into per-day entries regardless of shape: canonical
+ *  `weeks[].days[]`, or a flat top-level `workouts[]` grouped by each workout's date. */
+export function planDays(plan: PlanLike): PlanDay[] {
+  const out: PlanDay[] = [];
+  if (plan.weeks?.length) {
+    for (const week of plan.weeks) {
+      for (const day of week.days ?? []) {
+        out.push({
+          date: day.date,
           dayOfWeek: day.dayOfWeek,
           weekNumber: week.weekNumber,
           phase: week.phase,
           isRecoveryWeek: week.isRecoveryWeek,
           workouts: day.workouts ?? [],
-        };
+        });
       }
     }
+  } else if (plan.workouts?.length) {
+    const byDate = new Map<string, WorkoutLike[]>();
+    for (const w of plan.workouts) {
+      if (!w?.date) continue;
+      (byDate.get(w.date) ?? byDate.set(w.date, []).get(w.date)!).push(w);
+    }
+    for (const [date, workouts] of byDate) out.push({ date, workouts });
   }
-  return null;
+  out.sort((a, b) => a.date.localeCompare(b.date));
+  return out;
+}
+
+/** The plan day matching `date` (exact YYYY-MM-DD), or null. */
+export function deriveTodaysWorkout(plan: PlanLike, date: string): PlanDay | null {
+  return planDays(plan).find((d) => d.date === date) ?? null;
 }
 
 function toSession(date: string, w: WorkoutLike): PlannedSession {
+  const n = normalizeWorkout(w);
   return {
     date,
-    sport: String(w.sport),
-    type: w.type,
-    name: w.name ?? "Workout",
-    durationMinutes: w.durationMinutes,
-    distanceMeters: w.distanceMeters,
-    primaryZone: w.primaryZone,
-    description: w.description ?? w.humanReadable,
+    sport: n.sport,
+    type: n.type,
+    name: n.name,
+    durationMinutes: n.durationMinutes,
+    distanceMeters: n.distanceMeters,
+    primaryZone: n.primaryZone,
+    description: n.description ?? n.humanReadable,
   };
 }
+
+const isRealWorkout = (w: WorkoutLike): boolean => {
+  const sport = w.sport ?? "";
+  return sport !== "" && sport !== "rest";
+};
 
 /** Planned sessions on `date` (rest days dropped). */
 export function sessionsForDate(plan: PlanLike, date: string): PlannedSession[] {
   const day = deriveTodaysWorkout(plan, date);
   if (!day) return [];
-  return day.workouts.filter((w) => w?.sport && w.sport !== "rest").map((w) => toSession(date, w));
+  return day.workouts.filter(isRealWorkout).map((w) => toSession(date, w));
 }
 
 /** Upcoming planned sessions from `fromDate` (inclusive), date-sorted, capped. */
 export function upcomingWorkouts(plan: PlanLike, fromDate: string, limit = 30): PlannedSession[] {
   const out: PlannedSession[] = [];
-  for (const week of plan.weeks ?? []) {
-    for (const day of week.days ?? []) {
-      if (day.date < fromDate) continue;
-      for (const w of day.workouts ?? []) {
-        if (w?.sport && w.sport !== "rest") out.push(toSession(day.date, w));
-      }
-    }
+  for (const day of planDays(plan)) {
+    if (day.date < fromDate) continue;
+    for (const w of day.workouts) if (isRealWorkout(w)) out.push(toSession(day.date, w));
   }
   out.sort((a, b) => a.date.localeCompare(b.date));
   return out.slice(0, limit);
+}
+
+/** First/last workout dates across the plan (for backfilling missing meta dates). */
+export function planDateRange(plan: PlanLike): { start: string | null; end: string | null } {
+  const days = planDays(plan);
+  return days.length
+    ? { start: days[0].date, end: days[days.length - 1].date }
+    : { start: null, end: null };
 }
