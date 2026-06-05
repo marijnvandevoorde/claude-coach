@@ -105,26 +105,76 @@ function mysqlConfig(): Record<string, unknown> {
   };
 }
 
+/** True for errors that mean the MySQL socket is gone (idle wait_timeout, network
+ *  drop, server restart) — the long-running coach-app holds one connection, so the
+ *  first request after an overnight idle would otherwise fail with "closed state". */
+export function isDeadConnection(e: unknown): boolean {
+  const err = e as { code?: string; fatal?: boolean; message?: string };
+  return (
+    err?.fatal === true ||
+    err?.code === "PROTOCOL_CONNECTION_LOST" ||
+    err?.code === "ECONNRESET" ||
+    err?.code === "EPIPE" ||
+    err?.code === "ETIMEDOUT" ||
+    /closed state|connection is in closed|connection lost|server has gone away|read econnreset/i.test(
+      err?.message ?? ""
+    )
+  );
+}
+
 async function makeMysqlBackend(): Promise<Store> {
   const mysql = await import("mysql2/promise");
-  const conn = await mysql.createConnection(mysqlConfig());
-  // Match SQLite's string handling: only '' escapes a quote; backslashes are literal
-  // (so JSON blobs like garmin_raw store verbatim through our esc() helper).
-  await conn.query("SET SESSION sql_mode = CONCAT(@@SESSION.sql_mode, ',NO_BACKSLASH_ESCAPES')");
+  type Conn = Awaited<ReturnType<typeof mysql.createConnection>>;
+  // TCP keep-alive makes an idle connection less likely to be silently dropped;
+  // the reconnect-on-fatal below is the actual safety net when it is.
+  const config = { ...mysqlConfig(), enableKeepAlive: true, keepAliveInitialDelay: 10_000 };
+
+  let conn: Conn | null = null;
+  async function connect(): Promise<Conn> {
+    const c = await mysql.createConnection(config);
+    // Match SQLite's string handling: only '' escapes a quote; backslashes are literal
+    // (so JSON blobs like garmin_raw store verbatim through our esc() helper). Awaited
+    // before any query runs on this connection, so escaping is always correct.
+    await c.query("SET SESSION sql_mode = CONCAT(@@SESSION.sql_mode, ',NO_BACKSLASH_ESCAPES')");
+    conn = c;
+    return c;
+  }
+
+  // Run a unit of work against a live connection; if it fails because the socket is
+  // dead, reconnect once and retry (so a stale overnight connection self-heals).
+  async function withConn<T>(fn: (c: Conn) => Promise<T>): Promise<T> {
+    const c = conn ?? (await connect());
+    try {
+      return await fn(c);
+    } catch (e) {
+      if (!isDeadConnection(e)) throw e;
+      try {
+        await c.end();
+      } catch {
+        /* the socket is already gone */
+      }
+      conn = null;
+      return fn(await connect());
+    }
+  }
+
   return {
     async query(sql) {
-      const [rows] = await conn.query(sql);
-      return formatRows(rows as unknown[]);
+      return withConn(async (c) => formatRows((await c.query(sql))[0] as unknown[]));
     },
     async queryJson<T>(sql: string) {
-      const [rows] = await conn.query(sql);
-      return rows as T[];
+      return withConn(async (c) => (await c.query(sql))[0] as T[]);
     },
     async execute(sql) {
-      await conn.query(sql);
+      await withConn(async (c) => {
+        await c.query(sql);
+      });
     },
     async close() {
-      await conn.end();
+      if (conn) {
+        await conn.end();
+        conn = null;
+      }
     },
   };
 }
