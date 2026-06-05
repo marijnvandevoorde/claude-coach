@@ -124,7 +124,8 @@ function MonthGrid({
   plannedByDate: Map<string, PlannedSession[]>;
 }) {
   const first = new Date(year, month, 1);
-  const startDow = first.getDay();
+  // Monday-first (EU): map JS getDay() (0=Sun..6=Sat) so Monday is column 0.
+  const startDow = (first.getDay() + 6) % 7;
   const daysIn = new Date(year, month + 1, 0).getDate();
   const cells: (number | null)[] = [];
   for (let i = 0; i < startDow; i++) cells.push(null);
@@ -134,7 +135,7 @@ function MonthGrid({
   return (
     <div>
       <div className="month-strip" style={{ marginBottom: 6 }}>
-        {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+        {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
           <div key={i} className="ctx-note" style={{ textAlign: "center" }}>
             {d}
           </div>
@@ -309,11 +310,13 @@ export function Calendar({
 
   // build week columns for the heatmap
   const weeks = useMemo<HeatCell[][]>(() => {
+    // Monday-first (EU) columns: each week runs Mon→Sun. Extend `end` to the week's
+    // Sunday and walk `start` back to a Monday.
     const end = new Date(todayDate);
-    end.setDate(end.getDate() + (6 - end.getDay()));
+    end.setDate(end.getDate() + ((7 - end.getDay()) % 7));
     const start = new Date(end);
     start.setDate(start.getDate() - 60 * 7 + 1);
-    while (start.getDay() !== 0) start.setDate(start.getDate() - 1);
+    while (start.getDay() !== 1) start.setDate(start.getDate() - 1);
     const out: HeatCell[][] = [];
     const cur = new Date(start);
     while (cur <= end) {
