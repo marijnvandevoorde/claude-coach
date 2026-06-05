@@ -741,6 +741,10 @@ async function main(): Promise<void> {
   // Unauthenticated liveness check (for compose/Traefik).
   app.get("/healthz", (_req, res) => res.json({ ok: true, service: "coach-app" }));
 
+  // Bare root → the SPA. Kept unauthenticated (it leaks nothing); /app itself is
+  // behind Access.
+  app.get("/", (_req, res) => res.redirect(302, "/app/"));
+
   // JSON API — behind Cloudflare Access.
   // 8mb so a long ride's GPX (thousands of trackpoints) fits the upload-route body.
   app.use("/api", accessMiddleware(), express.json({ limit: "8mb" }), api());
