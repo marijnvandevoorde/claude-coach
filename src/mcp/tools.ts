@@ -214,7 +214,7 @@ export const TOOLS: Record<string, ToolDef> = {
   },
   schedule_workouts: {
     description:
-      "Create + schedule a training plan's workouts directly on Garmin Connect (they sync to the athlete's watch). Defaults to the stored ACTIVE plan, so 'push the plan to Garmin' needs no arguments; or pass `plan` inline / a `file` path. Optional from/to limit the date window. dryRun:true previews payloads without pushing. Returns an explicit {pushed,failed,...} summary.",
+      "Create + schedule a training plan's workouts directly on Garmin Connect (they sync to the athlete's watch). Defaults to the stored ACTIVE plan, so 'push the plan to Garmin' needs no arguments; or pass `plan` inline / a `file` path. Re-pushing OVERRIDES in place (updates each workout) and prunes any it no longer contains; a workout deleted by hand on Garmin is recreated automatically. Optional from/to limit the date window. replace:true forces a clean rebuild (delete each + create fresh). dryRun:true previews payloads without pushing. Returns an explicit {pushed,failed,pruned,...} summary.",
     inputSchema: {
       type: "object",
       properties: {
@@ -225,12 +225,17 @@ export const TOOLS: Record<string, ToolDef> = {
         file: { type: "string", description: "path to a plan JSON file (alternative to plan)" },
         from: { type: "string", description: "only push workouts on/after this date (YYYY-MM-DD)" },
         to: { type: "string", description: "only push workouts on/before this date (YYYY-MM-DD)" },
+        replace: {
+          type: "boolean",
+          description: "delete each existing workout and create it fresh (clean rebuild)",
+        },
         dryRun: { type: "boolean", description: "build payloads only; push nothing" },
       },
     },
     toArgs: (a) => {
       const f = ["garmin-push", ...planSource(a), "--json"];
       if (a.dryRun === true) f.push("--dry-run");
+      if (a.replace === true) f.push("--replace");
       if (typeof a.from === "string") f.push(`--from=${a.from}`);
       if (typeof a.to === "string") f.push(`--to=${a.to}`);
       return f;

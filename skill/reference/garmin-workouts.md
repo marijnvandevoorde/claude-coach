@@ -34,6 +34,10 @@ What it does:
 - **Prunes orphans:** a full push (no `from`/`to` window) deletes any previously-pushed workout for
   the plan that's no longer in it, so dropped/renamed sessions don't linger on the watch. A
   **windowed** push (`--from`/`--to`) never prunes; pass `--no-prune` to opt out entirely.
+- **Self-healing:** if a workout was deleted by hand on Garmin Connect, its cached id is stale and a
+  re-push would PUT a 404 — the push now detects that and **creates a fresh one** instead of failing.
+- **Clean rebuild:** `--replace` (MCP `replace: true`) deletes each existing workout and creates it
+  fresh, for when you want brand-new workouts rather than an in-place update.
 - **Links each pushed workout back to its plan day**, so the web app marks that session "✓ on
   watch". An empty/all-rest window returns an explicit `{pushed:0, reason}` (never a silent no-op).
 
