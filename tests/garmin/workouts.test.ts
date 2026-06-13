@@ -207,4 +207,35 @@ describe("pushWorkouts", () => {
     expect(r2[0].workoutId).toBe(777);
     expect(calls.some((c) => c.startsWith("PUT "))).toBe(true); // second run PUTs, not POSTs
   });
+
+  it("keys the store on input.key so a rename re-pushes in place (no orphan)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("diauth")) return res({ access_token: "a", refresh_token: "r2" });
+        if (url.includes("/workout-service/workouts?")) return res([]);
+        if (url.includes("/workout-service/workout")) return res({ workoutId: 777 });
+        if (url.includes("/workout-service/schedule/")) return res({ workoutScheduleId: 42 });
+        return res(null);
+      })
+    );
+    const db = new Map<string, any>();
+    const store = {
+      lookup: (k: string) => db.get(k),
+      save: (rec: any) => db.set(rec.push_key, rec),
+    };
+    const key = "2026-06-17|run#0";
+
+    // First push under the stable key.
+    await pushWorkouts([{ date: "2026-06-17", key, sport: "run", name: "3x8 tempo" }], { store });
+    expect([...db.keys()]).toEqual([key]); // stored by key, not name
+
+    // Rename the workout but keep the key → updates in place, store stays single-rowed.
+    const r = await pushWorkouts([{ date: "2026-06-17", key, sport: "run", name: "2x12 tempo" }], {
+      store,
+    });
+    expect(r[0].replaced).toBe(true);
+    expect([...db.keys()]).toEqual([key]); // no second row → no orphan
+    expect(db.get(key).name).toBe("2x12 tempo");
+  });
 });

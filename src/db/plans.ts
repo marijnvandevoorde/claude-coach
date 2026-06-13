@@ -26,6 +26,7 @@ function esc(value: string | null | undefined): string {
  * name/title, durationMinutes/durationMin, distanceMeters/distanceKm, primaryZone/intensity.
  */
 interface WorkoutLike {
+  id?: string; // canonical stable id (week1-tue-swim); absent in the flat shape
   date?: string; // present in the flat top-level workouts[] shape
   sport?: string;
   type?: string;
@@ -228,7 +229,7 @@ export function deriveTodaysWorkout(plan: PlanLike, date: string): PlanDay | nul
   return planDays(plan).find((d) => d.date === date) ?? null;
 }
 
-function toSession(date: string, w: WorkoutLike): PlannedSession {
+function toSession(date: string, w: WorkoutLike, key: string): PlannedSession {
   const n = normalizeWorkout(w);
   return {
     date,
@@ -239,6 +240,7 @@ function toSession(date: string, w: WorkoutLike): PlannedSession {
     distanceMeters: n.distanceMeters,
     primaryZone: n.primaryZone,
     description: n.description ?? n.humanReadable,
+    key,
   };
 }
 
@@ -247,20 +249,60 @@ const isRealWorkout = (w: WorkoutLike): boolean => {
   return sport !== "" && sport !== "rest";
 };
 
+/**
+ * Stable per-day-workout identity, used as the Garmin push dedup key AND the app's
+ * "✓ on watch" join. Survives renaming a session (its title/name is NOT part of the
+ * key), and distinguishes multiple sessions on the same day. Prefers the canonical
+ * workout `id`; otherwise keys on date + sport + the workout's ordinal among
+ * same-sport sessions that day (so two runs on one day get `…|run#0` / `…|run#1`).
+ *
+ * A workout that changes DATE still re-keys (moves are a different plan-day) — those
+ * orphan the old Garmin workout and want a separate prune pass; renames, which caused
+ * the bulk of the duplicate clutter, no longer do.
+ */
+export function workoutKey(date: string, w: WorkoutLike, sportOrdinal: number): string {
+  const id = typeof w.id === "string" ? w.id.trim() : "";
+  if (id) return `${date}|${id}`;
+  const sport = String(w.sport ?? "run");
+  return `${date}|${sport}#${sportOrdinal}`;
+}
+
+export interface KeyedWorkout {
+  date: string;
+  workout: WorkoutLike;
+  key: string;
+}
+
+/** Every non-rest workout in the plan, each tagged with its stable {@link workoutKey}.
+ *  The single source of per-workout keys so the Garmin push side and the app marker
+ *  side compute identical ordinals (same-sport index within the day, in array order). */
+export function keyedPlanWorkouts(plan: PlanLike): KeyedWorkout[] {
+  const out: KeyedWorkout[] = [];
+  for (const day of planDays(plan)) {
+    const sportCount: Record<string, number> = {};
+    for (const w of day.workouts) {
+      const sport = String(w.sport ?? "run");
+      const ord = sportCount[sport] ?? 0;
+      sportCount[sport] = ord + 1; // rest sits in its own bucket → never shifts a real sport's ordinal
+      if (!isRealWorkout(w)) continue;
+      out.push({ date: day.date, workout: w, key: workoutKey(day.date, w, ord) });
+    }
+  }
+  return out;
+}
+
 /** Planned sessions on `date` (rest days dropped). */
 export function sessionsForDate(plan: PlanLike, date: string): PlannedSession[] {
-  const day = deriveTodaysWorkout(plan, date);
-  if (!day) return [];
-  return day.workouts.filter(isRealWorkout).map((w) => toSession(date, w));
+  return keyedPlanWorkouts(plan)
+    .filter((k) => k.date === date)
+    .map((k) => toSession(k.date, k.workout, k.key));
 }
 
 /** Upcoming planned sessions from `fromDate` (inclusive), date-sorted, capped. */
 export function upcomingWorkouts(plan: PlanLike, fromDate: string, limit = 30): PlannedSession[] {
-  const out: PlannedSession[] = [];
-  for (const day of planDays(plan)) {
-    if (day.date < fromDate) continue;
-    for (const w of day.workouts) if (isRealWorkout(w)) out.push(toSession(day.date, w));
-  }
+  const out = keyedPlanWorkouts(plan)
+    .filter((k) => k.date >= fromDate)
+    .map((k) => toSession(k.date, k.workout, k.key));
   out.sort((a, b) => a.date.localeCompare(b.date));
   return out.slice(0, limit);
 }

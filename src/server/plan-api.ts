@@ -2,7 +2,7 @@
  * Plan-shaping helpers for the web app's /api — pure of HTTP/transport so they
  * can be unit-tested directly (coach-app.ts binds a port on import). Each reads
  * the active plan through the shared plans.ts readers and annotates whether a
- * session has been pushed to Garmin (push_key = `${date}|${name}`).
+ * session has been pushed to Garmin (joined on the stable plans.workoutKey).
  */
 import { getActivePlan, sessionsForDate, upcomingWorkouts } from "../db/plans.js";
 import { pushedWorkoutsForPlan } from "../db/garminPush.js";
@@ -11,11 +11,9 @@ import type { PlannedSession, DashboardPlan } from "../shared/api-types.js";
 
 export type { DashboardPlan };
 
-/** Set of `${date}|${name}` keys for a plan's workouts already pushed to Garmin. */
+/** Stable push keys (plans.workoutKey) for a plan's workouts already pushed to Garmin. */
 async function syncedKeySet(planId: string): Promise<Set<string>> {
-  return new Set(
-    (await pushedWorkoutsForPlan(planId)).map((p) => `${p.date ?? ""}|${p.name ?? ""}`)
-  );
+  return new Set((await pushedWorkoutsForPlan(planId)).map((p) => p.push_key));
 }
 
 /** The active plan's sessions for the dashboard — today's plus the next upcoming —
@@ -26,7 +24,7 @@ export async function planForDate(date: string): Promise<DashboardPlan> {
   const synced = await syncedKeySet(plan.meta.id);
   const mark = (s: PlannedSession): PlannedSession => ({
     ...s,
-    syncedToGarmin: synced.has(`${s.date}|${s.name}`),
+    syncedToGarmin: synced.has(s.key ?? ""),
   });
   const today = sessionsForDate(plan, date).map(mark);
   const next = upcomingWorkouts(plan, date, 60).find((s) => s.date > date) ?? null;
@@ -47,7 +45,7 @@ export async function upcomingForApp(
   const synced = await syncedKeySet(plan.meta.id);
   const sessions = upcomingWorkouts(plan, from, 200)
     .filter((s) => s.date <= cutoff)
-    .map((s) => ({ ...s, syncedToGarmin: synced.has(`${s.date}|${s.name}`) }));
+    .map((s) => ({ ...s, syncedToGarmin: synced.has(s.key ?? "") }));
   return { hasActivePlan: true, sessions };
 }
 
@@ -62,7 +60,7 @@ export async function allPlanSessions(): Promise<{
   const synced = await syncedKeySet(plan.meta.id);
   const sessions = upcomingWorkouts(plan, "0000-01-01", 1000).map((s) => ({
     ...s,
-    syncedToGarmin: synced.has(`${s.date}|${s.name}`),
+    syncedToGarmin: synced.has(s.key ?? ""),
   }));
   return { hasActivePlan: true, sessions };
 }

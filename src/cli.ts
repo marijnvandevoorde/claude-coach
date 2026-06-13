@@ -52,6 +52,7 @@ import {
   sessionsForDate,
   upcomingWorkouts,
   planDays,
+  keyedPlanWorkouts,
   normalizeWorkout,
   validatePlan,
   type PlanDay,
@@ -1032,6 +1033,7 @@ async function runExportCalendar(args: ExportCalendarArgs): Promise<void> {
 
 interface GarminWorkoutExport {
   date: string;
+  key: string;
   sport: string;
   type: string;
   name: string;
@@ -1049,29 +1051,25 @@ interface GarminWorkoutExport {
 /** Normalize a plan into per-workout records an agent can feed to the Garmin workout
  *  builders. Goes through planDays/normalizeWorkout so it handles both plan shapes. */
 function planToGarminWorkouts(plan: TrainingPlan): GarminWorkoutExport[] {
-  const out: GarminWorkoutExport[] = [];
-  for (const day of planDays(plan)) {
-    for (const w of day.workouts) {
-      if (!w.sport || w.sport === "rest") continue;
-      const n = normalizeWorkout(w);
-      out.push({
-        date: day.date,
-        sport: n.sport,
-        type: n.type ?? "",
-        name: n.name,
-        durationMinutes: n.durationMinutes,
-        distanceMeters: n.distanceMeters,
-        primaryZone: n.primaryZone,
-        targetHR: n.targetHR,
-        targetPace: n.targetPace,
-        targetPower: n.targetPower,
-        rpe: n.rpe,
-        structure: n.structure,
-        humanReadable: n.humanReadable,
-      });
-    }
-  }
-  return out;
+  return keyedPlanWorkouts(plan).map(({ date, workout, key }) => {
+    const n = normalizeWorkout(workout);
+    return {
+      date,
+      key,
+      sport: n.sport,
+      type: n.type ?? "",
+      name: n.name,
+      durationMinutes: n.durationMinutes,
+      distanceMeters: n.distanceMeters,
+      primaryZone: n.primaryZone,
+      targetHR: n.targetHR,
+      targetPace: n.targetPace,
+      targetPower: n.targetPower,
+      rpe: n.rpe,
+      structure: n.structure,
+      humanReadable: n.humanReadable,
+    };
+  });
 }
 
 async function runExportGarmin(args: ExportGarminArgs): Promise<void> {
@@ -1102,6 +1100,7 @@ async function runGarminPush(args: GarminPushArgs): Promise<void> {
   const to = flagStr(args.flags, "to");
   let inputs: WorkoutInput[] = planToGarminWorkouts(plan).map((w) => ({
     date: w.date,
+    key: w.key,
     sport: w.sport,
     name: w.name,
     durationMinutes: w.durationMinutes,
