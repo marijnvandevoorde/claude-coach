@@ -25,6 +25,8 @@ export interface WorkoutInput {
   date?: string;
   sport: string;
   name: string;
+  /** Stable dedup key (plans.workoutKey). Falls back to date|name when absent. */
+  key?: string;
   durationMinutes?: number;
   distanceMeters?: number;
   targetHR?: { low: number; high: number };
@@ -318,7 +320,8 @@ export async function listWorkouts(client: GarminClient): Promise<WorkoutSummary
   return arr.map((w) => ({ workoutId: w.workoutId, workoutName: w.workoutName }));
 }
 
-/** Stable per plan day-workout key for dedup. */
+/** Fallback dedup key when a caller doesn't supply WorkoutInput.key. Name-based, so
+ *  NOT rename-stable — prefer the plans.workoutKey passed in via input.key. */
 export function pushKey(date: string | undefined, name: string): string {
   return `${date ?? ""}|${name}`;
 }
@@ -390,7 +393,7 @@ export async function pushWorkouts(
   const results: PushResult[] = [];
   for (const input of inputs) {
     try {
-      const key = pushKey(input.date, input.name);
+      const key = input.key ?? pushKey(input.date, input.name);
       const stored = opts.store ? await opts.store.lookup(key) : undefined;
       const existingId = stored?.workout_id ?? byName.get(input.name);
 

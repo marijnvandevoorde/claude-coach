@@ -22,6 +22,8 @@ export interface PlannedSession {
   distanceMeters?: number;
   primaryZone?: string;
   description?: string;
+  /** Stable per-day-workout key (see plans.workoutKey); joins to garmin_pushed_workouts.push_key. */
+  key?: string;
   syncedToGarmin?: boolean;
 }
 
