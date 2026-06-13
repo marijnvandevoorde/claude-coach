@@ -336,11 +336,22 @@ type PushRecord = {
   plan_id?: string | null;
 };
 type StoredWorkout = { workout_id: number; schedule_id: number | null; date: string | null };
+/** A stored push row, as listed for the orphan-prune pass. */
+export type StoredPushRow = {
+  push_key: string;
+  workout_id: number;
+  name: string | null;
+  date: string | null;
+};
 
 /** The store can be sync (test fake) or async (the real coach.db-backed store). */
 export interface PushStore {
   lookup(key: string): StoredWorkout | undefined | Promise<StoredWorkout | undefined>;
   save(rec: PushRecord): void | Promise<void>;
+  /** All rows for a plan — enables the prune pass to find workouts no longer in the plan. */
+  listByPlan?(planId: string): StoredPushRow[] | Promise<StoredPushRow[]>;
+  /** Drop a stored row by key (prune pass). */
+  remove?(key: string): void | Promise<void>;
 }
 
 export async function deleteWorkout(client: GarminClient, workoutId: number): Promise<void> {
@@ -355,6 +366,8 @@ export interface PushResult {
   workoutId?: number;
   scheduleId?: number;
   replaced?: boolean; // updated an existing workout in place rather than creating one
+  pruned?: boolean; // a previously-pushed workout no longer in the plan, deleted from Garmin
+  prunedId?: number; // the Garmin workoutId that was pruned
   error?: string;
 }
 
@@ -362,10 +375,12 @@ export interface PushResult {
  * Create (and, when dated, schedule) each workout. `dryRun` builds payloads only.
  * When a `store` is provided, re-pushes UPDATE the existing workout in place (by
  * stored id, or by matching name as a fallback) instead of creating duplicates.
+ * With `prune` (a full-plan push — caller must not set it for a windowed push), any
+ * previously-pushed workout for the plan that isn't in this push is deleted as an orphan.
  */
 export async function pushWorkouts(
   inputs: WorkoutInput[],
-  opts: { dryRun?: boolean; store?: PushStore; planId?: string } = {}
+  opts: { dryRun?: boolean; store?: PushStore; planId?: string; prune?: boolean } = {}
 ): Promise<PushResult[]> {
   if (opts.dryRun) {
     return inputs.map((i) => ({
@@ -428,6 +443,40 @@ export async function pushWorkouts(
         date: input.date,
         error: e instanceof Error ? e.message : String(e),
       });
+    }
+  }
+
+  // Orphan prune: a full-plan push (no date window) is the complete set, so any
+  // previously-pushed workout for this plan we did NOT just (re)push is stale. Keyed on
+  // workout_id (not push_key) so it's robust across a key-format change: we only delete
+  // ids we didn't touch this run, and only ones we ourselves tracked for this plan.
+  if (opts.prune && opts.store?.listByPlan && opts.planId) {
+    const keptIds = new Set(
+      results.filter((r) => r.workoutId != null).map((r) => r.workoutId as number)
+    );
+    const savedKeys = new Set(inputs.map((i) => i.key ?? pushKey(i.date, i.name)));
+    const deleted = new Set<number>();
+    for (const row of await opts.store.listByPlan(opts.planId)) {
+      if (keptIds.has(row.workout_id)) {
+        // still in the plan — drop only a stale duplicate row (e.g. an old-format key)
+        if (!savedKeys.has(row.push_key)) await opts.store.remove?.(row.push_key);
+        continue;
+      }
+      if (!deleted.has(row.workout_id)) {
+        deleted.add(row.workout_id);
+        try {
+          await deleteWorkout(client, row.workout_id);
+        } catch {
+          /* already gone on Garmin — still drop the row */
+        }
+        results.push({
+          name: row.name ?? "",
+          date: row.date ?? undefined,
+          pruned: true,
+          prunedId: row.workout_id,
+        });
+      }
+      await opts.store.remove?.(row.push_key);
     }
   }
   return results;

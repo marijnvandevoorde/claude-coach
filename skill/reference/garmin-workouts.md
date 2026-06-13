@@ -29,8 +29,11 @@ What it does:
   zones).
 - Creates each workout, then **schedules it on its date** — scheduling is what makes Garmin push
   the session to the wrist on its day.
-- **Idempotent:** re-running after a plan change updates an existing same-name workout for that
-  date (and re-schedules if the date moved) instead of stacking duplicates.
+- **Idempotent:** re-running after a plan change updates the same workout in place (keyed on a
+  rename-stable plan-day identity, so re-wording "3×8" → "2×12" updates rather than duplicates).
+- **Prunes orphans:** a full push (no `from`/`to` window) deletes any previously-pushed workout for
+  the plan that's no longer in it, so dropped/renamed sessions don't linger on the watch. A
+  **windowed** push (`--from`/`--to`) never prunes; pass `--no-prune` to opt out entirely.
 - **Links each pushed workout back to its plan day**, so the web app marks that session "✓ on
   watch". An empty/all-rest window returns an explicit `{pushed:0, reason}` (never a silent no-op).
 

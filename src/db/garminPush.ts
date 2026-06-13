@@ -56,3 +56,8 @@ export async function pushedWorkoutsForPlan(planId: string): Promise<PushedWorko
      FROM garmin_pushed_workouts WHERE plan_id = ${esc(planId)};`
   );
 }
+
+/** Drop a pushed-workout row (used by the orphan-prune pass after a full plan push). */
+export async function deletePushedWorkout(key: string): Promise<void> {
+  await execute(`DELETE FROM garmin_pushed_workouts WHERE push_key = ${esc(key)};`);
+}
