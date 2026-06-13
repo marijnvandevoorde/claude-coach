@@ -60,7 +60,11 @@ npx claude-coach garmin-route <route>.gpx --name="Sunday loop" --type=trail
 - **Intensity:** targets come from the plan — HR (bpm), power (`percent_ftp` × FTP → watts), and
   pace (`targetPace` → m/s). Steps without a resolvable target are left open.
 - **Duration / structure:** time- or distance-based end conditions; interval sets become Garmin
-  repeat groups (warmup / work / recovery / rest / cooldown step types).
+  repeat groups (warmup / work / recovery / rest / cooldown step types). **This only happens if the
+  workout carries a `structure` object** (see "Structured workouts" in `SKILL.md`). A session with
+  intervals described only in `humanReadable`/`description` text but no `structure` collapses to a
+  **single step** on the watch (e.g. "3 × 8 min" → one flat 14 km block). Author `structure` for
+  every multi-effort session, and verify with `--dry-run` that it emits a `RepeatGroupDTO`.
 - **Bike / swim:** structured push currently covers run/walk-style steps best. If a session can't
   be expressed as structured steps, tell the athlete it stays on the calendar/plan only (or create
   it manually in Garmin) — don't silently skip it.

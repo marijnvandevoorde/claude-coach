@@ -589,6 +589,73 @@ Here's the structure:
 }
 ```
 
+#### Structured workouts → the watch (REQUIRED for intervals)
+
+`humanReadable` is prose **for the athlete** — Garmin can't read it. Any session with
+intervals/repeats (threshold, VO₂, cruise intervals, hill/downhill repeats, fartlek with defined
+reps, etc.) **MUST also carry a machine-readable `structure` object**, or `garmin-push` has nothing
+to build a repeat group from and collapses the whole session into a **single time/distance step**
+(e.g. "3 × 8 min" lands as one flat 14 km block on the watch).
+
+A `structure` has optional `warmup[]` / `cooldown[]` and a required `main[]`; an interval block is
+an `interval_set` with `repeats` and its `steps[]` (usually a `work` + a `recovery`). Targets are
+resolved from the plan's `zones` (`hr_zone`, `percent_ftp`, …) or given inline as
+`valueLow`/`valueHigh`. Durations use `{ unit, value }` (`minutes`, `seconds`, `meters`,
+`kilometers`, `miles`, `yards`, `laps`). The exact "3 × 8 min threshold" session that must produce a
+3-rep repeat group:
+
+```json
+{
+  "id": "w3-thu-threshold",
+  "sport": "run",
+  "type": "threshold",
+  "name": "3 x 8 min threshold",
+  "primaryZone": "Zone 4",
+  "durationMinutes": 62,
+  "humanReadable": "WU 12min easy\nMain: 3 x (8min @ threshold / 2min easy)\nCD 10min easy",
+  "structure": {
+    "warmup": [
+      {
+        "type": "warmup",
+        "duration": { "unit": "minutes", "value": 12 },
+        "intensity": { "unit": "hr_zone", "valueLow": 110, "valueHigh": 135 }
+      }
+    ],
+    "main": [
+      {
+        "type": "interval_set",
+        "repeats": 3,
+        "steps": [
+          {
+            "type": "work",
+            "duration": { "unit": "minutes", "value": 8 },
+            "intensity": { "unit": "hr_zone", "valueLow": 155, "valueHigh": 168 }
+          },
+          {
+            "type": "recovery",
+            "duration": { "unit": "minutes", "value": 2 },
+            "intensity": { "unit": "hr_zone", "valueLow": 110, "valueHigh": 130 }
+          }
+        ]
+      }
+    ],
+    "cooldown": [
+      {
+        "type": "cooldown",
+        "duration": { "unit": "minutes", "value": 10 },
+        "intensity": { "unit": "hr_zone", "valueLow": 110, "valueHigh": 130 }
+      }
+    ]
+  }
+}
+```
+
+Steady single-effort sessions (easy Z2 runs, long rides) don't need a `structure` — a
+`durationMinutes`/`distanceMeters` + `targetHR`/`primaryZone` is enough, and a single step is the
+correct result. Add `structure` whenever the session has **more than one distinct effort**. Preview
+with `garmin-push --active --dry-run` and confirm interval sessions show a `RepeatGroupDTO` before
+pushing for real.
+
 ### Step 2: Save the plan to the coach
 
 Persist the plan so it becomes the **active plan** — the single source of truth the web app reads (today's session, "Next up", the Activity screen's Upcoming list) and that Garmin/calendar push operate on. **Always do this for a plan the athlete is keeping** — don't leave it as a loose JSON file the rest of the system can't see.
