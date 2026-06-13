@@ -366,9 +366,15 @@ export interface PushResult {
   workoutId?: number;
   scheduleId?: number;
   replaced?: boolean; // updated an existing workout in place rather than creating one
+  recreated?: boolean; // stored id was gone on Garmin (404) → created a fresh one
   pruned?: boolean; // a previously-pushed workout no longer in the plan, deleted from Garmin
   prunedId?: number; // the Garmin workoutId that was pruned
   error?: string;
+}
+
+/** A PUT to a stored workout id that's been deleted on Garmin comes back 404. */
+function isWorkoutGone(e: unknown): boolean {
+  return e instanceof Error && /\bHTTP 404\b/.test(e.message);
 }
 
 /**
@@ -380,7 +386,13 @@ export interface PushResult {
  */
 export async function pushWorkouts(
   inputs: WorkoutInput[],
-  opts: { dryRun?: boolean; store?: PushStore; planId?: string; prune?: boolean } = {}
+  opts: {
+    dryRun?: boolean;
+    store?: PushStore;
+    planId?: string;
+    prune?: boolean;
+    replace?: boolean;
+  } = {}
 ): Promise<PushResult[]> {
   if (opts.dryRun) {
     return inputs.map((i) => ({
@@ -414,16 +426,36 @@ export async function pushWorkouts(
 
       let workoutId: number;
       let replaced = false;
-      if (existingId) {
-        await updateWorkout(client, existingId, input);
-        workoutId = existingId;
-        replaced = true;
+      let recreated = false;
+      if (existingId && opts.replace) {
+        // Explicit clean rebuild: delete the old workout, create a fresh one.
+        try {
+          await deleteWorkout(client, existingId);
+        } catch (e) {
+          if (!isWorkoutGone(e)) throw e; // already gone is fine
+        }
+        workoutId = await createWorkout(client, input);
+        recreated = true;
+      } else if (existingId) {
+        try {
+          await updateWorkout(client, existingId, input);
+          workoutId = existingId;
+          replaced = true;
+        } catch (e) {
+          if (!isWorkoutGone(e)) throw e;
+          // The stored id was deleted on Garmin (e.g. by hand) → PUT 404s. Self-heal
+          // by creating a fresh workout instead of failing the push. Its old schedule
+          // died with it, so force a reschedule below.
+          workoutId = await createWorkout(client, input);
+          recreated = true;
+        }
       } else {
         workoutId = await createWorkout(client, input);
       }
 
-      // Schedule on the date unless it's already scheduled there.
-      let scheduleId = stored?.schedule_id ?? undefined;
+      // Schedule on the date unless it's already scheduled there. A recreated workout
+      // lost its schedule, so scheduleId is reset to force a fresh schedule.
+      let scheduleId = recreated ? undefined : (stored?.schedule_id ?? undefined);
       if (input.date && !(scheduleId && stored?.date === input.date)) {
         scheduleId = await scheduleWorkout(client, workoutId, input.date);
       }
@@ -436,7 +468,14 @@ export async function pushWorkouts(
         date: input.date ?? null,
         plan_id: opts.planId ?? null,
       });
-      results.push({ name: input.name, date: input.date, workoutId, scheduleId, replaced });
+      results.push({
+        name: input.name,
+        date: input.date,
+        workoutId,
+        scheduleId,
+        replaced,
+        recreated,
+      });
     } catch (e) {
       results.push({
         name: input.name,

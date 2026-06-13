@@ -1140,6 +1140,8 @@ async function runGarminPush(args: GarminPushArgs): Promise<void> {
   // Prune orphans only on a COMPLETE push — never when a date window scopes it to a
   // subset (that would delete everything outside the window). `--no-prune` opts out.
   const prune = !dryRun && !from && !to && !args.flags["no-prune"];
+  // `--replace`: delete each existing workout and create it fresh (clean rebuild).
+  const replace = !dryRun && Boolean(args.flags["replace"]);
 
   let results;
   try {
@@ -1154,7 +1156,7 @@ async function runGarminPush(args: GarminPushArgs): Promise<void> {
         remove: deletePushedWorkout,
       };
     }
-    results = await pushWorkouts(inputs, { dryRun, store, planId: plan.meta?.id, prune });
+    results = await pushWorkouts(inputs, { dryRun, store, planId: plan.meta?.id, prune, replace });
   } catch (e) {
     log.error(`garmin-push: ${e instanceof Error ? e.message : String(e)}`);
     process.exit(1);
@@ -1188,8 +1190,9 @@ async function runGarminPush(args: GarminPushArgs): Promise<void> {
   const pruned = results.filter((r) => r.pruned);
   const failed = results.filter((r) => r.error);
   for (const r of ok) {
+    const how = r.recreated ? " (recreated)" : r.replaced ? " (updated)" : " (new)";
     log.success(
-      `${r.name}${r.date ? ` (${r.date})` : ""} → workout ${r.workoutId}${
+      `${r.name}${r.date ? ` (${r.date})` : ""} → workout ${r.workoutId}${how}${
         r.scheduleId ? `, scheduled` : ""
       }`
     );

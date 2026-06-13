@@ -283,6 +283,77 @@ describe("pushWorkouts", () => {
     expect(db.has("2026-06-17|run#0")).toBe(true); // current row kept
   });
 
+  it("recreates a workout whose stored id was deleted on Garmin (PUT 404 → POST)", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: { method?: string }) => {
+        const method = init?.method ?? "GET";
+        calls.push(`${method} ${url}`);
+        if (url.includes("diauth")) return res({ access_token: "a", refresh_token: "r2" });
+        if (url.includes("/workout-service/workouts?")) return res([]);
+        if (method === "PUT") return res({ message: "not found" }, false, 404); // stored id gone
+        if (url.includes("/workout-service/workout")) return res({ workoutId: 888 }); // POST → new id
+        if (url.includes("/workout-service/schedule/")) return res({ workoutScheduleId: 7 });
+        return res(null);
+      })
+    );
+    const key = "2026-06-17|run#0";
+    const db = new Map<string, any>([
+      [key, { push_key: key, workout_id: 555, schedule_id: 1, date: "2026-06-17" }], // stale id
+    ]);
+    const store = {
+      lookup: (k: string) => db.get(k),
+      save: (rec: any) => db.set(rec.push_key, rec),
+    };
+
+    const r = await pushWorkouts([{ date: "2026-06-17", key, sport: "run", name: "Tempo" }], {
+      store,
+    });
+
+    expect(r[0].error).toBeUndefined(); // did NOT fail on the 404
+    expect(r[0].recreated).toBe(true);
+    expect(r[0].workoutId).toBe(888); // fresh id from POST
+    expect(calls.some((c) => c.startsWith("PUT "))).toBe(true); // tried update first
+    expect(
+      calls.some((c) => c.startsWith("POST ") && c.includes("/workout-service/schedule/"))
+    ).toBe(true); // rescheduled the fresh workout
+    expect(db.get(key).workout_id).toBe(888); // store now points at the new id
+  });
+
+  it("replace deletes the existing workout and creates a fresh one", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: { method?: string }) => {
+        calls.push(`${init?.method ?? "GET"} ${url}`);
+        if (url.includes("diauth")) return res({ access_token: "a", refresh_token: "r2" });
+        if (url.includes("/workout-service/workouts?")) return res([]);
+        if (url.includes("/workout-service/workout")) return res({ workoutId: 200 });
+        if (url.includes("/workout-service/schedule/")) return res({ workoutScheduleId: 9 });
+        return res(null);
+      })
+    );
+    const key = "2026-06-17|run#0";
+    const db = new Map<string, any>([
+      [key, { push_key: key, workout_id: 100, schedule_id: 1, date: "2026-06-17" }],
+    ]);
+    const store = {
+      lookup: (k: string) => db.get(k),
+      save: (rec: any) => db.set(rec.push_key, rec),
+    };
+
+    const r = await pushWorkouts([{ date: "2026-06-17", key, sport: "run", name: "Tempo" }], {
+      store,
+      replace: true,
+    });
+
+    expect(calls).toContain("DELETE https://connectapi.garmin.com/workout-service/workout/100");
+    expect(r[0].recreated).toBe(true);
+    expect(r[0].replaced).toBeFalsy();
+    expect(r[0].workoutId).toBe(200);
+  });
+
   it("prune tolerates a 404 (workout already gone on Garmin) and still drops the row", async () => {
     vi.stubGlobal(
       "fetch",
