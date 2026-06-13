@@ -40,7 +40,12 @@ import type { StravaActivity, StravaTokenResponse } from "./strava/types.js";
 import { readFileSync, writeFileSync } from "fs";
 import { getDataSource, type DailySnapshot } from "./datasource/index.js";
 import { pushWorkouts, type WorkoutInput, type PushStore } from "./garmin/workouts.js";
-import { lookupPushedWorkout, savePushedWorkout } from "./db/garminPush.js";
+import {
+  lookupPushedWorkout,
+  savePushedWorkout,
+  pushedWorkoutsForPlan,
+  deletePushedWorkout,
+} from "./db/garminPush.js";
 import {
   savePlan,
   getActivePlan,
@@ -1132,28 +1137,39 @@ async function runGarminPush(args: GarminPushArgs): Promise<void> {
     return;
   }
 
+  // Prune orphans only on a COMPLETE push — never when a date window scopes it to a
+  // subset (that would delete everything outside the window). `--no-prune` opts out.
+  const prune = !dryRun && !from && !to && !args.flags["no-prune"];
+
   let results;
   try {
     // Live pushes use coach.db to dedup (update in place instead of duplicating).
     let store: PushStore | undefined;
     if (!dryRun) {
       await ensureDb();
-      store = { lookup: lookupPushedWorkout, save: savePushedWorkout };
+      store = {
+        lookup: lookupPushedWorkout,
+        save: savePushedWorkout,
+        listByPlan: pushedWorkoutsForPlan,
+        remove: deletePushedWorkout,
+      };
     }
-    results = await pushWorkouts(inputs, { dryRun, store, planId: plan.meta?.id });
+    results = await pushWorkouts(inputs, { dryRun, store, planId: plan.meta?.id, prune });
   } catch (e) {
     log.error(`garmin-push: ${e instanceof Error ? e.message : String(e)}`);
     process.exit(1);
   }
 
   if (args.flags["json"] || dryRun) {
-    const pushed = results.filter((r) => !r.error).length;
+    const pushed = results.filter((r) => !r.error && !r.pruned).length;
     const failed = results.filter((r) => r.error).length;
+    const pruned = results.filter((r) => r.pruned).length;
     console.log(
       JSON.stringify(
         {
           pushed,
           failed,
+          pruned,
           dryRun,
           planId: plan.meta?.id ?? null,
           dateRange: { from: from ?? null, to: to ?? null },
@@ -1168,7 +1184,8 @@ async function runGarminPush(args: GarminPushArgs): Promise<void> {
     return;
   }
 
-  const ok = results.filter((r) => !r.error);
+  const ok = results.filter((r) => !r.error && !r.pruned);
+  const pruned = results.filter((r) => r.pruned);
   const failed = results.filter((r) => r.error);
   for (const r of ok) {
     log.success(
@@ -1177,8 +1194,14 @@ async function runGarminPush(args: GarminPushArgs): Promise<void> {
       }`
     );
   }
+  for (const r of pruned)
+    log.info(`pruned ${r.name || "workout"} (#${r.prunedId}) — no longer in the plan`);
   for (const r of failed) log.error(`${r.name}: ${r.error}`);
-  log.info(`Pushed ${ok.length}/${results.length} workout(s) to Garmin.`);
+  log.info(
+    `Pushed ${ok.length}/${ok.length + failed.length} workout(s) to Garmin${
+      pruned.length ? `, pruned ${pruned.length} orphan(s)` : ""
+    }.`
+  );
 }
 
 async function runGarminRoute(args: GarminRouteArgs): Promise<void> {

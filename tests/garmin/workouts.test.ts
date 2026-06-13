@@ -238,4 +238,84 @@ describe("pushWorkouts", () => {
     expect([...db.keys()]).toEqual([key]); // no second row → no orphan
     expect(db.get(key).name).toBe("2x12 tempo");
   });
+
+  it("prune deletes a previously-pushed workout no longer in the plan", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: { method?: string }) => {
+        calls.push(`${init?.method ?? "GET"} ${url}`);
+        if (url.includes("diauth")) return res({ access_token: "a", refresh_token: "r2" });
+        if (url.includes("/workout-service/workouts?")) return res([]);
+        if (url.includes("/workout-service/workout")) return res({ workoutId: 100 });
+        if (url.includes("/workout-service/schedule/")) return res({ workoutScheduleId: 9 });
+        return res(null);
+      })
+    );
+    // Store already holds two rows for the plan: one we'll re-push (id 100), and a
+    // stale one (id 555) that the new plan no longer contains.
+    const db = new Map<string, any>([
+      [
+        "2026-06-17|run#0",
+        { push_key: "2026-06-17|run#0", workout_id: 100, name: "Tempo", date: "2026-06-17" },
+      ],
+      [
+        "2026-06-10|run#0",
+        { push_key: "2026-06-10|run#0", workout_id: 555, name: "Old", date: "2026-06-10" },
+      ],
+    ]);
+    const store = {
+      lookup: (k: string) => db.get(k),
+      save: (rec: any) => db.set(rec.push_key, rec),
+      listByPlan: () => [...db.values()],
+      remove: (k: string) => void db.delete(k),
+    };
+
+    const r = await pushWorkouts(
+      [{ date: "2026-06-17", key: "2026-06-17|run#0", sport: "run", name: "Tempo" }],
+      { store, planId: "p1", prune: true }
+    );
+
+    const pruned = r.find((x) => x.pruned);
+    expect(pruned?.prunedId).toBe(555);
+    expect(calls).toContain("DELETE https://connectapi.garmin.com/workout-service/workout/555");
+    expect(db.has("2026-06-10|run#0")).toBe(false); // orphan row dropped
+    expect(db.has("2026-06-17|run#0")).toBe(true); // current row kept
+  });
+
+  it("prune tolerates a 404 (workout already gone on Garmin) and still drops the row", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init?: { method?: string }) => {
+        if (url.includes("diauth")) return res({ access_token: "a", refresh_token: "r2" });
+        if (url.includes("/workout-service/workouts?")) return res([]);
+        if (init?.method === "DELETE") return res(null, false, 404); // already deleted
+        if (url.includes("/workout-service/workout")) return res({ workoutId: 100 });
+        if (url.includes("/workout-service/schedule/")) return res({ workoutScheduleId: 9 });
+        return res(null);
+      })
+    );
+    const db = new Map<string, any>([
+      [
+        "2026-06-17|run#0",
+        { push_key: "2026-06-17|run#0", workout_id: 100, name: "Tempo", date: "2026-06-17" },
+      ],
+      [
+        "2026-06-01|run#0",
+        { push_key: "2026-06-01|run#0", workout_id: 999, name: "Gone", date: "2026-06-01" },
+      ],
+    ]);
+    const store = {
+      lookup: (k: string) => db.get(k),
+      save: (rec: any) => db.set(rec.push_key, rec),
+      listByPlan: () => [...db.values()],
+      remove: (k: string) => void db.delete(k),
+    };
+    const r = await pushWorkouts(
+      [{ date: "2026-06-17", key: "2026-06-17|run#0", sport: "run", name: "Tempo" }],
+      { store, planId: "p1", prune: true }
+    );
+    expect(r.find((x) => x.pruned)?.prunedId).toBe(999);
+    expect(db.has("2026-06-01|run#0")).toBe(false); // row dropped despite the 404
+  });
 });
