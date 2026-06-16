@@ -125,17 +125,16 @@ Claude will use this information to create a plan tailored to your current fitne
 
 ## Push notifications (optional)
 
-Claude Coach can send reminders (hydration, bedtime, recovery) as push notifications. Delivery is handled by a small, dependency-free `notify` command that picks the best available channel:
+Claude Coach can send reminders (hydration, bedtime, recovery) as push notifications. Two **independent** channels fan out together — a reminder counts as delivered if either reaches you:
 
-- **Webhook (recommended)** — POSTs `{ "title", "message" }` JSON to a URL you configure. This works great with a **Home Assistant** webhook: HA receives the POST and fires `notify.mobile_app_*` to your phone (the same pattern as UptimeRobot). No extra app to install if you already use Home Assistant.
-- **macOS** — native notification banner (falls back to this on a Mac when no webhook is set).
-- **stdout** — prints the reminder (last-resort fallback, so reminders never silently fail).
+- **PWA web push (recommended)** — direct push to the installed web app, no third party. Set the `COACH_VAPID_PUBLIC_KEY` / `COACH_VAPID_PRIVATE_KEY` / `COACH_VAPID_SUBJECT` env vars (generate a pair once with `npx web-push generate-vapid-keys`), then subscribe once from the app's Notifications card. Works on Android/desktop and installed iOS PWAs.
+- **Webhook (optional)** — POSTs `{ "title", "message" }` JSON to a URL, e.g. a **Home Assistant** webhook that fires `notify.mobile_app_*`. Useful if you already live in HA. On a Mac with no webhook set, the `notify` command falls back to a native banner; otherwise to stdout, so reminders never silently fail.
 
 ```bash
-# Point it at your Home Assistant webhook (stored locally in coach.db)
+# Optional webhook (stored in the DB; or set COACH_NOTIFY_WEBHOOK_URL)
 npx claude-coach config --notify-webhook=https://homeassistant.local/api/webhook/your-id
 
-# Send one
+# Send a test
 npx claude-coach notify "Time to hydrate 💧"
 ```
 
@@ -152,7 +151,20 @@ action:
       message: "{{ trigger.json.message }}"
 ```
 
-You can override config per-call with `--url=`, `--channel=` (`webhook`/`macos`/`stdout`), or the `COACH_NOTIFY_WEBHOOK_URL` / `COACH_NOTIFY_CHANNEL` environment variables.
+**Config precedence:** the `COACH_NOTIFY_CHANNEL` / `COACH_NOTIFY_WEBHOOK_URL` environment variables **override** the stored config — so to turn the webhook off you must clear it wherever it's set (the env/`.env` first, then `npx claude-coach config --notify-channel=auto --notify-webhook=""`). PWA web push is unaffected by these — it's gated only on the VAPID keys. You can also override per-call with `--url=` / `--channel=` (`webhook`/`macos`/`stdout`).
+
+## Push workouts to your watch (optional)
+
+Once a plan is saved, Claude can create your sessions as **structured workouts on Garmin Connect** (they sync to the watch) — natively, no separate Garmin MCP:
+
+```bash
+npx claude-coach garmin-push --active --dry-run   # preview the payloads
+npx claude-coach garmin-push --active             # create + schedule on Garmin
+```
+
+- **Structured** — interval sessions (e.g. `3 × 8 min @ threshold`) become real Garmin repeat groups with warmup/work/recovery/cooldown steps and HR/pace/power targets, as long as the plan workout carries a `structure` object.
+- **Idempotent override** — re-pushing updates each workout in place (keyed on a rename-stable plan-day identity, so re-wording a session doesn't duplicate it) and **prunes** any it no longer contains. A workout you delete by hand on Garmin is **recreated** automatically on the next push. Pass `--replace` (MCP `replace: true`) to force a clean delete-and-recreate.
+- **Windowed** — `--from`/`--to` push just a date range (and never prune outside it).
 
 # Documentation
 
