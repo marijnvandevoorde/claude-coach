@@ -100,9 +100,10 @@ describe("training goals data layer", () => {
     expect(goals.weeksToGoal({ event_date: "2026-01-01" }, "2026-06-22")).toBeLessThan(0);
   });
 
-  it("raceEFD = distance + ascent/k (default k=100); null without distance", () => {
+  it("raceEFD = distance + (D+/100)·k (default k=1.0); null without distance", () => {
     expect(goals.raceEFD({ distance_km: 45, elevation_gain_m: 1450 })).toBe(59.5);
-    expect(goals.raceEFD({ distance_km: 45, elevation_gain_m: 1450 }, 80)).toBe(63.1);
+    // k is the technical surcharge: 45 + 14.5·1.2 = 62.4
+    expect(goals.raceEFD({ distance_km: 45, elevation_gain_m: 1450 }, 1.2)).toBe(62.4);
     expect(goals.raceEFD({ distance_km: 10, elevation_gain_m: null })).toBe(10);
     expect(goals.raceEFD({ distance_km: null, elevation_gain_m: 500 })).toBeNull();
   });

@@ -170,6 +170,23 @@ export interface WeekSummary {
   };
 }
 
+/**
+ * The periodizer's per-week load envelope (trail mode). Code owns these numbers;
+ * the LLM fills each day's workout to hit them, and planAudit checks fidelity.
+ * Optional so legacy/road plans without an envelope still read.
+ */
+export interface WeekEnvelope {
+  targetEFD: number; // equivalent flat distance for the week (km)
+  targetDPlus: number; // weekly vertical gain (m) — its own axis
+  efdLow: number; // accepted EFD band the fill must land within
+  efdHigh: number;
+  dPlusLow: number;
+  dPlusHigh: number;
+  longRunEFD: number; // the week's long-run anchor (EFD km)
+  easyPct: number; // intensity distribution target (share of easy volume)
+  qualityPct: number;
+}
+
 export interface TrainingWeek {
   weekNumber: number;
   startDate: string; // ISO date
@@ -180,6 +197,8 @@ export interface TrainingWeek {
   days: TrainingDay[];
   summary: WeekSummary;
   isRecoveryWeek: boolean;
+  /** Periodizer-emitted load envelope (trail mode); absent on legacy/road plans. */
+  envelope?: WeekEnvelope;
 }
 
 // ============================================================================

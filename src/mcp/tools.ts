@@ -242,6 +242,20 @@ export const TOOLS: Record<string, ToolDef> = {
     },
     stdin: (a) => (typeof a.plan === "string" ? a.plan : undefined),
   },
+  generate_plan: {
+    description:
+      "Generate a ramp-safe, goal-anchored plan SKELETON from the stored A-race goal + availability + the athlete's measured fitness. Returns dated weeks each carrying a load ENVELOPE (target/low/high EFD + D+, long-run EFD, easy/quality split, day slots, phase, deloads, taper) — code owns these numbers. You then FILL each day's actual workout to hit the week's envelope and call save_plan. Requires a goal (distance+vert+date) and availability set first (see athlete_info). Pass from:'YYYY-MM-DD' to re-periodize the remaining weeks from that date with current fitness.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        from: {
+          type: "string",
+          description: "re-periodize from this date (YYYY-MM-DD); omit to plan from today",
+        },
+      },
+    },
+    toArgs: (a) => ["plan", "generate", "--json", ...flags(a, ["from"])],
+  },
   save_plan: {
     description:
       "Save (create or update) a training plan and make it the ACTIVE plan — the one the app shows and Garmin/calendar push use. Pass the full TrainingPlan JSON inline as `plan`; it's keyed by meta.id, so re-saving the same id updates it in place.",
