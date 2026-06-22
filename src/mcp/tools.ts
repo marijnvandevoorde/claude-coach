@@ -404,4 +404,121 @@ export const TOOLS: Record<string, ToolDef> = {
     },
     toArgs: (a) => ["notify", String(a.message), ...flags(a, ["title"])],
   },
+  athlete_info: {
+    description:
+      "READ THIS FIRST before building or adjusting any training plan. One call returns everything the coach knows about the athlete: the primary A-race goal (enriched with weeksToGoal, raceEFD, trailMode), all goals, training availability (days/weekly hours/long day), an explicit `missing[]` of facts still needed (e.g. 'goal', 'availability.days', 'goal.elevation_gain_m'), a `ready` flag (true once a goal-anchored plan can be built), and `hints` on what to ask. NOTHING about a race is hardcoded — if a goal or availability is missing, ask the athlete and persist via set_goal / set_availability.",
+    inputSchema: { type: "object", properties: {} },
+    toArgs: () => ["athlete-info"],
+  },
+  get_goal: {
+    description:
+      "Get a training goal as JSON (enriched with weeksToGoal, raceEFD, trailMode). Omit `id` to get the primary A-race (the active priority-A goal with the nearest event date). Returns null if none is set.",
+    inputSchema: {
+      type: "object",
+      properties: { id: { type: "string", description: "goal id (default: the primary A-race)" } },
+    },
+    toArgs: (a) =>
+      typeof a.id === "string"
+        ? ["goal", "get", String(a.id), "--json"]
+        : ["goal", "get", "--json"],
+  },
+  list_goals: {
+    description:
+      "List all training goals (★ marks the primary A-race). Optional status filter (active|completed|abandoned).",
+    inputSchema: {
+      type: "object",
+      properties: { status: { type: "string", enum: ["active", "completed", "abandoned"] } },
+    },
+    toArgs: (a) => ["goal", "list", "--json", ...flags(a, ["status"])],
+  },
+  set_goal: {
+    description:
+      "Create or update a durable training goal in the coach backend (the system reads it from here — no race is hardcoded). Keyed by `id`; omit `id` and it's derived from name + event month. priority A = the race the plan peaks for (one A-race at a time). target_time is optional and never blocks plan generation. Required to be useful: name, date, distance_km; add vert_m for trail/ultra.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string", description: "stable id (default: slug of name + event month)" },
+        name: { type: "string", description: "event name, e.g. 'Trail des Hautes Fagnes'" },
+        date: { type: "string", description: "event date YYYY-MM-DD" },
+        type: { type: "string", description: "trail | ultra | marathon | road | triathlon | …" },
+        distanceKm: { type: "number", description: "race distance in km" },
+        vertM: { type: "number", description: "total ascent (D+) in metres" },
+        terrain: { type: "string", description: "technical | runnable | mixed | road | …" },
+        priority: {
+          type: "string",
+          enum: ["A", "B", "C"],
+          description: "A = the goal the block peaks for",
+        },
+        goalType: {
+          type: "string",
+          enum: ["finish", "finish-strong", "target-time", "place"],
+          description: "what success means (drives plan aggressiveness/taper)",
+        },
+        target: { type: "string", description: "optional target time 'H:MM:SS'" },
+        targetNotes: { type: "string", description: "optional free target, e.g. 'top 20%'" },
+        status: { type: "string", enum: ["active", "completed", "abandoned"] },
+        terrainNotes: { type: "string", description: "course notes (cutoffs, surface, climbs)" },
+        notes: { type: "string" },
+      },
+    },
+    toArgs: (a) => {
+      const out = ["goal", "set", "--json"];
+      if (typeof a.id === "string") out.push(`--id=${a.id}`);
+      if (typeof a.name === "string") out.push(`--name=${a.name}`);
+      if (typeof a.date === "string") out.push(`--date=${a.date}`);
+      if (typeof a.type === "string") out.push(`--type=${a.type}`);
+      if (a.distanceKm !== undefined && a.distanceKm !== null)
+        out.push(`--distance-km=${a.distanceKm}`);
+      if (a.vertM !== undefined && a.vertM !== null) out.push(`--vert-m=${a.vertM}`);
+      if (typeof a.terrain === "string") out.push(`--terrain=${a.terrain}`);
+      if (typeof a.priority === "string") out.push(`--priority=${a.priority}`);
+      if (typeof a.goalType === "string") out.push(`--goal-type=${a.goalType}`);
+      if (typeof a.target === "string") out.push(`--target=${a.target}`);
+      if (typeof a.targetNotes === "string") out.push(`--target-notes=${a.targetNotes}`);
+      if (typeof a.status === "string") out.push(`--status=${a.status}`);
+      if (typeof a.terrainNotes === "string") out.push(`--terrain-notes=${a.terrainNotes}`);
+      if (typeof a.notes === "string") out.push(`--notes=${a.notes}`);
+      return out;
+    },
+  },
+  delete_goal: {
+    description: "Delete a training goal by id.",
+    inputSchema: { type: "object", required: ["id"], properties: { id: { type: "string" } } },
+    toArgs: (a) => ["goal", "delete", String(a.id), "--json"],
+  },
+  get_availability: {
+    description:
+      "Get the athlete's durable training availability: days of week, weekly-hours budget, long-run day, doubles. The periodizer builds the schedule around this.",
+    inputSchema: { type: "object", properties: {} },
+    toArgs: () => ["availability", "get", "--json"],
+  },
+  set_availability: {
+    description:
+      "Set the athlete's durable training availability (asked once, remembered). Pass any subset. `days` is a list/CSV like 'tue,thu,sat,sun'. Build it from what the athlete confirms — don't assume.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        days: {
+          type: "string",
+          description: "available training days, CSV or JSON array, e.g. 'tue,thu,sat,sun'",
+        },
+        weeklyHours: { type: "number", description: "target training hours per week" },
+        longDay: { type: "string", description: "day the long run anchors, e.g. 'sat'" },
+        doubles: { type: "boolean", description: "can do AM/PM split sessions" },
+        notes: { type: "string", description: "e.g. 'pool only weekdays', 'no Wed evenings'" },
+      },
+    },
+    toArgs: (a) => {
+      const out = ["availability", "set", "--json"];
+      if (typeof a.days === "string") out.push(`--days=${a.days}`);
+      else if (Array.isArray(a.days)) out.push(`--days=${(a.days as unknown[]).join(",")}`);
+      if (a.weeklyHours !== undefined && a.weeklyHours !== null)
+        out.push(`--weekly-hours=${a.weeklyHours}`);
+      if (typeof a.longDay === "string") out.push(`--long-day=${a.longDay}`);
+      if (a.doubles === true) out.push(`--doubles=true`);
+      if (a.doubles === false) out.push(`--doubles=false`);
+      if (typeof a.notes === "string") out.push(`--notes=${a.notes}`);
+      return out;
+    },
+  },
 };

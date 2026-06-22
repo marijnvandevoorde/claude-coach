@@ -68,6 +68,25 @@ import { GarminClient } from "./garmin/client.js";
 import { fetchActivityTrack, decimate, toCompactTrack } from "./garmin/tracks.js";
 import { fetchActivityStreams, toCompactStreams } from "./garmin/streams.js";
 import { addJournalEntry, listJournalEntries } from "./db/journal.js";
+import {
+  saveGoal,
+  getGoal,
+  getPrimaryGoal,
+  listGoals,
+  deleteGoal,
+  setGoalStatus,
+  weeksToGoal,
+  raceEFD,
+  isTrailGoal,
+  type Goal,
+  type GoalInput,
+} from "./db/goals.js";
+import {
+  getAvailability,
+  updateAvailability,
+  isAvailabilityComplete,
+  type Availability,
+} from "./db/availability.js";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -222,6 +241,24 @@ interface PlanArgs {
   flags: Flags;
 }
 
+interface GoalArgs {
+  command: "goal";
+  sub: string; // set | get | list | delete | show
+  pos?: string; // a goal id (for get/delete)
+  flags: Flags;
+}
+
+interface AvailabilityArgs {
+  command: "availability";
+  sub: string; // get | set
+  flags: Flags;
+}
+
+interface AthleteInfoArgs {
+  command: "athlete-info";
+  flags: Flags;
+}
+
 type CliArgs =
   | SyncArgs
   | RenderArgs
@@ -244,7 +281,10 @@ type CliArgs =
   | JournalArgs
   | SummaryArgs
   | WellnessArgs
-  | PlanArgs;
+  | PlanArgs
+  | GoalArgs
+  | AvailabilityArgs
+  | AthleteInfoArgs;
 
 type Flags = Record<string, string | boolean>;
 
@@ -415,6 +455,23 @@ function parseArgs(): CliArgs {
     return { command: "plan", sub, pos, flags: parseFlags(args.slice(2)) };
   }
 
+  if (args[0] === "goal") {
+    // goal <sub> [<id>] [--flags]. Default sub = show (the primary goal).
+    const sub = args[1] && !args[1].startsWith("--") ? args[1] : "show";
+    const pos = args[2] && !args[2].startsWith("--") ? args[2] : undefined;
+    return { command: "goal", sub, pos, flags: parseFlags(args.slice(2)) };
+  }
+
+  if (args[0] === "availability" || args[0] === "avail") {
+    // availability <sub> [--flags]. Default sub = get.
+    const sub = args[1] && !args[1].startsWith("--") ? args[1] : "get";
+    return { command: "availability", sub, flags: parseFlags(args.slice(2)) };
+  }
+
+  if (args[0] === "athlete-info") {
+    return { command: "athlete-info", flags: parseFlags(args.slice(1)) };
+  }
+
   if (args[0] === "query") {
     if (!args[1]) {
       log.error("query command requires a SQL statement");
@@ -522,6 +579,9 @@ Commands:
   garmin-fetch      Pull live data FROM Garmin Connect (wellness + activities) into coach.db
   garmin-sync       Cache Garmin metrics you already have (readiness, sleep, HRV…) to coach.db
   checkin           Assemble plan + Garmin + wellness into a coaching/reminder payload
+  athlete-info      Consolidated read: primary goal + all goals + availability + what's missing
+  goal <sub>        Durable race goals: set|get|list|delete|complete|show (--name= --date= --distance-km= --vert-m= …)
+  availability <sub>  Training availability: get|set (--days= --weekly-hours= --long-day= --doubles=)
   help              Show this help message
 
 Auth Options (for headless/Claude environments):
@@ -2506,6 +2566,222 @@ async function runPlan(args: PlanArgs): Promise<void> {
   }
 }
 
+/** The `goal` command group — CRUD over durable training goals. */
+async function runGoal(args: GoalArgs): Promise<void> {
+  await ensureDb();
+  const json = Boolean(args.flags["json"]);
+  const f = args.flags;
+
+  switch (args.sub) {
+    case "set": {
+      // Build the goal from flags. Numeric flags parse via flagNum; everything else
+      // is a string. Only provided fields are sent (saveGoal applies defaults).
+      const input: GoalInput = {};
+      if (args.pos) input.id = args.pos;
+      if (flagStr(f, "id")) input.id = flagStr(f, "id");
+      if (flagStr(f, "name")) input.name = flagStr(f, "name");
+      if (flagStr(f, "date")) input.event_date = flagStr(f, "date");
+      if (flagStr(f, "type")) input.event_type = flagStr(f, "type");
+      if (flagNum(f, "distance-km") !== undefined) input.distance_km = flagNum(f, "distance-km");
+      if (flagNum(f, "vert-m") !== undefined) input.elevation_gain_m = flagNum(f, "vert-m");
+      if (flagStr(f, "terrain")) input.terrain = flagStr(f, "terrain");
+      if (flagStr(f, "priority")) input.priority = flagStr(f, "priority")!.toUpperCase();
+      if (flagStr(f, "goal-type")) input.goal_type = flagStr(f, "goal-type");
+      if (flagStr(f, "target")) input.target_time = flagStr(f, "target");
+      if (flagStr(f, "target-notes")) input.target_notes = flagStr(f, "target-notes");
+      if (flagStr(f, "status")) input.status = flagStr(f, "status");
+      if (flagStr(f, "notes")) input.notes = flagStr(f, "notes");
+      if (flagStr(f, "terrain-notes")) input.terrain_notes = flagStr(f, "terrain-notes");
+      if (flagStr(f, "gpx-id")) input.gpx_id = flagStr(f, "gpx-id");
+      if (input.name == null && input.id == null) {
+        log.error("goal set requires --name (or an explicit --id) to derive a goal id");
+        process.exit(1);
+      }
+      const id = await saveGoal(input);
+      const saved = await getGoal(id);
+      if (json) console.log(JSON.stringify({ saved: id, goal: saved }, null, 2));
+      else log.success(`Saved goal ${id} (${saved?.name ?? "—"}, ${saved?.event_date ?? "?"}).`);
+      break;
+    }
+    case "get": {
+      const goal = args.pos ? await getGoal(args.pos) : await getPrimaryGoal();
+      if (!goal) {
+        if (json) console.log(JSON.stringify(null));
+        else log.error(args.pos ? `No goal with id ${args.pos}` : "No active A-race goal set.");
+        if (!json) process.exit(1);
+        break;
+      }
+      console.log(JSON.stringify(json ? enrichGoal(goal) : goal, null, 2));
+      break;
+    }
+    case "list": {
+      const status = flagStr(f, "status");
+      const goals = await listGoals(status ? { status } : {});
+      if (json) {
+        console.log(JSON.stringify(goals.map(enrichGoal), null, 2));
+      } else if (goals.length === 0) {
+        log.info("No goals set yet.");
+      } else {
+        for (const g of goals) {
+          const w = weeksToGoal(g);
+          const star = g.priority === "A" && g.status === "active" ? "★" : " ";
+          log.info(
+            `${star} ${g.id} — ${g.name ?? "—"} (${g.event_date ?? "?"}, ${g.priority}, ${
+              g.status
+            }${w != null ? `, ${w}wk` : ""})`
+          );
+        }
+      }
+      break;
+    }
+    case "delete": {
+      if (!args.pos) {
+        log.error("goal delete requires a goal id");
+        process.exit(1);
+      }
+      await deleteGoal(args.pos);
+      if (json) console.log(JSON.stringify({ deleted: args.pos }, null, 2));
+      else log.success(`Deleted goal ${args.pos}.`);
+      break;
+    }
+    case "complete": {
+      if (!args.pos) {
+        log.error("goal complete requires a goal id");
+        process.exit(1);
+      }
+      await setGoalStatus(args.pos, "completed");
+      if (json) console.log(JSON.stringify({ completed: args.pos }, null, 2));
+      else log.success(`Marked goal ${args.pos} completed.`);
+      break;
+    }
+    case "show": {
+      const goal = await getPrimaryGoal();
+      if (!goal) {
+        if (json) console.log(JSON.stringify(null));
+        else
+          log.info(
+            "No active A-race goal set. Use `goal set --name=… --date=… --distance-km=… --vert-m=…`."
+          );
+        break;
+      }
+      console.log(JSON.stringify(enrichGoal(goal), null, 2));
+      break;
+    }
+    default:
+      log.error(`unknown goal subcommand: ${args.sub} (use set|get|list|delete|complete|show)`);
+      process.exit(1);
+  }
+}
+
+/** Attach the derived coaching numbers a goal read should always carry. */
+function enrichGoal(goal: Goal) {
+  return {
+    ...goal,
+    weeksToGoal: weeksToGoal(goal),
+    raceEFD: raceEFD(goal),
+    trailMode: isTrailGoal(goal),
+  };
+}
+
+/** The `availability` command group — the athlete's durable training availability. */
+async function runAvailability(args: AvailabilityArgs): Promise<void> {
+  await ensureDb();
+  const json = Boolean(args.flags["json"]);
+  const f = args.flags;
+
+  if (args.sub === "set") {
+    const patch: Parameters<typeof updateAvailability>[0] = {};
+    if (flagStr(f, "days") !== undefined) patch.days = flagStr(f, "days");
+    if (flagNum(f, "weekly-hours") !== undefined) patch.weeklyHours = flagNum(f, "weekly-hours");
+    if (flagStr(f, "long-day") !== undefined) patch.longDay = flagStr(f, "long-day");
+    if (f["doubles"] !== undefined)
+      patch.doublesOk = f["doubles"] === true || f["doubles"] === "true";
+    if (flagStr(f, "notes") !== undefined) patch.notes = flagStr(f, "notes");
+    await updateAvailability(patch);
+    const a = await getAvailability();
+    if (json) console.log(JSON.stringify(a, null, 2));
+    else
+      log.success(
+        `Availability: ${a.days.join("/") || "—"}, ${a.weeklyHours ?? "?"}h/wk, long run ${
+          a.longDay ?? "—"
+        }.`
+      );
+    return;
+  }
+
+  // get (default)
+  const a = await getAvailability();
+  if (json) console.log(JSON.stringify(a, null, 2));
+  else
+    log.info(
+      `Availability: days=${a.days.join("/") || "—"} weeklyHours=${a.weeklyHours ?? "—"} longDay=${
+        a.longDay ?? "—"
+      } doubles=${a.doublesOk} complete=${isAvailabilityComplete(a)}`
+    );
+}
+
+/**
+ * The consolidated athlete-context read. ONE call returns everything the coach
+ * knows about the athlete — primary goal (enriched), all goals, availability — plus
+ * an explicit `missing[]` of the facts still needed and a `ready` flag. The skill
+ * calls this first, then asks only for what's missing and persists via set_goal /
+ * set_availability. Nothing about a specific race or schedule is hardcoded.
+ */
+async function buildAthleteInfo(): Promise<{
+  goal: ReturnType<typeof enrichGoal> | null;
+  goals: Goal[];
+  availability: Availability;
+  missing: string[];
+  ready: boolean;
+  hints: string[];
+}> {
+  const primary = await getPrimaryGoal();
+  const goals = await listGoals();
+  const availability = await getAvailability();
+
+  const missing: string[] = [];
+  const hints: string[] = [];
+
+  if (!primary) {
+    missing.push("goal");
+    hints.push(
+      "No A-race goal is set. Ask the athlete for their main race — name, date, distance, and vertical gain — then call set_goal. Don't invent one."
+    );
+  } else {
+    if (!primary.event_date) missing.push("goal.event_date");
+    if (primary.distance_km == null) missing.push("goal.distance_km");
+    if (primary.elevation_gain_m == null && isTrailGoal(primary))
+      missing.push("goal.elevation_gain_m");
+  }
+
+  if (availability.days.length === 0) {
+    missing.push("availability.days");
+    hints.push(
+      "Training days aren't set. Ask which days the athlete can usually train (propose what their history shows, then confirm), and call set_availability."
+    );
+  }
+  if (availability.weeklyHours == null) missing.push("availability.weekly_hours");
+  if (!availability.longDay) missing.push("availability.long_day");
+
+  // Hard gates for building a goal-anchored plan. Vert is required only for trail goals.
+  const hardGates = [
+    "goal",
+    "goal.event_date",
+    "goal.distance_km",
+    "availability.days",
+    "availability.weekly_hours",
+  ];
+  if (primary && isTrailGoal(primary)) hardGates.push("goal.elevation_gain_m");
+  const ready = hardGates.every((g) => !missing.includes(g));
+
+  return { goal: primary ? enrichGoal(primary) : null, goals, availability, missing, ready, hints };
+}
+
+async function runAthleteInfo(_args: AthleteInfoArgs): Promise<void> {
+  await ensureDb();
+  console.log(JSON.stringify(await buildAthleteInfo(), null, 2));
+}
+
 async function main() {
   const args = parseArgs();
 
@@ -2575,6 +2851,15 @@ async function main() {
       break;
     case "plan":
       await runPlan(args);
+      break;
+    case "goal":
+      await runGoal(args);
+      break;
+    case "availability":
+      await runAvailability(args);
+      break;
+    case "athlete-info":
+      await runAthleteInfo(args);
       break;
   }
 }
