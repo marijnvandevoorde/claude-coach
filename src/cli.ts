@@ -89,6 +89,8 @@ import {
 } from "./db/availability.js";
 import { computeFitnessSnapshot, type ActivitySample } from "./lib/fitness.js";
 import { periodize, type PeriodizerGoal } from "./lib/periodizer.js";
+import { computeGoalAnchor } from "./lib/goalAnchor.js";
+import { auditPlan } from "./lib/planAudit.js";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -585,6 +587,8 @@ Commands:
   goal <sub>        Durable race goals: set|get|list|delete|complete|show (--name= --date= --distance-km= --vert-m= …)
   availability <sub>  Training availability: get|set (--days= --weekly-hours= --long-day= --doubles=)
   plan generate     Periodize a ramp-safe skeleton from the goal + availability + fitness (--from= to re-periodize)
+  plan anchor       Goal anchor for the active plan (weeks to race, on-track/behind/ahead/orphaned/stale)
+  plan audit        Coaching-soundness audit (ramp/taper/deload/long-run anchor/orphan goal)
   help              Show this help message
 
 Auth Options (for headless/Claude environments):
@@ -2472,15 +2476,51 @@ async function runPlan(args: PlanArgs): Promise<void> {
         log.error(`plan save rejected:\n- ${v.errors.join("\n- ")}`);
         process.exit(1);
       }
+      // Coaching-soundness audit (T8). Advisory by default — structural validity
+      // already gated the save; here we surface ramp/taper/anchor/orphan findings
+      // so the agent can heal them. `--strict` refuses a save with error findings.
+      const audit = await auditActivePlan(plan);
+      const strict = Boolean(args.flags["strict"]);
+      if (strict && !audit.ok) {
+        log.error(
+          `plan save refused (--strict): coaching-soundness errors:\n- ${audit.findings
+            .filter((f) => f.level === "error")
+            .map((f) => f.message)
+            .join("\n- ")}`
+        );
+        process.exit(1);
+      }
       await savePlan(plan);
       if (json) {
         console.log(
-          JSON.stringify({ saved: plan.meta.id, active: true, warnings: v.warnings }, null, 2)
+          JSON.stringify(
+            { saved: plan.meta.id, active: true, warnings: v.warnings, audit },
+            null,
+            2
+          )
         );
       } else {
         log.success(`Saved plan ${plan.meta.id} (${plan.meta.event ?? "—"}) and set it active.`);
         for (const w of v.warnings) log.warn(w);
+        for (const f of audit.findings) (f.level === "error" ? log.error : log.warn)(f.message);
       }
+      break;
+    }
+    case "anchor": {
+      const plan = args.pos ? await getPlan(args.pos) : await getActivePlan();
+      const goal = await resolveGoalForPlan(plan);
+      const anchor = computeGoalAnchor(plan, goal, flagStr(args.flags, "date"));
+      console.log(JSON.stringify(anchor, null, 2));
+      break;
+    }
+    case "audit": {
+      const plan = args.pos ? await getPlan(args.pos) : await getActivePlan();
+      if (!plan) {
+        log.error(args.pos ? `No plan with id ${args.pos}` : "No active plan to audit.");
+        process.exit(1);
+        break;
+      }
+      console.log(JSON.stringify(await auditActivePlan(plan), null, 2));
       break;
     }
     case "list": {
@@ -2567,7 +2607,7 @@ async function runPlan(args: PlanArgs): Promise<void> {
     }
     default:
       log.error(
-        `unknown plan subcommand: ${args.sub} (use generate|save|list|get|activate|delete|show-today|upcoming)`
+        `unknown plan subcommand: ${args.sub} (use generate|save|anchor|audit|list|get|activate|delete|show-today|upcoming)`
       );
       process.exit(1);
   }
@@ -2593,6 +2633,25 @@ async function loadFitnessSnapshot(asOf?: string) {
     movingMin: (Number(r.moving_time) || 0) / 60,
   }));
   return computeFitnessSnapshot(samples, asOf);
+}
+
+/** Resolve the goal a plan is anchored to: its meta.goalId if set (null when that
+ *  id no longer resolves — an orphan), else the current primary A-race. */
+async function resolveGoalForPlan(plan: TrainingPlan | null): Promise<Goal | null> {
+  const gid = (plan?.meta as { goalId?: string } | undefined)?.goalId;
+  if (typeof gid === "string" && gid) return await getGoal(gid);
+  return await getPrimaryGoal();
+}
+
+/** Run the coaching-soundness audit, resolving the plan's goal + the athlete's
+ *  foundation (from fitness) so the ramp-cap + long-run-anchor checks have context. */
+async function auditActivePlan(plan: TrainingPlan) {
+  const goal = await resolveGoalForPlan(plan);
+  const fitness = await loadFitnessSnapshot();
+  return auditPlan(plan as unknown as Parameters<typeof auditPlan>[0], {
+    goal: goal ?? null,
+    foundation: fitness.foundation,
+  });
 }
 
 /**

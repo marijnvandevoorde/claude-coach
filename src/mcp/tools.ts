@@ -256,6 +256,33 @@ export const TOOLS: Record<string, ToolDef> = {
     },
     toArgs: (a) => ["plan", "generate", "--json", ...flags(a, ["from"])],
   },
+  goal_anchor: {
+    description:
+      "The goal anchor for the active plan (or a given plan id): weeks to the race, which plan week we're in, peak long run vs race EFD, and a status — on-track | behind | ahead | orphaned (goal deleted) | stale (goal edited after the plan was built). Read it before adjusting a plan so the schedule never silently drifts off the goal.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        id: { type: "string", description: "plan id (default: the active plan)" },
+        date: { type: "string", description: "as-of date YYYY-MM-DD (default today)" },
+      },
+    },
+    toArgs: (a) =>
+      typeof a.id === "string"
+        ? ["plan", "anchor", String(a.id), ...flags(a, ["date"])]
+        : ["plan", "anchor", ...flags(a, ["date"])],
+  },
+  audit_plan: {
+    description:
+      "Audit a plan for coaching soundness (the active plan, or a given id): ramp-cap spikes, missing taper, missing deloads, long-run anchor vs 70–80% race EFD, too-much-quality, and an orphaned goal. Returns {ok, findings[], checked}. save_plan runs this automatically; call it directly to check a draft before saving.",
+    inputSchema: {
+      type: "object",
+      properties: { id: { type: "string", description: "plan id (default: the active plan)" } },
+    },
+    toArgs: (a) =>
+      typeof a.id === "string"
+        ? ["plan", "audit", String(a.id), "--json"]
+        : ["plan", "audit", "--json"],
+  },
   save_plan: {
     description:
       "Save (create or update) a training plan and make it the ACTIVE plan — the one the app shows and Garmin/calendar push use. Pass the full TrainingPlan JSON inline as `plan`; it's keyed by meta.id, so re-saving the same id updates it in place.",

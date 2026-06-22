@@ -377,6 +377,10 @@ export interface TrainingPlan {
     updatedAt: string;
     totalWeeks: number;
     generatedBy: string; // "Claude Coach"
+    /** Binds the plan to the durable goal it was built toward (T9). Optional so
+     *  legacy/hand-authored plans still validate; goalAnchor/planAudit use it to
+     *  detect an orphaned (goal deleted) or stale (goal edited after) plan. */
+    goalId?: string;
   };
   preferences: UnitPreferences;
   assessment: AthleteAssessment;
