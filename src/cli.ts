@@ -87,6 +87,8 @@ import {
   isAvailabilityComplete,
   type Availability,
 } from "./db/availability.js";
+import { computeFitnessSnapshot, type ActivitySample } from "./lib/fitness.js";
+import { periodize, type PeriodizerGoal } from "./lib/periodizer.js";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -582,6 +584,7 @@ Commands:
   athlete-info      Consolidated read: primary goal + all goals + availability + what's missing
   goal <sub>        Durable race goals: set|get|list|delete|complete|show (--name= --date= --distance-km= --vert-m= …)
   availability <sub>  Training availability: get|set (--days= --weekly-hours= --long-day= --doubles=)
+  plan generate     Periodize a ramp-safe skeleton from the goal + availability + fitness (--from= to re-periodize)
   help              Show this help message
 
 Auth Options (for headless/Claude environments):
@@ -2558,12 +2561,98 @@ async function runPlan(args: PlanArgs): Promise<void> {
       console.log(JSON.stringify({ from, days, hasActivePlan: !!plan, sessions }, null, 2));
       break;
     }
+    case "generate": {
+      await runPlanGenerate(args);
+      break;
+    }
     default:
       log.error(
-        `unknown plan subcommand: ${args.sub} (use save|list|get|activate|delete|show-today|upcoming)`
+        `unknown plan subcommand: ${args.sub} (use generate|save|list|get|activate|delete|show-today|upcoming)`
       );
       process.exit(1);
   }
+}
+
+/** Pull recent run activities and roll them up into a fitness snapshot. */
+async function loadFitnessSnapshot(asOf?: string) {
+  const rows = await queryJson<{
+    start_date: string | null;
+    sport_type: string | null;
+    distance: number | null;
+    total_elevation_gain: number | null;
+    moving_time: number | null;
+  }>(
+    `SELECT start_date, sport_type, distance, total_elevation_gain, moving_time
+     FROM activities WHERE start_date IS NOT NULL ORDER BY start_date DESC LIMIT 400;`
+  );
+  const samples: ActivitySample[] = rows.map((r) => ({
+    date: String(r.start_date ?? "").slice(0, 10),
+    sport: r.sport_type ?? "",
+    distanceKm: (Number(r.distance) || 0) / 1000,
+    dPlusM: Number(r.total_elevation_gain) || 0,
+    movingMin: (Number(r.moving_time) || 0) / 60,
+  }));
+  return computeFitnessSnapshot(samples, asOf);
+}
+
+/**
+ * `plan generate` — load the goal + availability + measured fitness, periodize a
+ * ramp-safe skeleton, and print it as JSON. The LLM then FILLS each day's workout
+ * to hit the week envelope and calls `plan save`. Re-periodize the remainder with
+ * `--from=<date>` (the skeleton is rebuilt from that week using current fitness).
+ */
+async function runPlanGenerate(args: PlanArgs): Promise<void> {
+  // `plan generate` always emits structured JSON — it's a skeleton generator.
+  const asOf = flagStr(args.flags, "asof") ?? flagStr(args.flags, "from");
+
+  const goal = await getPrimaryGoal(asOf);
+  if (!goal) {
+    log.error(
+      "No active A-race goal set. Set one first (goal set / mcp__coach__set_goal) — the plan is built toward it."
+    );
+    process.exit(1);
+    return;
+  }
+  const missing: string[] = [];
+  if (!goal.event_date) missing.push("event date");
+  if (goal.distance_km == null) missing.push("distance (--distance-km)");
+  if (goal.elevation_gain_m == null && isTrailGoal(goal)) missing.push("vertical gain (--vert-m)");
+  if (missing.length) {
+    log.error(
+      `Goal "${goal.name ?? goal.id}" is missing: ${missing.join(", ")}. Update it, then regenerate.`
+    );
+    process.exit(1);
+    return;
+  }
+
+  const availability = await getAvailability();
+  if (!isAvailabilityComplete(availability)) {
+    log.error(
+      "Availability isn't set (need training days + weekly hours). Run `availability set` / mcp__coach__set_availability first."
+    );
+    process.exit(1);
+    return;
+  }
+
+  const fitness = await loadFitnessSnapshot(asOf);
+  const pGoal: PeriodizerGoal = {
+    id: goal.id,
+    name: goal.name ?? undefined,
+    eventDate: goal.event_date!,
+    distanceKm: Number(goal.distance_km),
+    dPlusM: Number(goal.elevation_gain_m ?? 0),
+    eventType: goal.event_type ?? undefined,
+  };
+
+  let skeleton;
+  try {
+    skeleton = periodize({ goal: pGoal, fitness, availability, asOf });
+  } catch (e) {
+    log.error((e as Error).message);
+    process.exit(1);
+    return;
+  }
+  console.log(JSON.stringify(skeleton, null, 2));
 }
 
 /** The `goal` command group — CRUD over durable training goals. */

@@ -10,6 +10,7 @@
 import { execute, queryJson } from "./client.js";
 import { getDialect } from "./dialect.js";
 import { localDate } from "./wellness.js";
+import { efd as computeEFD } from "../lib/loadModel.js";
 
 function esc(value: string | null | undefined): string {
   if (value == null) return "NULL";
@@ -171,19 +172,17 @@ export function weeksToGoal(goal: Pick<Goal, "event_date">, fromDate?: string): 
 }
 
 /**
- * Equivalent Flat Distance (km) for the race: distance + ascent/k, where k metres
- * of climb ≈ 1 km of flat running (default k=100, the trail.md heuristic). This is
- * the volume currency trail mode periodizes in; the long run anchors to 70–80% of
- * it. Null when distance is unknown.
+ * Equivalent Flat Distance (km) for the race — the volume currency trail mode
+ * periodizes in (the long run anchors to 70–80% of it). Delegates to the canonical
+ * `loadModel.efd` (= distance + (D+/100)·k, default k=1.0 — see trail.md). `k` is
+ * the optional technical surcharge. Null when distance is unknown.
  */
 export function raceEFD(
   goal: Pick<Goal, "distance_km" | "elevation_gain_m">,
-  k = 100
+  k = 1.0
 ): number | null {
   if (goal.distance_km == null || !Number.isFinite(goal.distance_km)) return null;
-  const vert = Number(goal.elevation_gain_m ?? 0);
-  const efd = Number(goal.distance_km) + (Number.isFinite(vert) ? vert : 0) / k;
-  return Math.round(efd * 10) / 10;
+  return computeEFD(Number(goal.distance_km), Number(goal.elevation_gain_m ?? 0), k);
 }
 
 /** Is this a trail/ultra goal (activates EFD/vert trail mode)? Keys off type, then
