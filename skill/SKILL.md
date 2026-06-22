@@ -16,6 +16,39 @@ Before creating a training plan, you need to understand the athlete's current fi
 
 They're complementary. Garmin is optional but strongly preferred for recovery-aware coaching; you still need an activity-history source (Strava or manual) to build the plan.
 
+### Step 0: Resolve the goal & availability (DO THIS FIRST — it's a hard guard)
+
+**Before building, showing, or adjusting any training schedule, read the athlete's stored context.** The race goal and training availability are **never hardcoded** — they live in the coach backend and are read/written via MCP. Make ONE call:
+
+```
+mcp__coach__athlete_info        # or: npx claude-coach athlete-info --json
+```
+
+It returns everything the coach knows in one structured payload:
+
+- `goal` — the primary **A-race** (enriched with `weeksToGoal`, `raceEFD`, `trailMode`), or `null`.
+- `goals` — all stored goals (one A-race at a time; B/C races are dated markers the plan flows around, not separate peaks).
+- `availability` — `days` (which weekdays), `weeklyHours`, `longDay` (the long-run anchor), `doublesOk`.
+- `missing` — the exact facts still needed, e.g. `["goal","availability.days","goal.elevation_gain_m"]`.
+- `ready` — `true` once a goal-anchored plan can be built.
+- `hints` — short guidance on what to ask.
+
+**If `ready` is false, fill the gaps before doing anything else — by asking, then persisting:**
+
+1. **Goal missing?** Ask the athlete for their main race and set it. Use **infer-then-confirm**, not a form: from a name + rough timing ("Trail des Hautes Fagnes, late September"), propose the specifics back ("that's the 45 km / ~1450 m option on ~13 Sept — right?") and only ask for genuine gaps. The periodizer needs **distance + vertical gain + date** at minimum; `target_time` is **optional** (capture intent via `goal_type`: finish / finish-strong / target-time / place — don't force a number). Then persist — **never invent or hardcode a race**:
+
+   ```
+   mcp__coach__set_goal   {name, date, type, distanceKm, vertM, terrain, priority:"A", goalType}
+   ```
+
+2. **Availability missing?** Ask which days the athlete usually trains, how many hours/week, and which day the long run lands. **Propose what their history shows first** (you have their Strava/Garmin days), then confirm. Persist:
+
+   ```
+   mcp__coach__set_availability   {days:"tue,thu,sat,sun", weeklyHours:7, longDay:"sat"}
+   ```
+
+Both are **durable** — next session `athlete_info` already has them, so **don't re-ask**; just confirm if something looks stale (e.g. the athlete mentions a schedule change). Swapping the goal re-aims the whole plan; nothing about a specific race lives in this skill or the code.
+
 ### Step 1: Connect Garmin (recovery & readiness)
 
 Garmin is the **primary source for recovery and readiness**, and **the coach reads it itself — you don't need a separate Garmin MCP.** There are two ways the coach reaches Garmin, in order of preference:
@@ -292,7 +325,8 @@ This works on any Node.js version (uses built-in SQLite on Node 22.5+, falls bac
 
 - **activities**: All workouts (`id`, `name`, `sport_type`, `start_date`, `moving_time`, `distance`, `average_heartrate`, `suffer_score`, etc.)
 - **athlete**: Profile (`weight`, `ftp`, `max_heartrate`)
-- **goals**: Target events (`event_name`, `event_date`, `event_type`, `notes`)
+- **training_goals**: Durable race goals (`id`, `name`, `event_date`, `event_type`, `distance_km`, `elevation_gain_m`, `priority`, `goal_type`, `target_time`, `status`). Read/write these via `athlete_info` / `set_goal` (Step 0) — don't hand-edit.
+- **athlete_availability**: Training availability (`days_of_week`, `weekly_hours`, `long_day`). Read/write via `get_availability` / `set_availability`.
 
 ---
 
@@ -331,6 +365,7 @@ If the goal event is a **trail or ultra race**, activate trail mode: the volume 
 
 ### Phase 0: Setup
 
+0. **Resolve the goal & availability FIRST** (Step 0 above): call `mcp__coach__athlete_info`. If `ready` is false, elicit the missing goal/availability (infer-then-confirm) and persist with `set_goal` / `set_availability` before building anything. The race is read from the backend, never hardcoded.
 1. **Connect Garmin** via the coach (`mcp__coach__garmin_refresh` or `claude-coach garmin-fetch`, using the saved tokens); offer the one-time token mint if missing. The standalone `mcp__garmin__*` server is optional. Garmin is the primary readiness/load source when available.
 2. Ask how athlete wants to provide activity history (Strava or manual)
 3. **If Strava:** Check for existing database, gather credentials if needed, run sync
@@ -767,6 +802,7 @@ The coach is also available as **MCP tools** (`mcp__coach__*`) when the remote c
 - **Wellness & journaling:** `mcp__coach__wellness`, `mcp__coach__log`, `mcp__coach__journal`, `mcp__coach__journal_list`, `mcp__coach__summary`
 - **Reminders:** `mcp__coach__config`, `mcp__coach__checkin`, `mcp__coach__notify`
 - **Garmin:** `mcp__coach__garmin_refresh` (live pull), `mcp__coach__garmin_sync` (cache values you pass), `mcp__coach__backfill` (historical), `mcp__coach__schedule_workouts` (push the active plan's workouts), `mcp__coach__upload_route` (GPX course)
+- **Goal & availability (read FIRST — see Step 0):** `mcp__coach__athlete_info` (the consolidated read: goal + goals + availability + `missing[]` + `ready`), `mcp__coach__get_goal`, `mcp__coach__list_goals`, `mcp__coach__set_goal`, `mcp__coach__delete_goal`, `mcp__coach__get_availability`, `mcp__coach__set_availability`. The goal is durable and never hardcoded — `set_goal`/`set_availability` write it to the backend; every schedule is built toward the stored A-race.
 - **Plans:** `mcp__coach__save_plan` (create/update + activate), `mcp__coach__list_plans`, `mcp__coach__get_plan`, `mcp__coach__activate_plan`, `mcp__coach__delete_plan`, `mcp__coach__plan_today`, `mcp__coach__plan_upcoming`, `mcp__coach__export_calendar`, `mcp__coach__export_garmin`. The plan tools and push/export default to the **stored active plan**, so once a plan is saved you rarely pass JSON again.
 
 A full tool-by-tool reference lives in [`MCP.md`](../MCP.md); the CLI equivalents are in [`CLI.md`](../CLI.md).
