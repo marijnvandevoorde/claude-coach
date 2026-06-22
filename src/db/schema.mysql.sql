@@ -60,14 +60,42 @@ CREATE TABLE IF NOT EXISTS athlete (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS goals (
-  id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  event_name TEXT,
-  event_date VARCHAR(40),
+-- Training goals — durable, athlete-set race targets the coach plans toward.
+-- See schema.sql for the full rationale. Replaces the old thin, dead `goals`
+-- table (dropped in migrate.ts). event_date stays VARCHAR (compared as ISO string).
+CREATE TABLE IF NOT EXISTS training_goals (
+  id VARCHAR(191) PRIMARY KEY,
+  name TEXT,
+  event_date VARCHAR(10),
   event_type VARCHAR(48),
+  distance_km DOUBLE,
+  elevation_gain_m DOUBLE,
+  terrain VARCHAR(48),
+  priority VARCHAR(2) DEFAULT 'A',
+  goal_type VARCHAR(24) DEFAULT 'finish',
+  target_time VARCHAR(16),
+  target_notes TEXT,
+  status VARCHAR(16) DEFAULT 'active',
+  terrain_notes TEXT,
   notes TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  gpx_id VARCHAR(191),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Athlete training availability (single row, id = 1). Durable, athlete-level input
+-- to the periodizer. See schema.sql for rationale.
+CREATE TABLE IF NOT EXISTS athlete_availability (
+  id INT PRIMARY KEY,
+  days_of_week TEXT,
+  weekly_hours DOUBLE,
+  long_day VARCHAR(8),
+  doubles_ok TINYINT DEFAULT 0,
+  notes TEXT,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT IGNORE INTO athlete_availability (id) VALUES (1);
 
 CREATE TABLE IF NOT EXISTS sync_log (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
