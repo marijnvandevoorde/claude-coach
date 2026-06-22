@@ -53,15 +53,46 @@ CREATE TABLE IF NOT EXISTS athlete (
   updated_at TEXT DEFAULT (datetime('now'))
 );
 
--- Training goals
-CREATE TABLE IF NOT EXISTS goals (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  event_name TEXT,                  -- "Ironman 70.3 Oceanside"
-  event_date TEXT,                  -- ISO 8601
-  event_type TEXT,                  -- triathlon, marathon, ultra, century
-  notes TEXT,                       -- constraints, injuries, etc.
-  created_at TEXT DEFAULT (datetime('now'))
+-- Training goals — the durable, athlete-set race targets the coach plans toward.
+-- One row per goal (multiple allowed); exactly one is the primary A-race (resolved
+-- by getPrimaryGoal: status='active' AND priority='A', nearest event_date). NOTHING
+-- about a specific race is hardcoded in the skill or code — it's all data here.
+-- (Replaces the old thin, dead `goals` table; that one is dropped in migrate.ts.)
+CREATE TABLE IF NOT EXISTS training_goals (
+  id TEXT PRIMARY KEY,              -- stable slug, e.g. 'trail-des-hautes-fagnes-2026-09'
+  name TEXT,                        -- "Trail des Hautes Fagnes"
+  event_date TEXT,                  -- ISO 'YYYY-MM-DD' (string, compared with localeCompare)
+  event_type TEXT,                  -- trail | ultra | marathon | road | triathlon | …
+  distance_km REAL,                 -- race distance
+  elevation_gain_m REAL,            -- total ascent (D+) — drives EFD + the vert axis
+  terrain TEXT,                     -- technical | runnable | mixed | road | …
+  priority TEXT DEFAULT 'A',        -- A | B | C (A = the race the block peaks for)
+  goal_type TEXT DEFAULT 'finish',  -- finish | finish-strong | target-time | place
+  target_time TEXT,                 -- optional 'H:MM:SS' (never blocks plan generation)
+  target_notes TEXT,                -- optional free target, e.g. 'top 20%'
+  status TEXT DEFAULT 'active',     -- active | completed | abandoned
+  terrain_notes TEXT,               -- course notes (cutoffs, surface, climbs)
+  notes TEXT,
+  gpx_id TEXT,                      -- nullable hook for a stored course GPX (future D+ profile)
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
 );
+
+-- Athlete training availability (single row, id = 1). Durable, athlete-level — it
+-- outlives any one goal and is an INPUT to the periodizer (which days, how many
+-- hours, which day the long run lands). Asked once by the skill, persisted here.
+CREATE TABLE IF NOT EXISTS athlete_availability (
+  id INTEGER PRIMARY KEY CHECK (id = 1),  -- enforce a single row
+  days_of_week TEXT,                      -- JSON array, e.g. '["tue","thu","sat","sun"]'
+  weekly_hours REAL,                      -- target training hours per week
+  long_day TEXT,                          -- which day the long run anchors, e.g. 'sat'
+  doubles_ok INTEGER DEFAULT 0,           -- 0/1 — can do AM/PM split sessions
+  notes TEXT,                             -- "pool only weekdays", "no Wed evenings"
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Ensure the single availability row always exists so reads never return empty.
+INSERT OR IGNORE INTO athlete_availability (id) VALUES (1);
 
 -- Sync metadata
 CREATE TABLE IF NOT EXISTS sync_log (

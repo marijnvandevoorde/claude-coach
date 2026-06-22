@@ -55,6 +55,11 @@ export async function migrate(silent = false): Promise<void> {
     dialect.driver === "mysql" ? "VARCHAR(191)" : "TEXT"
   );
 
+  // Drop the old thin, dead `goals` table (never read/written by any code) — its
+  // schema (INTEGER id, event_name) conflicts with the new `training_goals`, and
+  // CREATE TABLE IF NOT EXISTS would never reshape it. Safe: it was always empty.
+  await execute(`DROP TABLE IF EXISTS goals;`).catch(() => {});
+
   // Single-row shared Garmin OAuth token + lease lock (one row, id=1). Portable
   // across both backends. See src/garmin/client.ts for why it lives in the DB.
   await execute(
