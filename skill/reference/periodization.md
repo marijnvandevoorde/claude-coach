@@ -24,11 +24,16 @@ Divide the training period into phases:
 - Race-pace work
 - Course-specific preparation (hills, open water)
 
-### 4. Taper (1-3 weeks depending on event)
+### 4. Taper (event-dependent; ~2 weeks is the default)
 
-- Significant volume reduction (40-60%)
-- Maintain some intensity
-- Focus on rest, nutrition, mental prep
+The taper is precise where most amateurs wing it. The meta-analytic optimum (Bosquet 2007, replicated by Wang 2023):
+
+- **Cut volume ~40–60%**, **progressively / exponentially** — a decaying ramp beats a single step-down.
+- **Maintain intensity** — keep some race-pace/quality work. _Dropping intensity along with volume is the #1 taper error_ and the fastest way to go flat.
+- **Maintain training frequency** — train as often, just shorter. Don't bank a pile of extra rest days.
+- **~2 weeks** is the typical optimum (~7–10 days for short races, up to ~3 weeks for Ironman); expect a **~2–3% performance gain**.
+- A **pre-taper overload block** (a deliberately hard final build week) amplifies the taper response.
+- Focus on rest, nutrition, mental prep. (Trail: keep a little vert and short descent strides into race week — see the Terrain-Preserving Taper note below.)
 
 ---
 
@@ -249,6 +254,16 @@ Zone 2 is the foundation—never sacrifice it for more intensity.
 | Neuromuscular recruitment | 2-4 weeks  | Better coordination at high speeds |
 
 Use sparingly—1x/week max, requires 48-72hr recovery.
+
+### Durability (Fatigue Resistance) — the Fourth Determinant
+
+For any effort lasting hours (marathon, trail, ultra), classic lab fitness — VO2max, threshold, economy — **all drift downward over time**: VO2max can fall ~6–7% after 90 minutes of running, and threshold and economy degrade as the hours accumulate. **Durability** is the resistance to that drift, and for a 4–7 h trail race it matters _more_ than a fresh-legged VO2max number (Maunder 2021, "The Importance of Durability"). A fresh treadmill test says little about who is still running well at hour 5.
+
+| What                | How                                                                                                                                                                                                                                                                |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Field metric**    | **HR–pace (or HR–power) decoupling** on long runs: compare HR:pace in the first half vs the second half. <5% decoupling = good durability for that duration; a widening gap flags the durability ceiling. Readable from Strava/Garmin.                             |
+| **How to train it** | Accumulated easy long volume; **quality placed _late_ in long runs** (run hard on already-tired legs); **back-to-back long days**; robust in-race **fueling** (defends the thresholds late). Both low- _and_ high-intensity training build it — it's not only LSD. |
+| **Where it sits**   | The fourth determinant alongside VO2max, fractional utilisation (threshold), and economy. For a ~45 km trail goal, build it deliberately; don't assume long easy miles alone cover it.                                                                             |
 
 ### Adaptation Timelines Summary
 

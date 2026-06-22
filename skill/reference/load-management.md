@@ -172,7 +172,7 @@ These aren't independent — D+ is _inside_ EFD, so a vert spike inflates both a
 | Mountain | 1500 – 3000   | Mountain / ultra build             |
 | Alpine   | > 3000        | Big alpine / vert-heavy ultra peak |
 
-**How fast to ramp — a prudent ceiling, not a validated threshold.** The ≤10%/week guide is sensible but _not_ strongly evidenced (cohort/RCT work hasn't shown a 10% cap prevents injury). The better-supported rule is to **avoid spiking any single long session well beyond the recent longest** — which is exactly why the long-run anchor below is scaled to race EFD. Apply both, and scale the cap to the athlete:
+**How fast to ramp — a prudent ceiling, not a validated threshold.** The ≤10%/week guide is sensible but _not_ strongly evidenced (cohort/RCT work hasn't shown a 10% cap prevents injury). The better-supported rule is to **avoid spiking any single long session well beyond the recent longest** — which is exactly why the long-run anchor below is scaled to race EFD. The largest prospective running study to date quantifies it (Nielsen 2025, RUNSAFE, n=5,205): a single run **10–30%** longer than the longest run in the prior 30 days carried **~+64%** injury risk; **30–100%** longer ≈ +50%; **>100%** longer ≈ +128%. Treat **>30% beyond the recent longest single run as the line to justify or avoid**, and keep the long-run progression inside it. Apply both, and scale the cap to the athlete:
 
 | Athlete                                    | D+ / EFD ramp guidance                                                                             |
 | ------------------------------------------ | -------------------------------------------------------------------------------------------------- |
