@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS activities (
   raw_json TEXT,                    -- full Strava response as JSON
   gps_track TEXT,                   -- compact GPS track [[lat,lon,ele?],…]; '[]' = fetched, no track
   activity_streams TEXT,            -- compact { splits:[…], hr:[…], pace?:[…] }; '{}' = fetched, none
+  coach_notes TEXT,                 -- athlete's answer to a reconcile question (distinct from Strava description)
+  adherence_json TEXT,              -- session-adherence verdict for this activity (sessionAdherence.ts)
   synced_at TEXT DEFAULT (datetime('now'))
 );
 

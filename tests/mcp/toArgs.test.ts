@@ -150,6 +150,44 @@ describe("goal / availability / athlete_info tools map to the right CLI verbs", 
   });
 });
 
+describe("periodizer / adaptive tools map to the right CLI verbs", () => {
+  it("generate_plan + re-periodize via from", () => {
+    expect(TOOLS.generate_plan.toArgs({})).toEqual(["plan", "generate", "--json"]);
+    expect(TOOLS.generate_plan.toArgs({ from: "2026-07-01" })).toEqual([
+      "plan",
+      "generate",
+      "--json",
+      "--from=2026-07-01",
+    ]);
+  });
+  it("goal_anchor / audit_plan default to the active plan or take an id", () => {
+    expect(TOOLS.goal_anchor.toArgs({})).toEqual(["plan", "anchor"]);
+    expect(TOOLS.goal_anchor.toArgs({ id: "p1", date: "2026-07-01" })).toEqual([
+      "plan",
+      "anchor",
+      "p1",
+      "--date=2026-07-01",
+    ]);
+    expect(TOOLS.audit_plan.toArgs({})).toEqual(["plan", "audit", "--json"]);
+  });
+  it("reconcile + plan_drift carry the window flags", () => {
+    expect(TOOLS.reconcile.toArgs({ days: 14 })).toEqual(["reconcile", "--days=14"]);
+    expect(TOOLS.plan_drift.toArgs({ days: 14 })).toEqual(["plan", "drift", "--json", "--days=14"]);
+  });
+  it("note_activity passes id + note positionally and an optional class", () => {
+    expect(TOOLS.note_activity.toArgs({ id: 123, note: "felt great" })).toEqual([
+      "activity",
+      "note",
+      "123",
+      "felt great",
+      "--json",
+    ]);
+    expect(
+      TOOLS.note_activity.toArgs({ id: 123, note: "nailed it", classify: "legit-hard" })
+    ).toEqual(["activity", "note", "123", "nailed it", "--json", "--classify=legit-hard"]);
+  });
+});
+
 describe("checkin and config flag mapping", () => {
   it("checkin uses --plan-stdin for inline, --plan= for a path", () => {
     const inline = TOOLS.checkin.toArgs({ plan: "P" });

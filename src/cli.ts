@@ -91,6 +91,15 @@ import { computeFitnessSnapshot, type ActivitySample } from "./lib/fitness.js";
 import { periodize, type PeriodizerGoal } from "./lib/periodizer.js";
 import { computeGoalAnchor } from "./lib/goalAnchor.js";
 import { auditPlan } from "./lib/planAudit.js";
+import { reconcile, type PrescribedItem } from "./lib/planActual.js";
+import { detectDrift, type DriftSignals } from "./lib/planDrift.js";
+import { reclassify, type AdherenceClass } from "./lib/sessionAdherence.js";
+import {
+  loadActuals,
+  setActivityNote,
+  setActivityAdherence,
+  getActivityNote,
+} from "./db/activities.js";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -263,6 +272,19 @@ interface AthleteInfoArgs {
   flags: Flags;
 }
 
+interface ReconcileArgs {
+  command: "reconcile";
+  flags: Flags;
+}
+
+interface ActivityArgs {
+  command: "activity";
+  sub: string; // note
+  pos?: string; // activity id
+  note?: string; // the note text (positional after id)
+  flags: Flags;
+}
+
 type CliArgs =
   | SyncArgs
   | RenderArgs
@@ -288,7 +310,9 @@ type CliArgs =
   | PlanArgs
   | GoalArgs
   | AvailabilityArgs
-  | AthleteInfoArgs;
+  | AthleteInfoArgs
+  | ReconcileArgs
+  | ActivityArgs;
 
 type Flags = Record<string, string | boolean>;
 
@@ -476,6 +500,18 @@ function parseArgs(): CliArgs {
     return { command: "athlete-info", flags: parseFlags(args.slice(1)) };
   }
 
+  if (args[0] === "reconcile") {
+    return { command: "reconcile", flags: parseFlags(args.slice(1)) };
+  }
+
+  if (args[0] === "activity") {
+    // activity <sub> [<id>] [<note>] [--flags]
+    const sub = args[1] && !args[1].startsWith("--") ? args[1] : "note";
+    const pos = args[2] && !args[2].startsWith("--") ? args[2] : undefined;
+    const note = args[3] && !args[3].startsWith("--") ? args[3] : undefined;
+    return { command: "activity", sub, pos, note, flags: parseFlags(args.slice(2)) };
+  }
+
   if (args[0] === "query") {
     if (!args[1]) {
       log.error("query command requires a SQL statement");
@@ -589,6 +625,9 @@ Commands:
   plan generate     Periodize a ramp-safe skeleton from the goal + availability + fitness (--from= to re-periodize)
   plan anchor       Goal anchor for the active plan (weeks to race, on-track/behind/ahead/orphaned/stale)
   plan audit        Coaching-soundness audit (ramp/taper/deload/long-run anchor/orphan goal)
+  plan drift        Detect too-tired/too-easy drift from reconcile + readiness + load (--days=)
+  reconcile         Judge actual activities vs the prescribed plan (HR-lag-aware) + outlier questions (--since= --to=)
+  activity note <id> "<text>"  Attach the athlete's note to an activity (--classify=legit-hard|cut-short|…)
   help              Show this help message
 
 Auth Options (for headless/Claude environments):
@@ -2605,9 +2644,13 @@ async function runPlan(args: PlanArgs): Promise<void> {
       await runPlanGenerate(args);
       break;
     }
+    case "drift": {
+      await runPlanDrift(args);
+      break;
+    }
     default:
       log.error(
-        `unknown plan subcommand: ${args.sub} (use generate|save|anchor|audit|list|get|activate|delete|show-today|upcoming)`
+        `unknown plan subcommand: ${args.sub} (use generate|save|anchor|audit|drift|list|get|activate|delete|show-today|upcoming)`
       );
       process.exit(1);
   }
@@ -2930,6 +2973,167 @@ async function runAthleteInfo(_args: AthleteInfoArgs): Promise<void> {
   console.log(JSON.stringify(await buildAthleteInfo(), null, 2));
 }
 
+/** ISO date `days` before `to` (YYYY-MM-DD). */
+function isoDaysAgo(to: string, days: number): string {
+  return new Date(Date.parse(`${to}T00:00:00Z`) - days * 86_400_000).toISOString().slice(0, 10);
+}
+
+/** Build a plan-vs-actual reconcile over [from, to] from the active plan. */
+async function buildReconcile(from: string, to: string) {
+  const plan = await getActivePlan();
+  const prescribed: PrescribedItem[] = plan
+    ? keyedPlanWorkouts(plan).map((k) => {
+        const nw = normalizeWorkout(k.workout);
+        return {
+          key: k.key,
+          date: k.date,
+          name: nw.name,
+          sport: nw.sport,
+          type: nw.type,
+          durationMinutes: nw.durationMinutes,
+          distanceMeters: nw.distanceMeters,
+          primaryZone: nw.primaryZone,
+          hasStructure: !!nw.structure,
+        };
+      })
+    : [];
+  const actuals = await loadActuals(from, to);
+  return { plan, result: reconcile(prescribed, actuals, { from, to }) };
+}
+
+/** `reconcile` — judge how recent actual activities matched the prescribed plan
+ *  (HR-lag-aware), persist each verdict, and surface the outlier questions. */
+async function runReconcile(args: ReconcileArgs): Promise<void> {
+  await ensureDb();
+  const to = flagStr(args.flags, "to") ?? localDate();
+  const days = flagNum(args.flags, "days") ?? 14;
+  const from = flagStr(args.flags, "since") ?? isoDaysAgo(to, days);
+  const { result } = await buildReconcile(from, to);
+  for (const m of result.matched) {
+    await setActivityAdherence(m.activityId, JSON.stringify(m.verdict));
+  }
+  console.log(JSON.stringify(result, null, 2));
+}
+
+/** `activity note <id> <text> [--classify=]` — attach the athlete's answer to a
+ *  reconcile question, and (optionally) reclassify the session's adherence. */
+async function runActivity(args: ActivityArgs): Promise<void> {
+  await ensureDb();
+  const json = Boolean(args.flags["json"]);
+  if (args.sub !== "note") {
+    log.error(`unknown activity subcommand: ${args.sub} (use note)`);
+    process.exit(1);
+    return;
+  }
+  const id = Number(args.pos);
+  const note = args.note ?? flagStr(args.flags, "note");
+  if (!Number.isFinite(id) || !note) {
+    log.error(
+      'activity note requires an activity id and text, e.g. activity note 123 "felt great, GPS dropped"'
+    );
+    process.exit(1);
+    return;
+  }
+  await setActivityNote(id, note);
+  const classify = flagStr(args.flags, "classify") as AdherenceClass | undefined;
+  if (classify) {
+    const existing = await getActivityNote(id);
+    let verdict: Parameters<typeof reclassify>[0] | null = null;
+    try {
+      verdict = existing?.adherence_json ? JSON.parse(existing.adherence_json) : null;
+    } catch {
+      verdict = null;
+    }
+    const updated = verdict
+      ? reclassify(verdict, classify)
+      : { class: classify, byAthlete: true, rationale: "Set by athlete feedback." };
+    await setActivityAdherence(id, JSON.stringify(updated));
+  }
+  if (json) console.log(JSON.stringify({ id, noted: true, classify: classify ?? null }, null, 2));
+  else log.success(`Noted activity ${id}${classify ? ` (reclassified ${classify})` : ""}.`);
+}
+
+/** `plan drift` — assemble the adherence pattern + readiness trend + load-vs-plan
+ *  into a drift verdict (too-tired / too-easy / on-track) with a suggestion. */
+async function runPlanDrift(args: PlanArgs): Promise<void> {
+  const to = flagStr(args.flags, "date") ?? localDate();
+  const days = flagNum(args.flags, "days") ?? 14;
+  const from = isoDaysAgo(to, days);
+  const { plan, result } = await buildReconcile(from, to);
+
+  const cutShort = result.matched.filter(
+    (m) => m.verdict.class === "cut-short" || m.verdict.class === "legit-easy"
+  ).length;
+  const overCooked = result.matched.filter((m) => m.verdict.class === "over-cooked").length;
+
+  // Readiness / recovery trend from the cached wellness snapshots in the window.
+  const wl = await queryJson<{
+    readiness_score: number | null;
+    resting_hr: number | null;
+    rhr_7day_avg: number | null;
+    hrv_status: string | null;
+    acwr: number | null;
+  }>(
+    `SELECT readiness_score, resting_hr, rhr_7day_avg, hrv_status, acwr
+     FROM wellness_state WHERE local_date >= '${from}' AND local_date <= '${to}'
+     ORDER BY local_date DESC LIMIT 14;`
+  );
+  const readinessVals = wl.map((r) => r.readiness_score).filter((x): x is number => x != null);
+  const readinessLowDays = readinessVals.filter((x) => x < 50).length;
+  const readinessAvg = readinessVals.length
+    ? Math.round(readinessVals.reduce((a, b) => a + b, 0) / readinessVals.length)
+    : null;
+  const rhrElevatedDays = wl.filter(
+    (r) => r.resting_hr != null && r.rhr_7day_avg != null && r.resting_hr - r.rhr_7day_avg >= 5
+  ).length;
+  const hrvSuppressedDays = wl.filter(
+    (r) => r.hrv_status != null && /low|unbalanced|poor/i.test(r.hrv_status)
+  ).length;
+  const acwr = wl.find((r) => r.acwr != null)?.acwr ?? null;
+
+  // Recent actual EFD vs the current plan week's planned EFD.
+  let actualVsEnvelope: number | null = null;
+  const fitness = await loadFitnessSnapshot(to);
+  if (plan) {
+    const weeks =
+      (
+        plan as {
+          weeks?: Array<{
+            startDate?: string;
+            endDate?: string;
+            targetEFD?: number;
+            envelope?: { targetEFD?: number };
+          }>;
+        }
+      ).weeks ?? [];
+    const cur = weeks.find((w) => w.startDate && w.endDate && to >= w.startDate && to <= w.endDate);
+    const planned = cur?.targetEFD ?? cur?.envelope?.targetEFD;
+    if (planned && planned > 0)
+      actualVsEnvelope = Math.round((fitness.recentWeeklyEFD / planned) * 100) / 100;
+  }
+
+  const signals: DriftSignals = {
+    cutShort,
+    overCooked,
+    onTarget: result.summary.onTarget,
+    missed: result.summary.missed,
+    readinessLowDays,
+    readinessAvg,
+    rhrElevatedDays,
+    hrvSuppressedDays,
+    acwr,
+    actualVsEnvelope,
+  };
+  const verdict = detectDrift(signals);
+  console.log(
+    JSON.stringify(
+      { window: { from, to }, reconcileSummary: result.summary, signals, verdict },
+      null,
+      2
+    )
+  );
+}
+
 async function main() {
   const args = parseArgs();
 
@@ -3008,6 +3212,12 @@ async function main() {
       break;
     case "athlete-info":
       await runAthleteInfo(args);
+      break;
+    case "reconcile":
+      await runReconcile(args);
+      break;
+    case "activity":
+      await runActivity(args);
       break;
   }
 }

@@ -283,6 +283,60 @@ export const TOOLS: Record<string, ToolDef> = {
         ? ["plan", "audit", String(a.id), "--json"]
         : ["plan", "audit", "--json"],
   },
+  reconcile: {
+    description:
+      "Judge how the last N days' ACTUAL activities matched the prescribed plan — HR-LAG-AWARE: short intervals are judged on work done / pace (not avg HR, which lags), long runs on duration (HR drifts up, that's expected). Returns per-session verdicts (class, judgedBy, deviations, confidence), the prescriptions with no activity (missed), unplanned activities, and a `questions[]` list of OUTLIERS to ask the athlete about. Ask those in chat, then record the answer with note_activity. Run it weekly (or before adjusting the plan).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        since: { type: "string", description: "window start YYYY-MM-DD" },
+        to: { type: "string", description: "window end YYYY-MM-DD (default today)" },
+        days: { type: "number", description: "window size in days (default 14)" },
+      },
+    },
+    toArgs: (a) => ["reconcile", ...flags(a, ["since", "to", "days"])],
+  },
+  plan_drift: {
+    description:
+      "Detect whether the athlete is drifting TOO TIRED (overreaching) or TOO EASY (under-stimulated) from the reconcile pattern + readiness trend + actual-vs-planned load. Returns {status: on-track|too-tired|too-easy|mixed, suggestion: hold|insert-recovery|flatten|ramp-up, confidence, evidence[]}. Requires a PATTERN (never one bad day). This is the PLAN-SHAPE dial (weekly) — distinct from adaptive.md's today's-session dial. Always propose the change and ask before re-periodizing.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        date: { type: "string", description: "as-of date YYYY-MM-DD (default today)" },
+        days: { type: "number", description: "window size in days (default 14)" },
+      },
+    },
+    toArgs: (a) => ["plan", "drift", "--json", ...flags(a, ["date", "days"])],
+  },
+  note_activity: {
+    description:
+      "Attach the athlete's note to a specific activity (e.g. their answer to a reconcile question: 'felt great, HR strap glitched' / 'cut short, calf niggle'). Optionally reclassify the session's adherence: legit-hard (nailed it, HR lies) | legit-easy (fatigue) | cut-short | over-cooked | data-glitch. The note + class feed plan_drift and round-trip to the app.",
+    inputSchema: {
+      type: "object",
+      required: ["id", "note"],
+      properties: {
+        id: { type: "number", description: "activity id" },
+        note: { type: "string", description: "the athlete's note / answer" },
+        classify: {
+          type: "string",
+          enum: [
+            "legit-hard",
+            "legit-easy",
+            "cut-short",
+            "over-cooked",
+            "data-glitch",
+            "on-target",
+          ],
+          description: "reclassify the session from the athlete's feedback",
+        },
+      },
+    },
+    toArgs: (a) => {
+      const out = ["activity", "note", String(a.id), String(a.note), "--json"];
+      if (typeof a.classify === "string") out.push(`--classify=${a.classify}`);
+      return out;
+    },
+  },
   save_plan: {
     description:
       "Save (create or update) a training plan and make it the ACTIVE plan — the one the app shows and Garmin/calendar push use. Pass the full TrainingPlan JSON inline as `plan`; it's keyed by meta.id, so re-saving the same id updates it in place.",
