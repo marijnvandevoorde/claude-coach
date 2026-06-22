@@ -399,16 +399,18 @@ If the goal event is a **trail or ultra race**, activate trail mode: the volume 
 6. Read `skill/reference/zones.md` to establish training zones
 7. Read `skill/reference/load-management.md` for TSS/CTL targets
 
-### Phase 4: Plan Design
+### Phase 4: Plan Design — generate the skeleton, then FILL it
 
-8. Read `skill/reference/periodization.md` for phase structure
-9. Read `skill/reference/workouts.md` to build weekly sessions
-10. Calculate weeks until event, design phases
+**Don't hand-author the phase structure, weekly ramp, deloads or taper — the periodizer owns those numbers.** Call **`mcp__coach__generate_plan`** (CLI: `plan generate`). It loads the stored goal + availability + the athlete's measured fitness and returns a dated, ramp-safe **skeleton**: phases (Base → Build-Vert → Mountain-Specific → Taper), 3:1 deloads, and per-week **envelopes** (`targetEFD`/`targetDPlus` with low/high bands, `longRunEFD` anchored to 70–80% race EFD, `easyPct`/`qualityPct`, `targetHours`) plus day `slots` (which day is the long run, quality, easy, B2B, rest) and `notes` (e.g. "thin history — conservative", "peak long run only X% of race").
 
-### Phase 5: Plan Delivery
+8. Read `skill/reference/periodization.md` + `workouts.md` for the session _content_ vocabulary.
+9. **Fill each day's workout to hit its week's envelope** — write the actual sessions (with `structure` for intervals) so the week lands inside `efdLow..efdHigh` / `dPlusLow..dPlusHigh`, the long run on the long-run day, easy share ≥ `easyPct`. Keep the skeleton's week metadata (`phase`, `isRecoveryWeek`, `envelope`) and `meta.goalId` on the saved plan. Read the skeleton's `notes` to the athlete — if it says the peak is under-built, say so.
+10. The skeleton is already dated and counted back from race day — don't recompute weeks by hand.
 
-11. Read `skill/reference/race-day.md` for race execution section
-12. Write the plan as JSON, **save it to the coach** (`save_plan` — it becomes the active plan the app + push use), then render to HTML (see output format below)
+### Phase 5: Plan Delivery — save through the audit
+
+11. Read `skill/reference/race-day.md` for the race-execution section.
+12. **Save it** (`save_plan`) — this auto-runs the **coaching-soundness audit** (`audit_plan`): ramp-cap spikes, missing taper/deloads, long-run anchor, orphaned goal. Read the returned `audit.findings` — **fix any `error` finding and re-save** (don't ship a plan that blew the ramp or dropped the taper); warnings are judgment calls to weigh. Then render to HTML (see output format below). The plan is now the active plan the app + Garmin/calendar push use.
 
 ---
 
@@ -766,6 +768,18 @@ Beyond creating the plan, act as a coach **day to day**. Whenever the athlete as
 
 Use `coach checkin` (which already computes a recovery level + flags) as the trigger; use `adaptive.md` to decide the actual change.
 
+> **Two dials, don't confuse them.** `adaptive.md` + `checkin` are **today's-session** dial — one reading, adjust today. The **plan-shape** dial below (`plan_drift`) is a **weekly trend** — never re-periodize a whole block over one bad night.
+
+### Weekly: reconcile, drift, and adapt the plan
+
+Once a goal-anchored plan is active, run a weekly loop (a good moment is the end-of-week summary):
+
+1. **Reconcile** what was prescribed vs what they actually did — **`mcp__coach__reconcile`** (CLI `reconcile`). It's **HR-lag-aware**: it judges short intervals on work done / pace (avg HR lags ~30–60 s and never reaches zone on short reps — a nailed 8×400 Z5 reads "avg HR Z3"), and long runs on duration (HR drifts up late, that's expected). It returns per-session verdicts **and** a `questions[]` list of genuine **outliers**.
+2. **Ask the athlete the outlier questions** in chat — "this came in short, was that a niggle or the watch?", "the data can't confirm the interval effort (HR lags) — did you hit the pace?" Then record their answer with **`mcp__coach__note_activity`** (`{id, note, classify}`) — `classify` reclassifies the session (legit-hard / legit-easy / cut-short / data-glitch). A "felt great, HR's just a watch thing" cancels a false "too easy"; a "legs flat, saving myself" reinforces fatigue.
+3. **Check drift** — **`mcp__coach__plan_drift`** folds the reconcile pattern + the readiness trend + actual-vs-planned load into a verdict: `on-track | too-tired | too-easy | mixed` with a suggestion (`hold | insert-recovery | flatten | ramp-up`). It needs a **pattern** (the two-day rule, ACWR, multi-session misses) — it won't cry wolf on one day. It's **asymmetric**: eager to protect (too-tired fires on softer evidence), conservative to push (too-easy needs sustained over-performance).
+4. **Propose, then act.** If drift fires, explain the evidence and **offer** the change — never silently rewrite the block. On agreement, **re-periodize the remaining weeks** with `mcp__coach__generate_plan { from: "<this week>" }` (it rebuilds the skeleton from current fitness), fill the new weeks, and `save_plan` (the audit runs again). The athlete can also just ask for a re-plan when life changes (travel, illness, a missed block) — same path.
+5. **Check the anchor** anytime with **`mcp__coach__goal_anchor`** — weeks to race, on-track/behind/ahead, and the two failure modes: **orphaned** (the goal was deleted) or **stale** (the goal was edited after the plan was built → re-periodize so the taper lines up).
+
 ### At the start of a coaching chat
 
 Run `npx claude-coach checkin --greeting` and, if it surfaces anything overdue (water behind, near/past bedtime, low readiness), weave it in briefly — **once, without nagging**. In Claude Code this can be automated with a `SessionStart` hook (see `REMINDERS.md`).
@@ -803,6 +817,7 @@ The coach is also available as **MCP tools** (`mcp__coach__*`) when the remote c
 - **Reminders:** `mcp__coach__config`, `mcp__coach__checkin`, `mcp__coach__notify`
 - **Garmin:** `mcp__coach__garmin_refresh` (live pull), `mcp__coach__garmin_sync` (cache values you pass), `mcp__coach__backfill` (historical), `mcp__coach__schedule_workouts` (push the active plan's workouts), `mcp__coach__upload_route` (GPX course)
 - **Goal & availability (read FIRST — see Step 0):** `mcp__coach__athlete_info` (the consolidated read: goal + goals + availability + `missing[]` + `ready`), `mcp__coach__get_goal`, `mcp__coach__list_goals`, `mcp__coach__set_goal`, `mcp__coach__delete_goal`, `mcp__coach__get_availability`, `mcp__coach__set_availability`. The goal is durable and never hardcoded — `set_goal`/`set_availability` write it to the backend; every schedule is built toward the stored A-race.
+- **Plan generation & adaptation:** `mcp__coach__generate_plan` (periodize a ramp-safe skeleton from goal + availability + fitness; `from:` to re-periodize), `mcp__coach__audit_plan` (coaching-soundness audit — also auto-run by save_plan), `mcp__coach__goal_anchor` (weeks-to-race + on-track/behind/ahead/orphaned/stale), `mcp__coach__reconcile` (HR-lag-aware plan-vs-actual + outlier questions), `mcp__coach__plan_drift` (too-tired/too-easy verdict), `mcp__coach__note_activity` (store the athlete's answer + reclassify a session).
 - **Plans:** `mcp__coach__save_plan` (create/update + activate), `mcp__coach__list_plans`, `mcp__coach__get_plan`, `mcp__coach__activate_plan`, `mcp__coach__delete_plan`, `mcp__coach__plan_today`, `mcp__coach__plan_upcoming`, `mcp__coach__export_calendar`, `mcp__coach__export_garmin`. The plan tools and push/export default to the **stored active plan**, so once a plan is saved you rarely pass JSON again.
 
 A full tool-by-tool reference lives in [`MCP.md`](../MCP.md); the CLI equivalents are in [`CLI.md`](../CLI.md).

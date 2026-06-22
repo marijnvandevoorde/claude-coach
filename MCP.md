@@ -152,10 +152,50 @@ snap-to-roads). Provide the GPX one of two ways:
 The coach persists training plans (one **active** plan at a time). These tools, and the
 export/push tools above, default to the active plan when given no `plan`/`file`.
 
+### `athlete_info` — read this first
+
+One consolidated read of everything the coach knows about the athlete: the primary A-race goal
+(enriched with `weeksToGoal`, `raceEFD`, `trailMode`), all goals, availability, an explicit
+`missing[]` of facts still needed, a `ready` flag, and `hints`. The goal/availability are **never
+hardcoded** — they live in the backend. If something's missing, ask the athlete and persist via
+`set_goal` / `set_availability` (no args).
+
+### `get_goal` / `list_goals` / `set_goal` / `delete_goal`
+
+Durable race goals. `get_goal` _(`id`, default the primary A-race)_; `set_goal` _(name, date,
+distanceKm, vertM, priority, goalType, …)_ creates/updates one (one priority-A race at a time;
+`target` time optional). `getPrimaryGoal` = active + A + nearest future date.
+
+### `get_availability` / `set_availability`
+
+The athlete's durable training availability — `days` (CSV), `weeklyHours`, `longDay`, `doubles` —
+which the periodizer builds the schedule around.
+
+### `generate_plan`
+
+Periodize a ramp-safe **skeleton** from the goal + availability + measured fitness: phases, 3:1
+deloads, per-week EFD/D+ envelopes, long run anchored to 70–80% race EFD, taper, day slots. The LLM
+fills each day to hit the envelope and calls `save_plan`. `from:` _(YYYY-MM-DD)_ re-periodizes the
+remaining weeks from current fitness.
+
+### `audit_plan` / `goal_anchor`
+
+`audit_plan` _(`id`, default active)_ — coaching-soundness audit (ramp spikes, missing
+taper/deloads, long-run anchor, orphaned goal); auto-run by `save_plan`. `goal_anchor` — weeks to
+race + status `on-track | behind | ahead | orphaned | stale`.
+
+### `reconcile` / `plan_drift` / `note_activity`
+
+The weekly adaptive loop. `reconcile` _(since/to/days)_ judges actual activities vs the plan
+**HR-lag-aware** (short reps on work/pace, long runs on duration — not avg HR) and returns outlier
+`questions[]`. `note_activity` _(id, note, classify)_ stores the athlete's answer + reclassifies the
+session. `plan_drift` _(date/days)_ → `too-tired | too-easy | on-track | mixed` with a suggestion
+(propose, then re-periodize on agreement).
+
 ### `save_plan`
 
 Save (create or update) a plan and make it the **active** plan — the one the app shows and
-Garmin/calendar push use. Keyed by `meta.id`, so re-saving updates in place.
+Garmin/calendar push use. Keyed by `meta.id`, so re-saving updates in place. Auto-runs `audit_plan`.
 
 - `plan` _(required, the full TrainingPlan JSON, inline)_.
 
@@ -210,5 +250,18 @@ Turn the plan into structured Garmin workout records (inspect, or feed to `sched
 | `plan_upcoming`     | `plan upcoming`            |
 | `export_calendar`   | `export-calendar --active` |
 | `export_garmin`     | `export-garmin --active`   |
+| `athlete_info`      | `athlete-info`             |
+| `get_goal`          | `goal get [id]`            |
+| `list_goals`        | `goal list`                |
+| `set_goal`          | `goal set …`               |
+| `delete_goal`       | `goal delete <id>`         |
+| `get_availability`  | `availability get`         |
+| `set_availability`  | `availability set …`       |
+| `generate_plan`     | `plan generate`            |
+| `audit_plan`        | `plan audit`               |
+| `goal_anchor`       | `plan anchor`              |
+| `reconcile`         | `reconcile`                |
+| `plan_drift`        | `plan drift`               |
+| `note_activity`     | `activity note <id> …`     |
 
 See [`CLI.md`](CLI.md) for the full flag-by-flag detail of each underlying command.

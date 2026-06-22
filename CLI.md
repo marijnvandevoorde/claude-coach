@@ -280,6 +280,30 @@ npx claude-coach sync                  # later: incremental refresh with cached 
 
 ---
 
+## Goal, availability & plan generation
+
+The race goal and training availability are **data in the backend, never hardcoded**. The coach
+reads them, generates a ramp-safe periodized skeleton, and adapts it weekly from real data.
+
+```bash
+npx claude-coach athlete-info                         # goal + availability + what's still missing
+npx claude-coach goal set --name="Trail des Hautes Fagnes" --date=2026-09-13 \
+  --type=trail --distance-km=45 --vert-m=1450 --goal-type=finish-strong
+npx claude-coach goal show                            # primary A-race + weeksToGoal + raceEFD
+npx claude-coach availability set --days=tue,thu,sat,sun --weekly-hours=7 --long-day=sat
+
+npx claude-coach plan generate                        # → ramp-safe skeleton (fill it, then plan save)
+npx claude-coach plan generate --from=2026-07-20      # re-periodize the remaining weeks
+npx claude-coach plan anchor                          # weeks to race + on-track/behind/orphaned/stale
+npx claude-coach plan audit                           # coaching-soundness audit (also auto-run on save)
+
+npx claude-coach reconcile --days=14                  # actual vs prescribed (HR-lag-aware) + questions
+npx claude-coach activity note 123 "felt great, HR glitched" --classify=legit-hard
+npx claude-coach plan drift --days=14                 # too-tired / too-easy / on-track verdict
+```
+
+---
+
 ## Plans: store, render & export
 
 The coach persists training plans (one **active** at a time); the app and Garmin/calendar push
@@ -309,33 +333,41 @@ npx claude-coach query "SELECT * FROM weekly_volume LIMIT 5"
 npx claude-coach query "SELECT * FROM recent_activities" --json
 ```
 
-Handy views/tables: `activities`, `athlete`, `goals`, `wellness_state`, `hydration_log`,
-`journal`, `weekly_volume`, `recent_activities`, `hydration_daily`.
+Handy views/tables: `activities`, `athlete`, `training_goals`, `athlete_availability`,
+`training_plans`, `wellness_state`, `hydration_log`, `journal`, `weekly_volume`,
+`recent_activities`, `hydration_daily`.
 
 ---
 
 ## Command summary
 
-| Command                                  | What it does                                           |
-| ---------------------------------------- | ------------------------------------------------------ |
-| `log <type> <val>`                       | Log water/sleep/energy/soreness/mood/weight            |
-| `wellness`                               | Today's hydration + wellness snapshot                  |
-| `journal add "<text>"`                   | Add a free-text journal entry                          |
-| `journal list`                           | List journal entries                                   |
-| `summary`                                | Bundle the week's journal + wellness as JSON           |
-| `config`                                 | Show/set reminder preferences                          |
-| `notify <message>`                       | Send a push notification                               |
-| `checkin`                                | Assemble plan + Garmin + wellness; send due reminders  |
-| `garmin-fetch`                           | Pull today's live data from Garmin into `coach.db`     |
-| `garmin-sync`                            | Cache Garmin metrics you already have                  |
-| `garmin-backfill`                        | Backfill historical Garmin data (range or `--full`)    |
-| `garmin-push --active`                   | Create + schedule the active plan's workouts on Garmin |
-| `garmin-route <file.gpx>`                | Upload a GPX as a Garmin course                        |
-| `plan save\|list\|get\|activate\|delete` | Manage stored plans (one active at a time)             |
-| `plan show-today\|upcoming`              | Active plan's sessions today / upcoming                |
-| `sync` / `auth`                          | Strava activity history                                |
-| `render <plan>`                          | Render a plan JSON to an HTML viewer                   |
-| `export-calendar --active`               | Plan → `.ics` / calendar events                        |
-| `export-garmin --active`                 | Plan → structured-workout JSON                         |
-| `query <sql>`                            | Run a SQL query against the database                   |
-| `help`                                   | Full built-in help                                     |
+| Command                                  | What it does                                            |
+| ---------------------------------------- | ------------------------------------------------------- |
+| `log <type> <val>`                       | Log water/sleep/energy/soreness/mood/weight             |
+| `wellness`                               | Today's hydration + wellness snapshot                   |
+| `journal add "<text>"`                   | Add a free-text journal entry                           |
+| `journal list`                           | List journal entries                                    |
+| `summary`                                | Bundle the week's journal + wellness as JSON            |
+| `config`                                 | Show/set reminder preferences                           |
+| `notify <message>`                       | Send a push notification                                |
+| `checkin`                                | Assemble plan + Garmin + wellness; send due reminders   |
+| `garmin-fetch`                           | Pull today's live data from Garmin into `coach.db`      |
+| `garmin-sync`                            | Cache Garmin metrics you already have                   |
+| `garmin-backfill`                        | Backfill historical Garmin data (range or `--full`)     |
+| `garmin-push --active`                   | Create + schedule the active plan's workouts on Garmin  |
+| `garmin-route <file.gpx>`                | Upload a GPX as a Garmin course                         |
+| `plan save\|list\|get\|activate\|delete` | Manage stored plans (one active at a time)              |
+| `plan show-today\|upcoming`              | Active plan's sessions today / upcoming                 |
+| `athlete-info`                           | Goal + availability + what's still missing              |
+| `goal set\|get\|list\|delete\|show`      | Durable race goals (one A-race at a time)               |
+| `availability get\|set`                  | Durable training days / weekly hours / long day         |
+| `plan generate [--from=]`                | Periodize a ramp-safe skeleton (fill, then save)        |
+| `plan anchor\|audit\|drift`              | Goal anchor / soundness audit / too-tired-too-easy      |
+| `reconcile`                              | Actual vs prescribed (HR-lag-aware) + outlier questions |
+| `activity note <id> "<text>"`            | Attach the athlete's note (+ `--classify=`) to a run    |
+| `sync` / `auth`                          | Strava activity history                                 |
+| `render <plan>`                          | Render a plan JSON to an HTML viewer                    |
+| `export-calendar --active`               | Plan → `.ics` / calendar events                         |
+| `export-garmin --active`                 | Plan → structured-workout JSON                          |
+| `query <sql>`                            | Run a SQL query against the database                    |
+| `help`                                   | Full built-in help                                      |
