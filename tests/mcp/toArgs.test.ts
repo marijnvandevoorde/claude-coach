@@ -84,6 +84,72 @@ describe("plan CRUD tools map to the right CLI verbs", () => {
   });
 });
 
+describe("goal / availability / athlete_info tools map to the right CLI verbs", () => {
+  it("athlete_info is the consolidated read (no args)", () => {
+    expect(TOOLS.athlete_info.toArgs({})).toEqual(["athlete-info"]);
+  });
+  it("get_goal defaults to the primary, or fetches by id", () => {
+    expect(TOOLS.get_goal.toArgs({})).toEqual(["goal", "get", "--json"]);
+    expect(TOOLS.get_goal.toArgs({ id: "g1" })).toEqual(["goal", "get", "g1", "--json"]);
+  });
+  it("list_goals carries an optional status filter", () => {
+    expect(TOOLS.list_goals.toArgs({})).toEqual(["goal", "list", "--json"]);
+    expect(TOOLS.list_goals.toArgs({ status: "active" })).toEqual([
+      "goal",
+      "list",
+      "--json",
+      "--status=active",
+    ]);
+  });
+  it("set_goal maps camelCase args to the CLI's kebab flags", () => {
+    expect(
+      TOOLS.set_goal.toArgs({
+        name: "Trail des Hautes Fagnes",
+        date: "2026-09-13",
+        type: "trail",
+        distanceKm: 45,
+        vertM: 1450,
+        priority: "A",
+        goalType: "finish-strong",
+      })
+    ).toEqual([
+      "goal",
+      "set",
+      "--json",
+      "--name=Trail des Hautes Fagnes",
+      "--date=2026-09-13",
+      "--type=trail",
+      "--distance-km=45",
+      "--vert-m=1450",
+      "--priority=A",
+      "--goal-type=finish-strong",
+    ]);
+  });
+  it("delete_goal passes the id", () => {
+    expect(TOOLS.delete_goal.toArgs({ id: "g1" })).toEqual(["goal", "delete", "g1", "--json"]);
+  });
+  it("get_availability / set_availability map days + numeric + bool flags", () => {
+    expect(TOOLS.get_availability.toArgs({})).toEqual(["availability", "get", "--json"]);
+    expect(
+      TOOLS.set_availability.toArgs({ days: "tue,thu,sat,sun", weeklyHours: 7, longDay: "sat" })
+    ).toEqual([
+      "availability",
+      "set",
+      "--json",
+      "--days=tue,thu,sat,sun",
+      "--weekly-hours=7",
+      "--long-day=sat",
+    ]);
+    expect(TOOLS.set_availability.toArgs({ days: ["tue", "sat"], doubles: true })).toEqual([
+      "availability",
+      "set",
+      "--json",
+      "--days=tue,sat",
+      "--doubles=true",
+    ]);
+  });
+});
+
 describe("checkin and config flag mapping", () => {
   it("checkin uses --plan-stdin for inline, --plan= for a path", () => {
     const inline = TOOLS.checkin.toArgs({ plan: "P" });
