@@ -335,12 +335,18 @@ PM: 60min easy run (easy)
 
 ---
 
-## Session Intensity Distribution (Polarized Model)
+## Session Intensity Distribution
 
-For endurance events, 80% of volume should be easy (Zone 1-2), 20% hard (Zone 4+). Avoid excessive Zone 3 "gray zone" training.
+The headline rule is **mostly easy** — keep ~75–85% of weekly volume genuinely easy (Zone 1–2) and the rest at quality. _How_ the quality splits between threshold (Zone 3–4) and high intensity (Zone 5) is a **phase decision, not a fixed law**:
 
-| Zone         | % of Weekly Volume | Purpose                       |
-| ------------ | ------------------ | ----------------------------- |
-| 1-2 (Easy)   | 75-80%             | Aerobic development, recovery |
-| 3 (Moderate) | 5-10%              | Race-specific only            |
-| 4-5 (Hard)   | 15-20%             | Stimulus for adaptation       |
+- **Pyramidal-leaning in Base/Build** — a large easy base plus a deliberate block of **threshold/tempo** (Zone 3–4) at race-relevant intensity, with a little Zone 5. A 45 km trail effort (run largely at sub-threshold) is served by this far more than by strict polarized.
+- **Sequence toward polarized in the final sharpening weeks** — as the race nears, shift some threshold volume to lower (more Zone 1–2) and sharper (more Zone 5) to peak VO2max and freshen the legs.
+
+This **pyramidal → polarized sequencing** is better supported than locking one model for the whole plan: a 16-week RCT found polarized and pyramidal improved well-trained runners equally, with the largest gains from periodizing PYR→POL (Filipas 2022); a meta-analysis found polarized's only edge is a small VO2max bump confined to short blocks in elite athletes (Oliveira 2024); and >80% of the fastest marathoners train pyramidally (Casado 2022). **Volume is a bigger lever than the exact ratio.**
+
+| Phase             | Easy (Z1–2) | Threshold (Z3–4) | Hard (Z5) | Shape             |
+| ----------------- | ----------- | ---------------- | --------- | ----------------- |
+| Base / Build      | 75–85%      | 12–20%           | 3–8%      | Pyramidal-leaning |
+| Peak / sharpening | 80–85%      | 5–10%            | 10–15%    | More polarized    |
+
+**On hilly terrain the distribution self-corrects toward pyramidal** whether you plan it or not — climbs force effort into Zone 3 regardless of intent, so a trail athlete's _real_ TID is rarely cleanly polarized. Don't fight it; the one thing to protect is keeping the easy days **genuinely easy**. Avoid letting _all_ your easy volume drift into the Zone 3 gray zone (the classic amateur error) — that's different from a deliberate, race-relevant threshold block.

@@ -87,16 +87,31 @@ For a trail or ultra goal, distance alone under-describes both the athlete and t
 - **Biggest descent handled without a quad blow-up** — descending durability is usually the real limiter, not climbing fitness.
 - **Technical-terrain experience** — comfort on rocky / rooty / steep ground (a pacing and safety factor, not just fitness).
 - **EFD trend** — weekly Equivalent Flat Distance over time, not raw km.
+- **HR–pace decoupling on long runs** — the durability metric: compare HR:pace in the first half vs the second half of recent long runs (<5% = durable for that duration; a widening gap flags the durability ceiling — see `periodization.md`). Readable from Strava/Garmin, and the best signal for "can they still run at hour 4–5?"
 
 **Race-EFD gap analysis.** Convert the goal race to EFD (`race_km + race_D+/100 × k`) and compare it to where the athlete is now:
 
-| Compare                          | Against                               | Flags                                                   |
-| -------------------------------- | ------------------------------------- | ------------------------------------------------------- |
-| Race EFD                         | Current weekly EFD & longest long run | Long-run anchor should reach 70–80% of race EFD         |
-| Race D+                          | Current weekly D+ & longest D+ day    | Big gap → vert is the limiter; ramp the D+ axis         |
-| Race's longest sustained descent | Longest descent trained without DOMS  | Gap → prioritise downhill repeats early (`workouts.md`) |
+| Compare                          | Against                                       | Flags                                                                      |
+| -------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------- |
+| Race EFD                         | Current weekly EFD & longest long run         | Long-run anchor should reach 70–80% of race EFD                            |
+| Race D+                          | Current weekly D+ & longest D+ day            | Big gap → vert is the limiter; ramp the D+ axis                            |
+| Race's longest sustained descent | Longest descent trained without DOMS          | Gap → prioritise downhill repeats early (`workouts.md`)                    |
+| Race duration (~4–7 h for a 45k) | Long-run HR-decoupling & longest time-on-feet | Decoupling stays low late → durable; widens → train late-run quality + B2B |
 
 **Garmin signals** (see `garmin.md`): `get_hill_score` and `get_endurance_score` verify that climbing-specific and durability fitness are actually building through the block; `get_vo2max_trend` / `get_training_status` VO₂max remain the aerobic anchor. **Durability readiness gate:** when the legs carry **diffuse, improving soreness ≤ 2/5**, skip demanding D+ sessions and technical descents — eccentric damage shows in the legs before HRV or training readiness, so the legs win that tie (see `adaptive.md`). But first tell soreness from injury: **sharp, localized, or worsening pain — especially focal bone or tendon pain, or pain at rest/night — is not a gate-and-train-around-it signal; stop and assess** (see the pain-vs-soreness rule and red flags in `load-management.md`).
+
+---
+
+## Female-Athlete Considerations
+
+Apply these alongside the rest of the assessment, framed sensitively as **health**, not performance policing. The evidence is honestly thin in places — say so.
+
+- **Menstrual-cycle-phase periodization is _not_ well-supported.** A large meta-analysis (McNulty 2020, 78 studies) found cycle-phase effects on performance are _trivial on average with large individual variation_, and most studies were low-quality. **Don't prescribe phase-based training blocks.** Encourage **individual symptom tracking** (energy, sleep, heavy-symptom days) and individualise only when a given athlete clearly responds.
+- **The robust, actionable levers are energy availability, bone health, and iron** — not cycle timing:
+  - **Energy availability / RED-S.** Low energy availability plus menstrual dysfunction (amenorrhea/oligomenorrhea) sharply raises bone-stress-injury risk. Ask about menstrual regularity, recent unexplained cycle changes, and under-fuelling — and treat irregularity as a flag worth a medical conversation, not a training variable.
+  - **Iron.** Iron deficiency is common in female endurance athletes (~15–35%+, higher in some cohorts) and blunts adaptation well before anemia. Suggest a periodic **ferritin** check via their GP, especially with fatigue, stalled progress, or heavy menses.
+  - **Fuelling.** Female athletes are frequently _under_-fuelled; **don't transplant male-derived fasted / low-carb approaches** (Sims). Protect carbohydrate availability around hard and long sessions.
+- **Be honest about uncertainty.** Female-specific RCT evidence is limited; default to the well-established health levers above and individualise the rest.
 
 ---
 

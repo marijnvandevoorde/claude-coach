@@ -104,6 +104,29 @@ For athletes with known race times:
 
 ---
 
+## Goal-Time Prediction & Race Tiering
+
+Before periodizing, set a realistic target from demonstrated fitness — you can't build a plan without an anchor.
+
+**Predict an equivalent performance** from a recent race or benchmark:
+
+- **Riegel formula:** `T2 = T1 × (D2 / D1)^1.06` — predicted time `T2` at distance `D2` from a known time `T1` at distance `D1`.
+- **VDOT (Daniels):** plug a recent race time into a VDOT table to get equivalent times and the training paces above.
+
+**Trail caveat — treat road extrapolations as an optimistic _ceiling_, not a prediction.** Riegel's 1.06 exponent **over-predicts when extrapolating far** (e.g. 10 km → 45 km) and **degrades further on technical, vert-heavy trail**, where time is governed by climbing, descending and terrain, not flat-pace fitness. For a first time at the distance or a technical course, bias toward a **completion / effort-based A-goal**, with a time target only as a secondary stretch. Cross-check any predicted time against the race-EFD gap analysis (`assessment.md`) and the weeks available under the ramp caps — if the gap can't close in time, the **goal** is the variable to adjust, not the ramp.
+
+**Tier the goals (A/B/C):**
+
+| Tier  | Meaning                                                                                                  | Taper / treatment                |
+| ----- | -------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| **A** | Season peak — the race the plan is built around. **One per season** (two only if ~4–5 months apart).     | Full taper + full periodization  |
+| **B** | Important, but not the peak.                                                                             | Mini-taper (a few days) only     |
+| **C** | Training / tune-up race. Slot one **3–6 weeks before the A-race** to rehearse pacing, fuelling and gear. | **No taper, no plan disruption** |
+
+**Make it SMART and layered:** Specific, Measurable, Attainable (vs the prediction band + gap analysis), Relevant, Time-bound — and combine an **outcome** goal (finish / place) with **performance** (target time/effort band) and **process** goals (fuel every 30 min, power-hike >15%, descend braked early, hit weekly EFD/D+). Process goals are the day-to-day expression of "anchored to the A-race," and the evidence shows they lower anxiety and raise confidence versus outcome-only goals.
+
+---
+
 ## Power-Based Training (Cycling)
 
 When power data is available, use power zones exclusively—they're more accurate than HR which lags and drifts.
