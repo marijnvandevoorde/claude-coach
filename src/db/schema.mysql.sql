@@ -32,6 +32,8 @@ CREATE TABLE IF NOT EXISTS activities (
   raw_json LONGTEXT,
   gps_track LONGTEXT,
   activity_streams LONGTEXT,
+  coach_notes TEXT,
+  adherence_json LONGTEXT,
   synced_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   KEY idx_activities_date (start_date),
   KEY idx_activities_sport (sport_type),

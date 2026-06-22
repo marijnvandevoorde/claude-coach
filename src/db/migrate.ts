@@ -41,6 +41,14 @@ export async function migrate(silent = false): Promise<void> {
     "activity_streams",
     dialect.driver === "mysql" ? "LONGTEXT" : "TEXT"
   );
+  // Coach note (athlete's answer to a reconcile question) + the adherence verdict,
+  // attached per activity (added after prod existed). See sessionAdherence.ts.
+  await ensureColumn("activities", "coach_notes", "TEXT");
+  await ensureColumn(
+    "activities",
+    "adherence_json",
+    dialect.driver === "mysql" ? "LONGTEXT" : "TEXT"
+  );
   // Move-nudge cadence pref + its per-day dedup timestamp (added after prod existed).
   await ensureColumn("reminder_prefs", "move_cadence_minutes", "INTEGER DEFAULT 120");
   await ensureColumn(
