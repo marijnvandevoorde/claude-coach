@@ -38,7 +38,7 @@
   },
   "dependencies": {
     "@garmin/fitsdk": "^21.205.0",
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "consola": "^3.2.3",
     "express": "^5.2.1",
     "jose": "^6.2.3",
