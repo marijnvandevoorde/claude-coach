@@ -392,6 +392,8 @@ export async function pushWorkouts(
     planId?: string;
     prune?: boolean;
     replace?: boolean;
+    /** Called with a short progress line per workout. */
+    onProgress?: (msg: string) => void;
   } = {}
 ): Promise<PushResult[]> {
   if (opts.dryRun) {
@@ -418,7 +420,10 @@ export async function pushWorkouts(
   }
 
   const results: PushResult[] = [];
-  for (const input of inputs) {
+  for (const [i, input] of inputs.entries()) {
+    opts.onProgress?.(
+      `workout ${i + 1}/${inputs.length}: ${input.name} (${input.date ?? "no date"})`
+    );
     try {
       const key = input.key ?? pushKey(input.date, input.name);
       const stored = opts.store ? await opts.store.lookup(key) : undefined;

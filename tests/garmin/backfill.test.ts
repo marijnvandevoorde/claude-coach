@@ -109,11 +109,20 @@ describe("runBackfill", () => {
       saveActivity: async () => {},
       hasFullSnapshot: async () => true, // every day already done
     };
+    const progress: string[] = [];
     const r = await runBackfill(
-      { from: "2026-05-30", to: "2026-05-31", full: true, delayMs: 0 },
+      {
+        from: "2026-05-30",
+        to: "2026-05-31",
+        full: true,
+        delayMs: 0,
+        onProgress: (m) => progress.push(m),
+      },
       sink
     );
     expect(r.skipped).toBe(2);
     expect(r.fullDays).toBe(0);
+    // Progress for coach-mcp's job_status: each day (no activity pages here).
+    expect(progress).toEqual(["wellness day 1/2 (2026-05-30)", "wellness day 2/2 (2026-05-31)"]);
   });
 });

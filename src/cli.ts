@@ -1164,6 +1164,12 @@ async function runExportGarmin(args: ExportGarminArgs): Promise<void> {
   console.log(JSON.stringify(planToGarminWorkouts(plan), null, 2));
 }
 
+/** A progress line on stderr when run as a coach-mcp job (COACH_PROGRESS=1);
+ *  job_status shows the latest one. */
+function progress(msg: string): void {
+  if (process.env.COACH_PROGRESS === "1") process.stderr.write(`progress: ${msg}\n`);
+}
+
 async function runGarminPush(args: GarminPushArgs): Promise<void> {
   const explicitPlan = Boolean(args.flags["stdin"]) || Boolean(args.inputFile);
   const plan = await resolvePlan({
@@ -1236,7 +1242,14 @@ async function runGarminPush(args: GarminPushArgs): Promise<void> {
         remove: deletePushedWorkout,
       };
     }
-    results = await pushWorkouts(inputs, { dryRun, store, planId: plan.meta?.id, prune, replace });
+    results = await pushWorkouts(inputs, {
+      dryRun,
+      store,
+      planId: plan.meta?.id,
+      prune,
+      replace,
+      onProgress: progress,
+    });
   } catch (e) {
     log.error(`garmin-push: ${e instanceof Error ? e.message : String(e)}`);
     process.exit(1);
@@ -1362,7 +1375,7 @@ async function runGarminBackfill(args: GarminBackfillArgs): Promise<void> {
   log.start(`Backfilling Garmin ${from} → ${to}${full ? " (--full, per-day)" : " (range)"}…`);
   let res;
   try {
-    res = await runBackfill({ from, to, full, force, delayMs }, sink);
+    res = await runBackfill({ from, to, full, force, delayMs, onProgress: progress }, sink);
   } catch (e) {
     log.error(`garmin-backfill: ${e instanceof Error ? e.message : String(e)}`);
     process.exit(1);
@@ -1926,6 +1939,7 @@ async function runGarminFetch(args: GarminFetchArgs): Promise<void> {
 
   let payload: DailySnapshot;
   try {
+    progress(`fetching Garmin data for ${date}`);
     payload = await getDataSource().fetchDailySnapshot(date);
   } catch (e) {
     log.error(`garmin-fetch: ${e instanceof Error ? e.message : String(e)}`);
@@ -1971,7 +1985,8 @@ async function runGarminFetch(args: GarminFetchArgs): Promise<void> {
       const todo = ids.filter((id) => !haveStreams.has(id) || !haveTracks.has(id));
       if (todo.length > 0) {
         const client = await GarminClient.create();
-        for (const id of todo) {
+        for (const [i, id] of todo.entries()) {
+          progress(`activity details ${i + 1}/${todo.length} (#${id})`);
           if (!haveTracks.has(id)) {
             try {
               const points = decimate(await fetchActivityTrack(client, id));
