@@ -62,6 +62,30 @@ function iso(ms: number | null): string | null {
   return ms == null ? null : new Date(ms).toISOString();
 }
 
+/**
+ * A CLI result as JSON when it is JSON, also when log lines precede it (e.g.
+ * "◐ Backfilling Garmin …" before the JSON summary; those go to `log`).
+ * Otherwise the text as is.
+ */
+export function parseResult(raw: string): { result: unknown; log?: string } {
+  try {
+    return { result: JSON.parse(raw) };
+  } catch {
+    /* try from the first line that opens a JSON value */
+  }
+  const lines = raw.split("\n");
+  const start = lines.findIndex((l) => /^[{[]/.test(l));
+  if (start > 0) {
+    try {
+      const result: unknown = JSON.parse(lines.slice(start).join("\n"));
+      return { result, log: lines.slice(0, start).join("\n").trim() };
+    } catch {
+      /* not JSON after all */
+    }
+  }
+  return { result: raw };
+}
+
 /** A job as the client sees it. The result is parsed when it is JSON. */
 export function describeJob(j: JobRow, now = Date.now()): Record<string, unknown> {
   const out: Record<string, unknown> = {
@@ -74,14 +98,7 @@ export function describeJob(j: JobRow, now = Date.now()): Record<string, unknown
   };
   if (j.progress) out.progress = j.progress;
   if (j.finished_at != null) out.finishedAt = iso(j.finished_at);
-  if (j.status === "succeeded") {
-    const raw = j.result ?? "";
-    try {
-      out.result = JSON.parse(raw);
-    } catch {
-      out.result = raw;
-    }
-  }
+  if (j.status === "succeeded") Object.assign(out, parseResult(j.result ?? ""));
   if (j.status === "failed") out.error = j.error;
   if (j.status === "running")
     out.next = `Still running. Call job_status with {"jobId":"${j.id}"} again in 15-30 s.`;

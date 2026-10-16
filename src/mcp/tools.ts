@@ -474,7 +474,7 @@ export const TOOLS: Record<string, ToolDef> = {
     job: {
       kind: "garmin-backfill",
       summary: (a) =>
-        `Garmin backfill ${a.from} → ${typeof a.to === "string" ? a.to : "today"}${a.full === true ? " (full)" : ""}${a.force === true ? " (force)" : ""}`,
+        `Garmin backfill ${a.from} → ${typeof a.to === "string" ? a.to : "today"}${a.full === true || a.force === true ? ` (${[a.full === true && "full", a.force === true && "force"].filter(Boolean).join(", ")})` : ""}`,
     },
     toArgs: (a) => {
       const f = ["garmin-backfill", "--json", ...flags(a, ["from", "to"])];

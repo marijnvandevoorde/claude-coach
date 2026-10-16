@@ -136,6 +136,16 @@ describe("coach-mcp background jobs", () => {
       expect((await db.getJob(job.id))?.status).toBe("failed");
     });
 
+    it("parses a JSON result that follows log lines", async () => {
+      const { parseResult } = await import("../../src/mcp/handler.js");
+      expect(parseResult('{"a":1}')).toEqual({ result: { a: 1 } });
+      expect(parseResult('◐ Backfilling…\n{\n  "a": 1\n}')).toEqual({
+        result: { a: 1 },
+        log: "◐ Backfilling…",
+      });
+      expect(parseResult("done, 3 workouts")).toEqual({ result: "done, 3 workouts" });
+    });
+
     it("keeps JSON fragments out of the progress line", () => {
       expect(jobsMod.progressLine("progress: day 2/9")).toBe("day 2/9");
       expect(jobsMod.progressLine("{")).toBeNull();
