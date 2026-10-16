@@ -9,6 +9,22 @@ The compose files just **pull** the image.
 
 ---
 
+## Production (coach.small-victories.co)
+
+Our own instance runs on the Kubernetes cluster `sv-oke` (Deployments `coach`, `coach-app`,
+`coach-mcp` in namespace `apps`, one image). Ship `origin/main` with the shared script from the
+Oracle repo, configured by `deploy.env`:
+
+```bash
+npm run deploy:check   # what runs now vs. origin/main
+npm run deploy         # build, push to OCIR, roll, smoke test, pin the tag in the Oracle repo
+```
+
+`SV_DEPLOY=/path/to/sv-deploy` overrides the default `../Oracle/deploy/sv-deploy`. The GHCR and
+compose steps below are for running your own copy.
+
+---
+
 ## Tier 1 — always-on reminder service
 
 A super-light `node:22-alpine` image runs the CLI on a cron schedule: `checkin --notify` → your push webhook (Home Assistant). Outbound-only, so **no open ports, no proxy**.
