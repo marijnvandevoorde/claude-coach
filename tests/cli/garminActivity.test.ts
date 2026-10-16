@@ -41,4 +41,29 @@ describe("saveGarminActivity", () => {
       coach_notes: "felt good",
     });
   });
+
+  it("saveStravaActivity keeps track, streams, coach notes and adherence on re-sync", async () => {
+    const a = {
+      id: 77,
+      name: "Ride",
+      sport_type: "Ride",
+      start_date: "2026-10-11T08:00:00Z",
+    } as unknown as import("../../src/strava/types.js").StravaActivity;
+    await acts.saveStravaActivity(a);
+    await db.execute(
+      `UPDATE activities SET gps_track = '[[3,4]]', activity_streams = '{}', coach_notes = 'windy', adherence_json = '{"c":1}' WHERE id = 77;`
+    );
+    await acts.saveStravaActivity({ ...a, name: "Evening ride", distance: 20000 });
+    const [row] = await db.queryJson<Record<string, unknown>>(
+      "SELECT name, distance, gps_track, activity_streams, coach_notes, adherence_json FROM activities WHERE id = 77"
+    );
+    expect(row).toEqual({
+      name: "Evening ride",
+      distance: 20000,
+      gps_track: "[[3,4]]",
+      activity_streams: "{}",
+      coach_notes: "windy",
+      adherence_json: '{"c":1}',
+    });
+  });
 });

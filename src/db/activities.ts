@@ -8,6 +8,7 @@
 import { execute, queryJson } from "./client.js";
 import { getDialect } from "./dialect.js";
 import type { ActualActivity } from "../lib/planActual.js";
+import type { StravaActivity } from "../strava/types.js";
 
 function esc(value: string | null | undefined): string {
   if (value == null) return "NULL";
@@ -115,6 +116,74 @@ export async function saveGarminActivity(a: Record<string, unknown>): Promise<vo
        ${sqlNum(a.average_cadence)}, ${sqlNum(a.calories)},
        ${esc(JSON.stringify(a.raw ?? a))}, ${dialect.now()}
      )`,
+      "id",
+      cols.filter((c) => c !== "id")
+    )
+  );
+}
+
+/** Store a Strava activity. Upsert, not REPLACE, for the same reason as
+ *  saveGarminActivity: keep the stored track, streams, notes and adherence. */
+export async function saveStravaActivity(activity: StravaActivity): Promise<void> {
+  const cols = [
+    "id",
+    "name",
+    "sport_type",
+    "start_date",
+    "elapsed_time",
+    "moving_time",
+    "distance",
+    "total_elevation_gain",
+    "average_speed",
+    "max_speed",
+    "average_heartrate",
+    "max_heartrate",
+    "average_watts",
+    "max_watts",
+    "weighted_average_watts",
+    "kilojoules",
+    "suffer_score",
+    "average_cadence",
+    "calories",
+    "description",
+    "workout_type",
+    "gear_id",
+    "raw_json",
+    "synced_at",
+  ];
+  const a = activity;
+  const dialect = getDialect();
+  const values = [
+    sqlNum(a.id),
+    esc(a.name),
+    esc(a.sport_type),
+    esc(a.start_date),
+    sqlNum(a.elapsed_time),
+    sqlNum(a.moving_time),
+    sqlNum(a.distance),
+    sqlNum(a.total_elevation_gain),
+    sqlNum(a.average_speed),
+    sqlNum(a.max_speed),
+    sqlNum(a.average_heartrate),
+    sqlNum(a.max_heartrate),
+    sqlNum(a.average_watts),
+    sqlNum(a.max_watts),
+    sqlNum(a.weighted_average_watts),
+    sqlNum(a.kilojoules),
+    sqlNum(a.suffer_score),
+    sqlNum(a.average_cadence),
+    sqlNum(a.calories),
+    esc(a.description),
+    sqlNum(a.workout_type),
+    esc(a.gear_id),
+    esc(JSON.stringify(a)),
+    dialect.now(),
+  ];
+  await execute(
+    dialect.upsert(
+      "activities",
+      cols,
+      `(${values.join(", ")})`,
       "id",
       cols.filter((c) => c !== "id")
     )
