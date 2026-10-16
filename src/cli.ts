@@ -99,6 +99,7 @@ import {
   setActivityNote,
   setActivityAdherence,
   getActivityNote,
+  saveGarminActivity,
 } from "./db/activities.js";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
@@ -1392,7 +1393,7 @@ async function runGarminBackfill(args: GarminBackfillArgs): Promise<void> {
 
   const sink: BackfillSink = {
     saveWellness: (date, patch) => upsertWellness(date, patch as WellnessPatch),
-    saveActivity: (a) => insertGarminActivity(a),
+    saveActivity: (a) => saveGarminActivity(a),
     hasFullSnapshot: async (date) => Boolean((await getWellness(date))?.garmin_raw),
   };
 
@@ -1957,30 +1958,6 @@ const GARMIN_FETCH_NUMERIC = [
 ] as const;
 const GARMIN_FETCH_TEXT = ["hrv_status", "training_status", "garmin_raw"] as const;
 
-function sqlNum(value: unknown): string {
-  const n = Number(value);
-  return value == null || !Number.isFinite(n) ? "NULL" : String(n);
-}
-
-async function insertGarminActivity(a: Record<string, unknown>): Promise<void> {
-  const str = (v: unknown): string | null => (typeof v === "string" ? v : null);
-  await execute(
-    `${getDialect().replaceVerb()} INTO activities (
-       id, name, sport_type, start_date, elapsed_time, moving_time,
-       distance, total_elevation_gain, average_speed, max_speed,
-       average_heartrate, max_heartrate, average_cadence, calories,
-       raw_json, synced_at
-     ) VALUES (
-       ${sqlNum(a.id)}, ${escapeString(str(a.name))}, ${escapeString(str(a.sport_type))},
-       ${escapeString(str(a.start_date))}, ${sqlNum(a.elapsed_time)}, ${sqlNum(a.moving_time)},
-       ${sqlNum(a.distance)}, ${sqlNum(a.total_elevation_gain)}, ${sqlNum(a.average_speed)},
-       ${sqlNum(a.max_speed)}, ${sqlNum(a.average_heartrate)}, ${sqlNum(a.max_heartrate)},
-       ${sqlNum(a.average_cadence)}, ${sqlNum(a.calories)},
-       ${escapeString(JSON.stringify(a.raw ?? a))}, ${getDialect().now()}
-     );`
-  );
-}
-
 async function runGarminFetch(args: GarminFetchArgs): Promise<void> {
   await ensureDb();
   const date = flagStr(args.flags, "date") ?? localDate();
@@ -2010,7 +1987,7 @@ async function runGarminFetch(args: GarminFetchArgs): Promise<void> {
   const ids: number[] = [];
   for (const a of payload.activities ?? []) {
     if (a.id == null || !Number.isFinite(Number(a.id))) continue;
-    await insertGarminActivity(a);
+    await saveGarminActivity(a);
     ids.push(Math.trunc(Number(a.id)));
     stored++;
   }
