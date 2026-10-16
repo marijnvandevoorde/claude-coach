@@ -2,7 +2,8 @@
 #
 # Super-lightweight image for the always-on reminder service.
 # It runs the Node CLI on a cron schedule: checkin --notify -> your push webhook.
-# coach.db + Garmin tokens come from a mounted /data volume (see docker-compose.yml).
+# State lives in the database: MySQL (COACH_DB_DRIVER=mysql) needs no volume at all.
+# For SQLite, set COACH_DB_PATH (+ GARMINTOKENS) to a mounted volume (see docker-compose.yml).
 
 # ---------- builder: compile TS -> dist ----------
 FROM node:22-alpine AS builder
@@ -17,13 +18,11 @@ RUN npx tsc && cp src/db/schema.sql src/db/schema.mysql.sql dist/db/ \
 
 # ---------- runtime: prod deps + dist only ----------
 FROM node:22-alpine AS runtime
-# tzdata = local-time cron; sqlite = CLI fallback if node:sqlite is flagged off.
+# tzdata = local-time cron. SQLite (if used) is Node's built-in node:sqlite.
 # The Garmin fetcher is native TypeScript (src/garmin) — no Python, nothing to pip-install.
-RUN apk add --no-cache tzdata sqlite
+RUN apk add --no-cache tzdata
 WORKDIR /app
 ENV NODE_ENV=production \
-    COACH_DB_PATH=/data/coach.db \
-    GARMINTOKENS=/data/garminconnect \
     COACH_NOTIFY_CHANNEL=webhook
 
 COPY package.json package-lock.json ./
@@ -34,6 +33,5 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh \
  && printf '#!/bin/sh\nexec node /app/dist/cli.js "$@"\n' > /usr/local/bin/coach \
  && chmod +x /usr/local/bin/coach
 
-VOLUME ["/data"]
 # No args -> start the reminder cron. With args -> run the CLI (e.g. `docker compose run coach wellness`).
 ENTRYPOINT ["docker-entrypoint.sh"]
