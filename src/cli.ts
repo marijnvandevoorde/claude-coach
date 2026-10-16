@@ -64,7 +64,7 @@ import {
 } from "./db/plans.js";
 import { uploadRoute, COURSE_TYPES } from "./garmin/routes.js";
 import { runBackfill, type BackfillSink } from "./garmin/backfill.js";
-import { GarminClient } from "./garmin/client.js";
+import { GarminClient, importGarminTokens, type GarminTokens } from "./garmin/client.js";
 import { fetchActivityTrack, decimate, toCompactTrack } from "./garmin/tracks.js";
 import { fetchActivityStreams, toCompactStreams } from "./garmin/streams.js";
 import { addJournalEntry, listJournalEntries } from "./db/journal.js";
@@ -230,6 +230,11 @@ interface GarminStreamsArgs {
   flags: Flags;
 }
 
+interface GarminAuthImportArgs {
+  command: "garmin-auth-import";
+  inputFile: string; // "" = read stdin
+}
+
 interface JournalArgs {
   command: "journal";
   sub: string;
@@ -304,6 +309,7 @@ type CliArgs =
   | GarminBackfillArgs
   | GarminTracksArgs
   | GarminStreamsArgs
+  | GarminAuthImportArgs
   | JournalArgs
   | SummaryArgs
   | WellnessArgs
@@ -461,6 +467,10 @@ function parseArgs(): CliArgs {
   if (args[0] === "garmin-tracks") {
     return { command: "garmin-tracks", flags: parseFlags(args.slice(1)) };
   }
+  if (args[0] === "garmin-auth-import") {
+    const file = args[1] && !args[1].startsWith("--") ? args[1] : "";
+    return { command: "garmin-auth-import", inputFile: file };
+  }
   if (args[0] === "garmin-streams") {
     return { command: "garmin-streams", flags: parseFlags(args.slice(1)) };
   }
@@ -608,6 +618,7 @@ Commands:
   garmin-backfill         Backfill history into the DB (--from=|--days= --to= [--full] [--force])
   garmin-tracks           Download + store each activity's GPS track ([--limit=] [--id=] [--force])
   garmin-streams          Download + store each activity's real splits + HR stream ([--limit=] [--id=] [--force])
+  garmin-auth-import [file]  Store a garmin_tokens.json (from garmin-mcp-auth) in the DB; stdin if no file
   journal add "<text>"    Add a free-text journal entry (--tag= --date=)
   journal list            List journal entries (--since= --until= --limit= --json)
   summary                 Bundle the week's journal + wellness as JSON (--since= --to=)
@@ -1469,6 +1480,24 @@ async function fillTracks(
  * for the map + "create a course from this activity" features. Resumable (skips
  * activities that already have a track unless --force), throttled with 429 backoff.
  */
+/** Store freshly minted Garmin tokens in the DB (first setup or re-auth). The DB row
+ *  is the only token store a server needs; the file can be deleted afterwards. */
+async function runGarminAuthImport(args: GarminAuthImportArgs): Promise<void> {
+  const raw = readFileSync(args.inputFile || 0, "utf-8");
+  let tokens: GarminTokens;
+  try {
+    tokens = JSON.parse(raw) as GarminTokens;
+  } catch {
+    log.error("garmin-auth-import: input is not JSON (expected a garmin_tokens.json)");
+    process.exit(1);
+  }
+  await ensureDb();
+  await importGarminTokens(tokens);
+  // Prove the tokens work: this refreshes the access token and stores the rotated pair.
+  await GarminClient.create();
+  log.success("Garmin tokens stored in the database and verified.");
+}
+
 async function runGarminTracks(args: GarminTracksArgs): Promise<void> {
   await ensureDb();
   const force = Boolean(args.flags["force"]);
@@ -3167,6 +3196,9 @@ async function main() {
       break;
     case "garmin-streams":
       await runGarminStreams(args);
+      break;
+    case "garmin-auth-import":
+      await runGarminAuthImport(args);
       break;
     case "journal":
       await runJournal(args);

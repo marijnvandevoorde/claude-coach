@@ -1,11 +1,13 @@
 /**
  * Garmin Connect client — token management + authenticated HTTP, in TypeScript.
  *
- * Talks to Garmin Connect using the OAuth2 ("diauth") tokens first minted into
- * $GARMINTOKENS (a `garmin_tokens.json` with di_token / di_refresh_token /
- * di_client_id, via `garmin-mcp-auth`). The live access/refresh token is then
- * kept in a shared DB row and refreshed only when the access token expires (see
- * the "Shared OAuth token store" section below) — the file becomes a seed only.
+ * Talks to Garmin Connect using the OAuth2 ("diauth") tokens minted by
+ * `garmin-mcp-auth` (a `garmin_tokens.json` with di_token / di_refresh_token /
+ * di_client_id). The live access/refresh token AND the client id are kept in a
+ * shared DB row (`garmin_oauth`, id=1) and refreshed only when the access token
+ * expires (see the "Shared OAuth token store" section below). Once that row is
+ * populated no file is needed: load it with `garmin-auth-import`, or let the
+ * first run seed it from $GARMINTOKENS when that file exists (local use).
  * The client stays alive for months without any re-auth or password.
  *
  * Uses only Node built-ins (global `fetch`, `node:fs`) — no third-party deps,
@@ -47,6 +49,11 @@ export function tokenPath(): string {
     /* fall through to treating it as a file path */
   }
   return store;
+}
+
+/** The token file if it exists, else null (a DB-only deployment has no file). */
+export function tryLoadTokens(path = tokenPath()): GarminTokens | null {
+  return existsSync(path) ? loadTokens(path) : null;
 }
 
 export function loadTokens(path = tokenPath()): GarminTokens {
@@ -97,7 +104,8 @@ function persist(path: string, tokens: GarminTokens, refreshed: RefreshResponse)
 // expired (≈hourly, not per call), and serialize that rare refresh with a
 // lease-lock row (atomic `UPDATE … WHERE locked_until < now` — works across
 // containers and pooled connections, unlike per-connection MySQL GET_LOCK). The
-// token file is now only a seed: di_client_id + first-run / re-auth bootstrap.
+// row also holds di_client_id, so no token file is needed at runtime; a file
+// (when present) only seeds an empty row or offers a re-minted refresh token.
 // ============================================================================
 
 const SKEW_MS = 120_000; // treat the access token as stale 2 min before expiry
@@ -113,6 +121,7 @@ interface OAuthState {
   access_token: string | null;
   refresh_token: string | null;
   expires_at: number | null;
+  client_id: string | null;
 }
 
 /** True if the DB + the token table are reachable (else we fall back to the file). */
@@ -127,7 +136,7 @@ async function dbReady(): Promise<boolean> {
 
 async function readOAuth(): Promise<OAuthState | null> {
   const rows = await queryJson<OAuthState>(
-    `SELECT access_token, refresh_token, expires_at FROM garmin_oauth WHERE id = 1 LIMIT 1;`
+    `SELECT access_token, refresh_token, expires_at, client_id FROM garmin_oauth WHERE id = 1 LIMIT 1;`
   );
   const r = rows[0];
   if (!r) return null;
@@ -135,16 +144,36 @@ async function readOAuth(): Promise<OAuthState | null> {
     access_token: r.access_token ?? null,
     refresh_token: r.refresh_token ?? null,
     expires_at: r.expires_at != null ? Number(r.expires_at) : null,
+    client_id: r.client_id ?? null,
   };
 }
 
-/** Seed the single token row from the file when missing/empty (first run). */
-async function seedOAuth(file: GarminTokens): Promise<void> {
-  if ((await readOAuth())?.refresh_token) return;
+/** Overwrite the token row with a freshly minted token set (first setup or re-auth).
+ *  The access token is marked expired so the next call refreshes and validates it. */
+export async function importGarminTokens(tokens: GarminTokens): Promise<void> {
+  for (const k of ["di_refresh_token", "di_client_id"] as const) {
+    if (!tokens[k]) throw new Error(`missing ${k} (expected a garmin_tokens.json)`);
+  }
   await execute(
-    `${getDialect().replaceVerb()} INTO garmin_oauth (id, access_token, refresh_token, expires_at) ` +
-      `VALUES (1, ${sqlStr(file.di_token ?? null)}, ${sqlStr(file.di_refresh_token)}, 0);`
+    `${getDialect().replaceVerb()} INTO garmin_oauth (id, access_token, refresh_token, expires_at, client_id) ` +
+      `VALUES (1, ${sqlStr(tokens.di_token ?? null)}, ${sqlStr(tokens.di_refresh_token)}, 0, ${sqlStr(tokens.di_client_id)});`
   );
+}
+
+/** Seed the single token row from the file when missing/empty (first run), and
+ *  backfill the client id on rows that pre-date the client_id column. */
+async function seedOAuth(file: GarminTokens | null): Promise<void> {
+  if (!file) return;
+  const cur = await readOAuth();
+  if (!cur?.refresh_token) {
+    await importGarminTokens(file);
+    return;
+  }
+  if (!cur.client_id) {
+    await execute(
+      `UPDATE garmin_oauth SET client_id = ${sqlStr(file.di_client_id)} WHERE id = 1 AND client_id IS NULL;`
+    );
+  }
 }
 
 async function writeOAuth(access: string, refresh: string, expiresAt: number): Promise<void> {
@@ -182,9 +211,13 @@ async function releaseLease(owner: string): Promise<void> {
   }
 }
 
-/** Refresh once and persist. On invalid_grant, if the file holds a *different*
+/** Refresh once and persist. On invalid_grant, if a token file holds a *different*
  *  refresh token (the user re-minted tokens), retry with it to self-recover. */
-async function refreshAndStore(refreshToken: string, file: GarminTokens): Promise<string> {
+async function refreshAndStore(
+  refreshToken: string,
+  clientId: string,
+  file: GarminTokens | null
+): Promise<string> {
   const store = async (r: RefreshResponse, used: string): Promise<string> => {
     if (!r.access_token) throw new Error("refresh: no access_token in response");
     await writeOAuth(
@@ -195,10 +228,10 @@ async function refreshAndStore(refreshToken: string, file: GarminTokens): Promis
     return r.access_token;
   };
   try {
-    return await store(await refreshAccess(refreshToken, file.di_client_id), refreshToken);
+    return await store(await refreshAccess(refreshToken, clientId), refreshToken);
   } catch (e) {
-    const reauth = file.di_refresh_token && file.di_refresh_token !== refreshToken;
-    if (reauth && /invalid_grant|invalid refresh|HTTP 400/i.test(String(e))) {
+    const reauth = file?.di_refresh_token && file.di_refresh_token !== refreshToken;
+    if (file && reauth && /invalid_grant|invalid refresh|HTTP 400/i.test(String(e))) {
       return store(
         await refreshAccess(file.di_refresh_token, file.di_client_id),
         file.di_refresh_token
@@ -208,12 +241,19 @@ async function refreshAndStore(refreshToken: string, file: GarminTokens): Promis
   }
 }
 
+const NO_TOKENS =
+  "no Garmin tokens: run `garmin-auth-import <garmin_tokens.json>` (or set $GARMINTOKENS) — mint them with `uvx garmin-mcp-auth`";
+
 /** A valid access token from the shared DB store — refresh only when expired,
  *  serialized across processes by the lease lock. */
-async function dbAccessToken(file: GarminTokens): Promise<string> {
+async function dbAccessToken(file: GarminTokens | null): Promise<string> {
   await seedOAuth(file);
-  const cached = fresh(await readOAuth());
+  const state = await readOAuth();
+  const cached = fresh(state);
   if (cached) return cached;
+  const clientId = state?.client_id || file?.di_client_id;
+  const seedRefresh = state?.refresh_token || file?.di_refresh_token;
+  if (!clientId || !seedRefresh) throw new Error(NO_TOKENS);
 
   const owner = `${process.pid}-${Date.now()}-${refreshCounter++}`;
   for (let attempt = 0; attempt < 8; attempt++) {
@@ -221,7 +261,7 @@ async function dbAccessToken(file: GarminTokens): Promise<string> {
       try {
         const cur = await readOAuth(); // double-check: someone may have just refreshed
         return (
-          fresh(cur) ?? (await refreshAndStore(cur?.refresh_token || file.di_refresh_token, file))
+          fresh(cur) ?? (await refreshAndStore(cur?.refresh_token || seedRefresh, clientId, file))
         );
       } finally {
         await releaseLease(owner);
@@ -234,7 +274,7 @@ async function dbAccessToken(file: GarminTokens): Promise<string> {
   }
   // Lease never freed and no fresh token appeared — refresh anyway (best effort).
   const cur = await readOAuth();
-  return refreshAndStore(cur?.refresh_token || file.di_refresh_token, file);
+  return refreshAndStore(cur?.refresh_token || seedRefresh, clientId, file);
 }
 
 /** File-only fallback when the DB is unreachable: the legacy load→refresh→persist
@@ -259,8 +299,10 @@ async function fileAccessToken(file: GarminTokens, path: string): Promise<string
 
 async function getValidAccessToken(): Promise<string> {
   const path = tokenPath();
-  const file = loadTokens(path);
-  return (await dbReady()) ? dbAccessToken(file) : fileAccessToken(file, path);
+  const file = tryLoadTokens(path);
+  if (await dbReady()) return dbAccessToken(file);
+  if (!file) throw new Error(NO_TOKENS);
+  return fileAccessToken(file, path);
 }
 
 /** An authenticated Garmin Connect client. Build with `GarminClient.create()`. */

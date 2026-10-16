@@ -173,6 +173,11 @@ GARMIN_EMAIL="you@example.com" GARMIN_PASSWORD="your-password" \
   uvx --python 3.12 --from git+https://github.com/Taxuspt/garmin_mcp garmin-mcp-auth
 ```
 
+On first use the tokens are copied into the database (`garmin_oauth`), which is the live store
+from then on. A server without the file (e.g. a MySQL deployment with no volume) gets them with
+`npx claude-coach garmin-auth-import ~/.garminconnect/garmin_tokens.json` (or on stdin); run it
+again after re-minting.
+
 ### Pull today's recovery data
 
 ```bash
