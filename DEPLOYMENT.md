@@ -47,9 +47,11 @@ Drop `coach.db` + `garmin_tokens.json` into `./data/` and `cp .env.example .env`
 | Var                                                                  | What                                                                      |
 | -------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | `TZ`                                                                 | Local timezone — reminders fire in local time (needs `tzdata`, baked in). |
-| `COACH_DB_PATH` / `GARMINTOKENS`                                     | DB + Garmin-tokens paths in the container (default under `/data`).        |
+| `COACH_DB_PATH` / `GARMINTOKENS`                                     | SQLite DB + Garmin-tokens seed paths (e.g. under a mounted `/data`).      |
 | `COACH_NOTIFY_CHANNEL` / `COACH_NOTIFY_WEBHOOK_URL`                  | Push channel + webhook (your HA webhook).                                 |
 | `COACH_MORNING_CRON` / `COACH_HYDRATION_CRON` / `COACH_BEDTIME_CRON` | Override the schedules.                                                   |
+
+> **Stateless with MySQL:** with `COACH_DB_DRIVER=mysql` every piece of state is in the database — wellness, plans, MCP OAuth clients and the Garmin tokens (`garmin_oauth`) — so no volume is needed. Load Garmin tokens minted with `uvx garmin-mcp-auth` once (and again after a re-auth) with `coach garmin-auth-import < garmin_tokens.json`; it stores and verifies them, and the file can then be deleted.
 
 > **Live Garmin data:** the CLI includes a native TypeScript Garmin client (`garmin-fetch`) that logs in to Garmin Connect with the tokens in `GARMINTOKENS` and writes a fresh wellness snapshot + recent activities into `coach.db`. A cron job runs it at **07:15** (override `COACH_GARMIN_FETCH_CRON`), just before the 07:30 check-in, so morning readiness/sleep are current. Trigger it on demand with `docker compose run --rm coach garmin-fetch`, or from any Claude client via the `garmin_refresh` MCP tool. Hydration + bedtime still work fully offline.
 
@@ -93,7 +95,7 @@ Add a **custom connector** pointing at `https://coach.example.com/mcp` — on De
 
 - `coach-mcp` advertises itself as the authorization server (`/.well-known/oauth-authorization-server` + `/.well-known/oauth-protected-resource`), supports **dynamic client registration**, runs **authorization-code + PKCE**, and federates login to **Google**.
 - On success it issues a short-lived HS256 JWT (signed with `COACH_OAUTH_SIGNING_SECRET`); `/mcp` requires a valid one. Only `COACH_OAUTH_ALLOWED_EMAILS` get through.
-- Registered clients persist to `oauth-clients.json` in `/data`; `coach.db` + Garmin tokens stay on your volume. Single-user, personal use.
+- Registered clients persist in the `oauth_clients` table (an old `oauth-clients.json` next to `COACH_DB_PATH` is imported once at startup). Single-user, personal use.
 
 > Not yet verified end-to-end here (OAuth handshakes are fiddly). If a client errors: check `docker compose logs -f coach-mcp`, confirm the Google redirect URI matches `ISSUER/oauth/google/callback` **exactly**, and that `coach.example.com` is reachable **without** a Cloudflare Access challenge.
 
