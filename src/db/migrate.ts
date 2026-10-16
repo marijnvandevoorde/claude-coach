@@ -96,6 +96,29 @@ export async function migrate(silent = false): Promise<void> {
      );`
   );
 
+  // Background jobs for long-running MCP tools (see src/db/jobs.ts). `active_key`
+  // is user|kind while running, NULL after: the UNIQUE index allows one running job
+  // of a kind per user (both backends allow many NULLs).
+  const longText = dialect.driver === "mysql" ? "LONGTEXT" : "TEXT";
+  await execute(
+    `CREATE TABLE IF NOT EXISTS jobs (
+       id VARCHAR(64) PRIMARY KEY,
+       user_key VARCHAR(191) NOT NULL,
+       kind VARCHAR(64) NOT NULL,
+       tool VARCHAR(64) NOT NULL,
+       summary TEXT,
+       status VARCHAR(16) NOT NULL,
+       progress TEXT,
+       result ${longText},
+       error TEXT,
+       active_key VARCHAR(255) UNIQUE,
+       owner VARCHAR(191),
+       created_at BIGINT NOT NULL,
+       heartbeat_at BIGINT NOT NULL,
+       finished_at BIGINT
+     );`
+  );
+
   if (!silent) log.success("Database schema initialized");
 }
 

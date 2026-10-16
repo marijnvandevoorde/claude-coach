@@ -11,7 +11,16 @@ export interface ToolDef {
   toArgs: (a: Args) => string[];
   /** Optional: content to pipe to the CLI's stdin (e.g. large file bodies). */
   stdin?: (a: Args) => string | undefined;
+  /**
+   * Long-running tool: runs as a background job (see jobs.ts). `kind` is the
+   * one-at-a-time-per-user key; `summary` says in words what was started.
+   */
+  job?: { kind: string; summary: (a: Args) => string };
 }
+
+/** Appended to the description of every job tool so the client knows to poll. */
+export const ASYNC_NOTE =
+  " Runs in the background: if it finishes within ~20 s the result comes back directly; otherwise the call returns {status:'running', jobId} — then call job_status with that jobId every 15-30 s until status is 'succeeded' (result included) or 'failed' (error included). Only one such job per kind runs at a time; starting another while one runs returns the running job.";
 
 /** Append `--key=value` for each present key. */
 function flags(a: Args, keys: string[]): string[] {
@@ -141,10 +150,15 @@ export const TOOLS: Record<string, ToolDef> = {
   },
   garmin_refresh: {
     description:
-      "Pull live data directly FROM Garmin Connect and store it in coach.db: readiness, sleep (+score), HRV (status, weekly avg, baseline + nightly readings), body battery (wake + charged), resting HR (+ 7-day avg), VO2max, daily steps/distance/floors, moderate/vigorous intensity minutes, active/total calories, SpO2, waking respiration, training status + acute/chronic load + ACWR, and recent activities. Also stores a full raw JSON blob (garmin_raw: sleep stages, HRV readings, load focus, heat/altitude acclimation) for deeper reasoning. This is the real 'sync with Garmin' — it fetches on the server using the saved Garmin tokens. (Contrast garmin_sync, which only caches numbers you pass in.)",
+      "Pull live data directly FROM Garmin Connect and store it in coach.db: readiness, sleep (+score), HRV (status, weekly avg, baseline + nightly readings), body battery (wake + charged), resting HR (+ 7-day avg), VO2max, daily steps/distance/floors, moderate/vigorous intensity minutes, active/total calories, SpO2, waking respiration, training status + acute/chronic load + ACWR, and recent activities. Also stores a full raw JSON blob (garmin_raw: sleep stages, HRV readings, load focus, heat/altitude acclimation) for deeper reasoning. This is the real 'sync with Garmin' — it fetches on the server using the saved Garmin tokens. (Contrast garmin_sync, which only caches numbers you pass in.)" +
+      ASYNC_NOTE,
     inputSchema: {
       type: "object",
       properties: { date: { type: "string", description: "YYYY-MM-DD (default today)" } },
+    },
+    job: {
+      kind: "garmin-fetch",
+      summary: (a) => `Garmin fetch for ${typeof a.date === "string" ? a.date : "today"}`,
     },
     toArgs: (a) => ["garmin-fetch", "--json", ...flags(a, ["date"])],
   },
@@ -214,7 +228,8 @@ export const TOOLS: Record<string, ToolDef> = {
   },
   schedule_workouts: {
     description:
-      "Create + schedule a training plan's workouts directly on Garmin Connect (they sync to the athlete's watch). Defaults to the stored ACTIVE plan, so 'push the plan to Garmin' needs no arguments; or pass `plan` inline / a `file` path. Re-pushing OVERRIDES in place (updates each workout) and prunes any it no longer contains; a workout deleted by hand on Garmin is recreated automatically. Optional from/to limit the date window. replace:true forces a clean rebuild (delete each + create fresh). dryRun:true previews payloads without pushing. Returns an explicit {pushed,failed,pruned,...} summary.",
+      "Create + schedule a training plan's workouts directly on Garmin Connect (they sync to the athlete's watch). Defaults to the stored ACTIVE plan, so 'push the plan to Garmin' needs no arguments; or pass `plan` inline / a `file` path. Re-pushing OVERRIDES in place (updates each workout) and prunes any it no longer contains; a workout deleted by hand on Garmin is recreated automatically. Optional from/to limit the date window. replace:true forces a clean rebuild (delete each + create fresh). dryRun:true previews payloads without pushing. Returns an explicit {pushed,failed,pruned,...} summary." +
+      ASYNC_NOTE,
     inputSchema: {
       type: "object",
       properties: {
@@ -231,6 +246,11 @@ export const TOOLS: Record<string, ToolDef> = {
         },
         dryRun: { type: "boolean", description: "build payloads only; push nothing" },
       },
+    },
+    job: {
+      kind: "garmin-push",
+      summary: (a) =>
+        `${a.dryRun === true ? "dry-run of the " : ""}Garmin workout push of ${typeof a.plan === "string" ? "the given plan" : typeof a.file === "string" ? String(a.file) : "the active plan"}${typeof a.from === "string" || typeof a.to === "string" ? ` (${a.from ?? "…"}..${a.to ?? "…"})` : ""}${a.replace === true ? ", replace" : ""}`,
     },
     toArgs: (a) => {
       const f = ["garmin-push", ...planSource(a), "--json"];
@@ -397,7 +417,8 @@ export const TOOLS: Record<string, ToolDef> = {
   },
   upload_route: {
     description:
-      "Upload a GPX route to Garmin as a course, kept EXACTLY as-is (no point reduction, no snap-to-roads). Pass the GPX either as inline `gpx` content (e.g. a file dropped into the conversation) or as a server-readable `file` path, plus an optional name (defaults to the GPX track name) and course type. dryRun parses + builds the payload without uploading.",
+      "Upload a GPX route to Garmin as a course, kept EXACTLY as-is (no point reduction, no snap-to-roads). Pass the GPX either as inline `gpx` content (e.g. a file dropped into the conversation) or as a server-readable `file` path, plus an optional name (defaults to the GPX track name) and course type. dryRun parses + builds the payload without uploading." +
+      ASYNC_NOTE,
     inputSchema: {
       type: "object",
       properties: {
@@ -417,6 +438,11 @@ export const TOOLS: Record<string, ToolDef> = {
         dryRun: { type: "boolean", description: "parse + build payload only; upload nothing" },
       },
     },
+    job: {
+      kind: "garmin-route",
+      summary: (a) =>
+        `${a.dryRun === true ? "dry-run of the " : ""}route upload${typeof a.name === "string" ? ` "${a.name}"` : ""}${typeof a.type === "string" ? ` (${a.type})` : ""}`,
+    },
     toArgs: (a) => {
       // Inline content goes via stdin (--stdin); a path is passed positionally.
       const f =
@@ -430,7 +456,8 @@ export const TOOLS: Record<string, ToolDef> = {
   },
   backfill: {
     description:
-      "Backfill historical Garmin data into coach.db over a date range. Default uses the cheap multi-day range endpoints (steps/distance/floors/stress/resting HR/intensity/body-battery/HRV). full=true fetches a per-day COMPLETE snapshot (adds sleep, training load, VO2max, calories, SpO2, respiration, garmin_raw) — heavier but resumable (skips days already backfilled unless force=true). Rate-limited with 429 backoff; safe to run repeatedly / a chunk at a time.",
+      "Backfill historical Garmin data into coach.db over a date range. Default uses the cheap multi-day range endpoints (steps/distance/floors/stress/resting HR/intensity/body-battery/HRV). full=true fetches a per-day COMPLETE snapshot (adds sleep, training load, VO2max, calories, SpO2, respiration, garmin_raw) — heavier but resumable (skips days already backfilled unless force=true). Rate-limited with 429 backoff; safe to run repeatedly / a chunk at a time." +
+      ASYNC_NOTE,
     inputSchema: {
       type: "object",
       required: ["from"],
@@ -443,6 +470,11 @@ export const TOOLS: Record<string, ToolDef> = {
         },
         force: { type: "boolean", description: "re-fetch days that already have a full snapshot" },
       },
+    },
+    job: {
+      kind: "garmin-backfill",
+      summary: (a) =>
+        `Garmin backfill ${a.from} → ${typeof a.to === "string" ? a.to : "today"}${a.full === true ? " (full)" : ""}${a.force === true ? " (force)" : ""}`,
     },
     toArgs: (a) => {
       const f = ["garmin-backfill", "--json", ...flags(a, ["from", "to"])];

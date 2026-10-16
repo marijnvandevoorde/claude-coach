@@ -5,7 +5,7 @@
  * a reverse proxy + Cloudflare Access; an optional bearer (COACH_AUTH_SECRET) is checked too.
  */
 import express from "express";
-import { spawn } from "node:child_process";
+import { hostname } from "node:os";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
@@ -16,87 +16,47 @@ import {
   verifyAccessToken,
   resourceMetadataUrl,
 } from "./oauth.js";
+import { initDatabase } from "../db/client.js";
+import { migrate } from "../db/migrate.js";
+import { JobRunner } from "./jobs.js";
+import { callTool, listTools, type ToolCallContext } from "./handler.js";
+import type { Args } from "./tools.js";
 
 const CLI = process.env.COACH_CLI || "/app/dist/cli.js";
 const PORT = Number(process.env.COACH_MCP_PORT || process.env.PORT || 8080);
-const MAX_OUTPUT = 16 * 1024 * 1024; // 16 MB cap on a tool's stdout
-// Per-tool wall-clock cap. A runaway/very long tool (e.g. a huge backfill) is
-// killed rather than tying up a request forever. Override with COACH_MCP_TOOL_TIMEOUT_MS.
+// Per-tool wall-clock cap for inline tools. Override with COACH_MCP_TOOL_TIMEOUT_MS.
 const TOOL_TIMEOUT_MS = Number(process.env.COACH_MCP_TOOL_TIMEOUT_MS || 600_000);
+// Cap for a background job (a long backfill). Override with COACH_MCP_JOB_TIMEOUT_MS.
+const JOB_TIMEOUT_MS = Number(process.env.COACH_MCP_JOB_TIMEOUT_MS || 3_600_000);
+// How long a job tool waits before answering with a job id. Cloudflare cuts a request
+// at 100 s; 20 s keeps short calls inline. Override with COACH_MCP_INLINE_WAIT_MS.
+const INLINE_WAIT_MS = Number(process.env.COACH_MCP_INLINE_WAIT_MS || 20_000);
 
-/**
- * Run the CLI as an ASYNC child process. Critically, this does NOT block the
- * Node event loop — `/health` and other tool calls stay responsive while a slow
- * tool (a big backfill, a slow Garmin fetch) runs. (The old spawnSync froze the
- * whole server for the child's entire duration.) Resolves to the captured output.
- */
-function runCli(args: string[], input?: string): Promise<{ ok: boolean; text: string }> {
-  return new Promise((resolve) => {
-    const child = spawn("node", [CLI, ...args], { stdio: ["pipe", "pipe", "pipe"] });
-    let stdout = "";
-    let stderr = "";
-    let over = false;
-    let timedOut = false;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      child.kill("SIGKILL");
-    }, TOOL_TIMEOUT_MS);
+// Jobs live in the database, so it is needed even without OAuth.
+await initDatabase();
+await migrate(true);
+const runner = new JobRunner({ owner: `${hostname()}:${process.pid}` });
+const swept = await runner.sweep();
+if (swept) console.log(`coach-mcp: marked ${swept} interrupted job(s) as failed`);
 
-    child.stdout.on("data", (d: Buffer) => {
-      stdout += d.toString();
-      if (stdout.length > MAX_OUTPUT && !over) {
-        over = true;
-        child.kill("SIGKILL");
-      }
-    });
-    child.stderr.on("data", (d: Buffer) => {
-      stderr += d.toString();
-    });
-    child.on("error", (e) => {
-      clearTimeout(timer);
-      resolve({ ok: false, text: e.message });
-    });
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      if (timedOut)
-        return resolve({ ok: false, text: `tool timed out after ${TOOL_TIMEOUT_MS / 1000}s` });
-      if (over) return resolve({ ok: false, text: "tool output exceeded 16 MB; aborted" });
-      if (code !== 0)
-        return resolve({ ok: false, text: (stderr || stdout || `exit ${code}`).trim() });
-      resolve({ ok: true, text: stdout.trim() });
-    });
-
-    if (input != null) child.stdin.end(input);
-    else child.stdin.end();
-  });
-}
-
-import { TOOLS, type Args, type ToolDef } from "./tools.js";
-
-function buildServer(): Server {
+function buildServer(user: string): Server {
   const server = new Server(
     { name: "claude-coach", version: "0.1.0" },
     { capabilities: { tools: {} } }
   );
+  const ctx: ToolCallContext = {
+    user,
+    runner,
+    cli: CLI,
+    toolTimeoutMs: TOOL_TIMEOUT_MS,
+    jobTimeoutMs: JOB_TIMEOUT_MS,
+    inlineWaitMs: INLINE_WAIT_MS,
+  };
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: Object.entries(TOOLS).map(([name, t]) => ({
-      name,
-      description: t.description,
-      inputSchema: t.inputSchema,
-    })),
-  }));
-
-  server.setRequestHandler(CallToolRequestSchema, async (req) => {
-    const name = req.params.name;
-    const def = TOOLS[name];
-    if (!def) {
-      return { content: [{ type: "text", text: `Unknown tool: ${name}` }], isError: true };
-    }
-    const args = (req.params.arguments ?? {}) as Args;
-    const r = await runCli(def.toArgs(args), def.stdin?.(args));
-    return { content: [{ type: "text", text: r.text || "(no output)" }], isError: !r.ok };
-  });
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: listTools() }));
+  server.setRequestHandler(CallToolRequestSchema, async (req) =>
+    callTool(req.params.name, (req.params.arguments ?? {}) as Args, ctx)
+  );
 
   return server;
 }
@@ -119,7 +79,9 @@ if (oauthEnabled()) {
 // Auth gate for everything below (i.e. /mcp).
 app.use(async (req, res, next) => {
   if (oauthEnabled()) {
-    if (await verifyAccessToken(req.headers.authorization)) {
+    const who = await verifyAccessToken(req.headers.authorization);
+    if (who) {
+      res.locals.user = who.email;
       next();
       return;
     }
@@ -139,7 +101,7 @@ app.use(async (req, res, next) => {
 
 // Stateless Streamable-HTTP MCP endpoint: a fresh server+transport per request.
 app.post("/mcp", async (req, res) => {
-  const server = buildServer();
+  const server = buildServer(String(res.locals.user ?? "default"));
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
   res.on("close", () => {
     transport.close();
@@ -148,6 +110,17 @@ app.post("/mcp", async (req, res) => {
   await server.connect(transport);
   await transport.handleRequest(req, res, req.body);
 });
+
+// On shutdown (a rollout or restart) this process's jobs die with it: record that.
+for (const sig of ["SIGTERM", "SIGINT"] as const) {
+  process.once(sig, () => {
+    runner
+      .shutdown()
+      .then((n) => n && console.log(`coach-mcp: ${sig}, marked ${n} running job(s) as failed`))
+      .catch((e) => console.error(`coach-mcp: could not mark jobs on ${sig}: ${String(e)}`))
+      .finally(() => process.exit(0));
+  });
+}
 
 app.listen(PORT, () => {
   const mode = oauthEnabled() ? "oauth(google)" : process.env.COACH_AUTH_SECRET ? "bearer" : "none";
