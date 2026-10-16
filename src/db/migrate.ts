@@ -23,8 +23,9 @@ async function ensureColumn(table: string, column: string, definition: string): 
 }
 
 export async function migrate(silent = false): Promise<void> {
-  ensureConfigDir();
   const dialect = getDialect();
+  // Only the SQLite backend lives on local disk; a MySQL deployment needs no directory.
+  if (dialect.driver === "sqlite") ensureConfigDir();
   const schemaPath = join(__dirname, dialect.schemaFile());
   const schema = readFileSync(schemaPath, "utf-8");
   await runScript(schema);
@@ -78,7 +79,20 @@ export async function migrate(silent = false): Promise<void> {
        expires_at BIGINT,
        lock_owner TEXT,
        locked_until BIGINT,
-       updated_at TEXT
+       updated_at TEXT,
+       client_id TEXT
+     );`
+  );
+  // Garmin's di_client_id, so no token file is needed at runtime (added after prod existed).
+  await ensureColumn("garmin_oauth", "client_id", "TEXT");
+
+  // MCP OAuth clients registered via dynamic client registration (RFC 7591).
+  // Formerly an oauth-clients.json next to coach.db. See src/db/oauthClients.ts.
+  await execute(
+    `CREATE TABLE IF NOT EXISTS oauth_clients (
+       client_id VARCHAR(191) PRIMARY KEY,
+       redirect_uris TEXT NOT NULL,
+       created_at BIGINT
      );`
   );
 

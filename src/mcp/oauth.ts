@@ -16,9 +16,16 @@
  */
 import { Router } from "express";
 import { createHash, randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
 import { SignJWT, jwtVerify, createRemoteJWKSet } from "jose";
+import { initDatabase } from "../db/client.js";
+import { migrate } from "../db/migrate.js";
+import {
+  type OAuthClient,
+  countOAuthClients,
+  getOAuthClient,
+  importLegacyOAuthClients,
+  saveOAuthClient,
+} from "../db/oauthClients.js";
 
 const ISSUER = (process.env.COACH_OAUTH_ISSUER || "").replace(/\/$/, "");
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
@@ -28,7 +35,8 @@ const ALLOWED_EMAILS = (process.env.COACH_OAUTH_ALLOWED_EMAILS || "")
   .map((s) => s.trim().toLowerCase())
   .filter(Boolean);
 const SIGNING_SECRET = process.env.COACH_OAUTH_SIGNING_SECRET || "";
-const CLIENTS_FILE = (process.env.COACH_DB_PATH || "/data/coach.db").replace(
+// Pre-DB location of the registered clients; imported once if it still exists.
+const LEGACY_CLIENTS_FILE = (process.env.COACH_DB_PATH || "/data/coach.db").replace(
   /[^/]+$/,
   "oauth-clients.json"
 );
@@ -51,27 +59,31 @@ const key = () => new TextEncoder().encode(SIGNING_SECRET);
 const sha256url = (s: string) => createHash("sha256").update(s).digest("base64url");
 const rand = (n = 32) => randomBytes(n).toString("base64url");
 
-// --- storage: clients persisted to disk, codes/logins in-memory (short-lived) ---
-interface Client {
-  client_id: string;
-  redirect_uris: string[];
-}
-function loadClients(): Record<string, Client> {
+// --- storage: clients in the DB (oauth_clients), codes/logins in-memory (short-lived) ---
+const clientCache = new Map<string, OAuthClient>();
+
+/** Open the DB, apply migrations and import a legacy oauth-clients.json if one is
+ *  still around. Call (await) once before serving the OAuth routes. */
+export async function initOAuthStore(): Promise<void> {
+  await initDatabase();
+  await migrate(true);
   try {
-    return existsSync(CLIENTS_FILE) ? JSON.parse(readFileSync(CLIENTS_FILE, "utf-8")) : {};
-  } catch {
-    return {};
+    const added = await importLegacyOAuthClients(LEGACY_CLIENTS_FILE);
+    if (added)
+      console.log(`coach-mcp: imported ${added} OAuth client(s) from ${LEGACY_CLIENTS_FILE}`);
+  } catch (e) {
+    console.error(`coach-mcp: could not import ${LEGACY_CLIENTS_FILE}: ${String(e)}`);
   }
+  console.log(`coach-mcp: ${await countOAuthClients()} registered OAuth client(s)`);
 }
-function saveClients(c: Record<string, Client>): void {
-  try {
-    mkdirSync(dirname(CLIENTS_FILE), { recursive: true });
-    writeFileSync(CLIENTS_FILE, JSON.stringify(c));
-  } catch {
-    /* best effort */
-  }
+
+async function findClient(id: string): Promise<OAuthClient | null> {
+  const hit = clientCache.get(id);
+  if (hit) return hit;
+  const c = await getOAuthClient(id);
+  if (c) clientCache.set(id, c);
+  return c;
 }
-const clients = loadClients();
 
 interface Code {
   client_id: string;
@@ -131,16 +143,23 @@ export function oauthRouter(): Router {
   });
 
   // Dynamic client registration (RFC 7591) — lets Claude register itself.
-  r.post("/oauth/register", (req, res) => {
+  r.post("/oauth/register", async (req, res) => {
     const body = (req.body ?? {}) as { redirect_uris?: unknown };
-    const redirect_uris = Array.isArray(body.redirect_uris) ? (body.redirect_uris as string[]) : [];
+    const redirect_uris = Array.isArray(body.redirect_uris)
+      ? (body.redirect_uris as unknown[]).filter((u): u is string => typeof u === "string")
+      : [];
     if (!redirect_uris.length) {
       res.status(400).json({ error: "invalid_redirect_uri" });
       return;
     }
     const client_id = rand(24);
-    clients[client_id] = { client_id, redirect_uris };
-    saveClients(clients);
+    try {
+      await saveOAuthClient({ client_id, redirect_uris });
+    } catch {
+      res.status(500).json({ error: "server_error" });
+      return;
+    }
+    clientCache.set(client_id, { client_id, redirect_uris });
     res.status(201).json({
       client_id,
       redirect_uris,
@@ -151,10 +170,16 @@ export function oauthRouter(): Router {
   });
 
   // Authorization endpoint -> bounce the user to Google.
-  r.get("/oauth/authorize", (req, res) => {
+  r.get("/oauth/authorize", async (req, res) => {
     gc();
     const q = req.query as Record<string, string>;
-    const client = q.client_id ? clients[q.client_id] : undefined;
+    let client: OAuthClient | null = null;
+    try {
+      client = q.client_id ? await findClient(q.client_id) : null;
+    } catch {
+      res.status(500).send("client lookup failed");
+      return;
+    }
     if (!client || !q.redirect_uri || !client.redirect_uris.includes(q.redirect_uri)) {
       res.status(400).send("invalid client_id / redirect_uri");
       return;

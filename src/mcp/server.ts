@@ -9,7 +9,13 @@ import { spawn } from "node:child_process";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import { oauthEnabled, oauthRouter, verifyAccessToken, resourceMetadataUrl } from "./oauth.js";
+import {
+  initOAuthStore,
+  oauthEnabled,
+  oauthRouter,
+  verifyAccessToken,
+  resourceMetadataUrl,
+} from "./oauth.js";
 
 const CLI = process.env.COACH_CLI || "/app/dist/cli.js";
 const PORT = Number(process.env.COACH_MCP_PORT || process.env.PORT || 8080);
@@ -106,6 +112,7 @@ app.get("/health", (_req, res) => {
 
 // Built-in OAuth (Google-federated): mounts discovery + /oauth/* publicly.
 if (oauthEnabled()) {
+  await initOAuthStore(); // registered clients live in the DB
   app.use(oauthRouter());
 }
 
