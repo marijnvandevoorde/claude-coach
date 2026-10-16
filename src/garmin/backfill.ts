@@ -29,6 +29,8 @@ export interface BackfillOpts {
   full?: boolean;
   force?: boolean;
   delayMs?: number;
+  /** Called with a short progress line (e.g. "day 3/30 (2026-01-03)"). */
+  onProgress?: (msg: string) => void;
 }
 
 export interface BackfillResult {
@@ -184,6 +186,7 @@ export async function runBackfill(opts: BackfillOpts, sink: BackfillSink): Promi
           result.activities++;
         }
       }
+      opts.onProgress?.(`activities: ${result.activities} stored so far`);
       if (reachedOld || page.length < limit) break;
       await sleep(delay);
     }
@@ -194,7 +197,9 @@ export async function runBackfill(opts: BackfillOpts, sink: BackfillSink): Promi
   // 2. Wellness.
   if (opts.full) {
     // Per-day complete snapshot (resumable: skip days that already have a blob).
-    for (const date of eachDate(opts.from, opts.to)) {
+    const dates = eachDate(opts.from, opts.to);
+    for (const [i, date] of dates.entries()) {
+      opts.onProgress?.(`wellness day ${i + 1}/${dates.length} (${date})`);
       if (!opts.force && (await sink.hasFullSnapshot(date))) {
         result.skipped++;
         continue;
@@ -210,7 +215,9 @@ export async function runBackfill(opts: BackfillOpts, sink: BackfillSink): Promi
     }
   } else {
     // Fast range path, in 28-day chunks.
-    for (const [s, e] of chunks(opts.from, opts.to, 28)) {
+    const parts = chunks(opts.from, opts.to, 28);
+    for (const [i, [s, e]] of parts.entries()) {
+      opts.onProgress?.(`wellness ${s}..${e} (chunk ${i + 1}/${parts.length})`);
       const days = await rangeWellness(client, s, e, result.errors);
       for (const [date, patch] of days) {
         if (Object.keys(patch).length > 0) {
