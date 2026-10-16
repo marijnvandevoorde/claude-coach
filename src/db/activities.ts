@@ -6,6 +6,7 @@
  * label that reclassifies a session. Style mirrors src/db/plans.ts.
  */
 import { execute, queryJson } from "./client.js";
+import { getDialect } from "./dialect.js";
 import type { ActualActivity } from "../lib/planActual.js";
 
 function esc(value: string | null | undefined): string {
@@ -70,4 +71,52 @@ export async function getActivityNote(id: number): Promise<ActivityNoteRow | nul
     `SELECT id, coach_notes, adherence_json FROM activities WHERE id = ${Number(id)} LIMIT 1;`
   );
   return rows[0] ?? null;
+}
+
+function sqlNum(value: unknown): string {
+  const n = Number(value);
+  return value == null || !Number.isFinite(n) ? "NULL" : String(n);
+}
+
+/** Store a Garmin activity summary. Upsert, not REPLACE: REPLACE deletes the row
+ *  first, which wiped the stored GPS track, streams, coach notes and adherence
+ *  verdict on every fetch (and made garmin-fetch re-download every recent
+ *  activity's track + streams each time). */
+export async function saveGarminActivity(a: Record<string, unknown>): Promise<void> {
+  const str = (v: unknown): string | null => (typeof v === "string" ? v : null);
+  const cols = [
+    "id",
+    "name",
+    "sport_type",
+    "start_date",
+    "elapsed_time",
+    "moving_time",
+    "distance",
+    "total_elevation_gain",
+    "average_speed",
+    "max_speed",
+    "average_heartrate",
+    "max_heartrate",
+    "average_cadence",
+    "calories",
+    "raw_json",
+    "synced_at",
+  ];
+  const dialect = getDialect();
+  await execute(
+    dialect.upsert(
+      "activities",
+      cols,
+      `(
+       ${sqlNum(a.id)}, ${esc(str(a.name))}, ${esc(str(a.sport_type))},
+       ${esc(str(a.start_date))}, ${sqlNum(a.elapsed_time)}, ${sqlNum(a.moving_time)},
+       ${sqlNum(a.distance)}, ${sqlNum(a.total_elevation_gain)}, ${sqlNum(a.average_speed)},
+       ${sqlNum(a.max_speed)}, ${sqlNum(a.average_heartrate)}, ${sqlNum(a.max_heartrate)},
+       ${sqlNum(a.average_cadence)}, ${sqlNum(a.calories)},
+       ${esc(JSON.stringify(a.raw ?? a))}, ${dialect.now()}
+     )`,
+      "id",
+      cols.filter((c) => c !== "id")
+    )
+  );
 }
