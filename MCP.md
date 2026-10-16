@@ -96,6 +96,23 @@ any Garmin signals you've already fetched, or call `garmin_refresh` first.
 
 ## Garmin
 
+### Long-running tools and `job_status`
+
+`garmin_refresh`, `backfill`, `schedule_workouts` and `upload_route` can take longer than the
+100 s a request through Cloudflare may last, so each runs as a **background job**:
+
+- The call waits up to ~20 s (`COACH_MCP_INLINE_WAIT_MS`). If the job is done by then, the result
+  comes back as before.
+- Otherwise it returns `{status: "running", jobId, started, next}`. Call **`job_status`** with that
+  `jobId` every 15-30 s: it reports `progress` (e.g. `wellness day 12/90`), `elapsedSeconds`, and
+  once finished `status: "succeeded"` with the `result`, or `status: "failed"` with the `error`.
+- `job_status` without a `jobId` lists your recent jobs.
+- One job of each kind runs per user at a time; starting another while one runs returns the
+  running job (`alreadyRunning: true`).
+- Jobs are kept in the `jobs` table. A job cut off by a server restart is marked failed; start it
+  again (a `full` backfill skips the days it already has).
+- A job is stopped after an hour (`COACH_MCP_JOB_TIMEOUT_MS`).
+
 ### `garmin_refresh` — the real Garmin pull
 
 Pulls live data **directly from Garmin Connect** on the server (using the saved tokens) and stores
@@ -241,6 +258,7 @@ Turn the plan into structured Garmin workout records (inspect, or feed to `sched
 | `backfill`          | `garmin-backfill`          |
 | `schedule_workouts` | `garmin-push --active`     |
 | `upload_route`      | `garmin-route <file.gpx>`  |
+| `job_status`        | — (coach-mcp only)         |
 | `save_plan`         | `plan save --stdin`        |
 | `list_plans`        | `plan list`                |
 | `get_plan`          | `plan get [id]`            |
