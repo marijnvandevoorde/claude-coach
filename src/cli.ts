@@ -100,6 +100,7 @@ import {
   setActivityAdherence,
   getActivityNote,
   saveGarminActivity,
+  saveStravaActivity,
 } from "./db/activities.js";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
@@ -836,45 +837,6 @@ function escapeString(str: string | null | undefined): string {
   return `'${str.replace(/'/g, "''")}'`;
 }
 
-async function insertActivity(activity: StravaActivity): Promise<void> {
-  const sql = `
-    ${getDialect().replaceVerb()} INTO activities (
-      id, name, sport_type, start_date, elapsed_time, moving_time,
-      distance, total_elevation_gain, average_speed, max_speed,
-      average_heartrate, max_heartrate, average_watts, max_watts,
-      weighted_average_watts, kilojoules, suffer_score, average_cadence,
-      calories, description, workout_type, gear_id, raw_json, synced_at
-    ) VALUES (
-      ${activity.id},
-      ${escapeString(activity.name)},
-      ${escapeString(activity.sport_type)},
-      ${escapeString(activity.start_date)},
-      ${activity.elapsed_time ?? "NULL"},
-      ${activity.moving_time ?? "NULL"},
-      ${activity.distance ?? "NULL"},
-      ${activity.total_elevation_gain ?? "NULL"},
-      ${activity.average_speed ?? "NULL"},
-      ${activity.max_speed ?? "NULL"},
-      ${activity.average_heartrate ?? "NULL"},
-      ${activity.max_heartrate ?? "NULL"},
-      ${activity.average_watts ?? "NULL"},
-      ${activity.max_watts ?? "NULL"},
-      ${activity.weighted_average_watts ?? "NULL"},
-      ${activity.kilojoules ?? "NULL"},
-      ${activity.suffer_score ?? "NULL"},
-      ${activity.average_cadence ?? "NULL"},
-      ${activity.calories ?? "NULL"},
-      ${escapeString(activity.description)},
-      ${activity.workout_type ?? "NULL"},
-      ${escapeString(activity.gear_id)},
-      ${escapeString(JSON.stringify(activity))},
-      ${getDialect().now()}
-    );
-  `;
-
-  await execute(sql);
-}
-
 async function insertAthlete(athlete: {
   id: number;
   firstname: string;
@@ -950,7 +912,7 @@ async function runSync(args: SyncArgs): Promise<void> {
     log.start("Storing activities in database...");
     let count = 0;
     for (const activity of activities) {
-      await insertActivity(activity);
+      await saveStravaActivity(activity);
       count++;
       if (count % 50 === 0) {
         log.progress(`   Stored ${count}/${activities.length}...`);
@@ -1009,7 +971,7 @@ async function runSync(args: SyncArgs): Promise<void> {
   log.start("Storing activities in database...");
   let count = 0;
   for (const activity of activities) {
-    await insertActivity(activity);
+    await saveStravaActivity(activity);
     count++;
     if (count % 50 === 0) {
       log.progress(`   Stored ${count}/${activities.length}...`);
