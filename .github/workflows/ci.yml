@@ -1,11 +1,10 @@
 name: CI
 
-# Typecheck + tests on every PR and on pushes to main. Also the gate Dependabot
-# auto-merge relies on (its workflow runs the same steps before merging).
+# Format check, typecheck + tests on every PR. Also the gate Dependabot
+# auto-merge waits for before merging.
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read

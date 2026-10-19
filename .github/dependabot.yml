@@ -3,8 +3,8 @@
 #
 # Dependabot opens PRs automatically on the schedule below. Minor + patch updates
 # are grouped into a single PR per ecosystem and are auto-merged by
-# .github/workflows/dependabot-auto-merge.yml once that workflow's test gate
-# passes. Major updates are intentionally left ungrouped: each gets its own PR
+# .github/workflows/dependabot-auto-merge.yml once the PR's other checks (CI)
+# pass. Major updates are intentionally left ungrouped: each gets its own PR
 # for manual review and is not auto-merged.
 version: 2
 updates:
@@ -26,6 +26,20 @@ updates:
       # ignore major bumps (they'd outrun the runtime). Minor/patch still flow.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+
+  # Base image in the Dockerfile at the repo root.
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      docker-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   # GitHub Actions used by the workflows (keeps actions/* etc. current).
   - package-ecosystem: "github-actions"
