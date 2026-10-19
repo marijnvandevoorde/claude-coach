@@ -27,7 +27,7 @@ compose steps below are for running your own copy.
 
 ## Tier 1 — always-on reminder service
 
-A super-light `node:22-alpine` image runs the CLI on a cron schedule: `checkin --notify` → your push webhook (Home Assistant). Outbound-only, so **no open ports, no proxy**.
+A super-light `node:26-alpine` image runs the CLI on a cron schedule: `checkin --notify` → your push webhook (Home Assistant). Outbound-only, so **no open ports, no proxy**.
 
 ### What's where
 

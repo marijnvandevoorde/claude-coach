@@ -2,10 +2,12 @@
 // commands without contacting Garmin. FAKE_DELAY_MS sets how long each "day" takes.
 const [cmd, ...rest] = process.argv.slice(2);
 const flags = Object.fromEntries(
-  rest.filter((a) => a.startsWith("--")).map((a) => {
-    const [k, v] = a.slice(2).split("=");
-    return [k, v ?? true];
-  })
+  rest
+    .filter((a) => a.startsWith("--"))
+    .map((a) => {
+      const [k, v] = a.slice(2).split("=");
+      return [k, v ?? true];
+    })
 );
 const delay = Number(process.env.FAKE_DELAY_MS || 0);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

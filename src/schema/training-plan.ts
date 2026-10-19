@@ -31,22 +31,10 @@ export type WorkoutType =
   | "long";
 
 export type IntensityUnit =
-  | "percent_ftp"
-  | "percent_lthr"
-  | "hr_zone"
-  | "pace_zone"
-  | "rpe"
-  | "css_offset";
+  "percent_ftp" | "percent_lthr" | "hr_zone" | "pace_zone" | "rpe" | "css_offset";
 
 export type DurationUnit =
-  | "seconds"
-  | "minutes"
-  | "hours"
-  | "meters"
-  | "kilometers"
-  | "miles"
-  | "yards"
-  | "laps";
+  "seconds" | "minutes" | "hours" | "meters" | "kilometers" | "miles" | "yards" | "laps";
 
 export type StepType = "warmup" | "work" | "recovery" | "rest" | "cooldown" | "interval_set";
 

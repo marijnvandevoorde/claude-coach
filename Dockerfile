@@ -6,7 +6,7 @@
 # For SQLite, set COACH_DB_PATH (+ GARMINTOKENS) to a mounted volume (see docker-compose.yml).
 
 # ---------- builder: compile TS -> dist ----------
-FROM node:22-alpine AS builder
+FROM node:26-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 # --ignore-scripts skips the `prepare`→husky git-hook step (no .git / no husky in CI).
@@ -17,7 +17,7 @@ RUN npx tsc && cp src/db/schema.sql src/db/schema.mysql.sql dist/db/ \
  && npx vite build --config vite.config.app.ts
 
 # ---------- runtime: prod deps + dist only ----------
-FROM node:22-alpine AS runtime
+FROM node:26-alpine AS runtime
 # tzdata = local-time cron. SQLite (if used) is Node's built-in node:sqlite.
 # The Garmin fetcher is native TypeScript (src/garmin) — no Python, nothing to pip-install.
 RUN apk add --no-cache tzdata

@@ -290,8 +290,7 @@
             class="form-textarea"
             bind:value={editDescription}
             placeholder="Conversational pace, focus on form"
-            rows="2"
-          ></textarea>
+            rows="2"></textarea>
         </div>
 
         <div class="form-grid">
@@ -336,8 +335,7 @@
             class="form-textarea mono"
             bind:value={editStructure}
             placeholder="Warm-up: 10min easy&#10;Main: 4x1km @ threshold&#10;Cool-down: 10min easy"
-            rows="5"
-          ></textarea>
+            rows="5"></textarea>
         </div>
       {/if}
     </div>

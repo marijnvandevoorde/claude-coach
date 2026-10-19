@@ -65,12 +65,7 @@ export interface AdherenceVerdict {
 }
 
 export type SessionCategory =
-  | "short-interval"
-  | "threshold"
-  | "steady-long"
-  | "easy"
-  | "hills"
-  | "other";
+  "short-interval" | "threshold" | "steady-long" | "easy" | "hills" | "other";
 
 /** Map the prescription to the category that decides which signal is valid. */
 export function sessionCategory(p: PrescribedSession): SessionCategory {

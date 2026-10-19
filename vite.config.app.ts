@@ -9,7 +9,7 @@ export default defineConfig({
   root: "src/app",
   base: "/app/",
   build: {
-    outDir: resolve(__dirname, "dist/app"),
+    outDir: resolve(import.meta.dirname, "dist/app"),
     emptyOutDir: true,
   },
 });

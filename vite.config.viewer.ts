@@ -9,8 +9,8 @@ function renameOutput(): Plugin {
   return {
     name: "rename-output",
     closeBundle() {
-      const from = resolve(__dirname, "templates/index.html");
-      const to = resolve(__dirname, "templates/plan-viewer.html");
+      const from = resolve(import.meta.dirname, "templates/index.html");
+      const to = resolve(import.meta.dirname, "templates/plan-viewer.html");
       try {
         renameSync(from, to);
       } catch {
@@ -24,7 +24,7 @@ export default defineConfig({
   plugins: [svelte(), viteSingleFile(), renameOutput()],
   root: "src/viewer",
   build: {
-    outDir: resolve(__dirname, "templates"),
+    outDir: resolve(import.meta.dirname, "templates"),
     emptyOutDir: false,
     target: "esnext",
     minify: "esbuild",

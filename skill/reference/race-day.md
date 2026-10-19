@@ -27,12 +27,13 @@
 - Watch Normalized Power, not average power
 
 **Target power for race distance:**
-| Race | % of FTP |
-|------|----------|
-| Sprint | 85-90% |
-| Olympic | 80-85% |
-| 70.3 | 70-77% |
-| Ironman | 65-72% |
+
+| Race    | % of FTP |
+| ------- | -------- |
+| Sprint  | 85-90%   |
+| Olympic | 80-85%   |
+| 70.3    | 70-77%   |
+| Ironman | 65-72%   |
 
 ### Run off Bike
 
