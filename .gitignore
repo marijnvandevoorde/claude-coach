@@ -53,3 +53,6 @@ docker_dist/
 # Global gitignore excludes any lib/ dir; the web app needs src/app/lib/
 !src/app/lib/
 !src/app/lib/**
+
+# Personal research and training notes: kept locally, never committed.
+research/

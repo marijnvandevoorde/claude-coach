@@ -8,7 +8,16 @@ Workouts can be exported as simple calendar events (.ics), Zwift (.zwo), Garmin 
 
 Connect **Garmin Connect** and Claude uses your real recovery and readiness data — sleep, HRV, body battery, training readiness, and training load (CTL/ATL/TSB) — to tailor each day's intensity, not just build a static plan. It can also send **proactive wellness reminders** (hydration, bedtime wind-down, recovery-aware morning check-ins) to your phone. See [Push notifications](#push-notifications-optional) and [`REMINDERS.md`](REMINDERS.md).
 
-> **This is a fork.** Claude Coach is built on the wonderful original by [**Felix Rieseberg** (`felixrieseberg/claude-coach`)](https://github.com/felixrieseberg/claude-coach) — all credit for the core training-plan engine, viewer, and skill design goes to him. This fork extends it with native **Garmin Connect** recovery/readiness, a coach **MCP server**, proactive wellness reminders, free-text journaling, and trail/ultra coaching. The Garmin side was inspired by [**`Taxuspt/garmin_mcp`** (Alexandre Domingues)](https://github.com/Taxuspt/garmin_mcp), whose `garminconnect`-based flow we still use for the one-time token mint. Thank you both. 🙏
+> **This is a fork.** Claude Coach is built on the wonderful original by [**Felix Rieseberg** (`felixrieseberg/claude-coach`)](https://github.com/felixrieseberg/claude-coach) — all credit for the core training-plan engine, viewer, and skill design goes to him. The Garmin side was inspired by [**`Taxuspt/garmin_mcp`** (Alexandre Domingues)](https://github.com/Taxuspt/garmin_mcp), whose `garminconnect`-based flow we still use for the one-time token mint. Thank you both. 🙏
+
+### What this fork adds
+
+- **Garmin Connect sync** — native recovery/readiness fetch and backfill (sleep, HRV, body battery, training load), one shared, refresh-safe OAuth token store, and pushing structured workouts and routes to your watch.
+- **Remote coach MCP server** — the CLI as `mcp__coach__*` tools for Claude Desktop, web, mobile and Code, protected with OAuth (Google sign-in) — see [MCP.md](MCP.md).
+- **Web app** — a PWA dashboard over a persisted training-plan store, with web push.
+- **Proactive wellness reminders** — hydration, bedtime and recovery-aware morning check-ins via webhook or web push — see [REMINDERS.md](REMINDERS.md).
+- **Coaching** — goal-anchored plan generation with a validator, free-text journaling, and trail/ultra support.
+- **Deployment** — a Docker image and Kubernetes deployment (MySQL-backed, no local disk), running at coach.small-victories.co — see [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Examples
 
@@ -16,7 +25,7 @@ See example training plans at [felixrieseberg.github.io/claude-coach](https://fe
 
 ## Installation & Creating a training plan
 
-I happen to work at Anthropic, so this tool is optimized for Claude. To use this tool, you need access to Claude.ai or Claude Code with network access for Skills. Depending on user/admin settings, Skills may have full, partial, or no network access.
+This tool is optimized for Claude. To use this tool, you need access to Claude.ai or Claude Code with network access for Skills. Depending on user/admin settings, Skills may have full, partial, or no network access.
 
 Syncing all your Strava activities and creating a tailored training plan takes ca. 15 minutes.
 
