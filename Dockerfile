@@ -18,6 +18,7 @@ RUN npx tsc && cp src/db/schema.sql src/db/schema.mysql.sql dist/db/ \
 
 # ---------- runtime: prod deps + dist only ----------
 FROM node:26-alpine AS runtime
+LABEL org.opencontainers.image.source="https://github.com/marijnvandevoorde/claude-coach"
 # tzdata = local-time cron. SQLite (if used) is Node's built-in node:sqlite.
 # The Garmin fetcher is native TypeScript (src/garmin) — no Python, nothing to pip-install.
 RUN apk add --no-cache tzdata
