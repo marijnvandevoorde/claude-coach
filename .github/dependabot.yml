@@ -26,6 +26,8 @@ updates:
       # ignore major bumps (they'd outrun the runtime). Minor/patch still flow.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+    cooldown:
+      default-days: 3
 
   # Base image in the Dockerfile at the repo root.
   - package-ecosystem: "docker"
@@ -40,6 +42,8 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    cooldown:
+      default-days: 3
 
   # GitHub Actions used by the workflows (keeps actions/* etc. current).
   - package-ecosystem: "github-actions"
@@ -54,3 +58,5 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    cooldown:
+      default-days: 3
