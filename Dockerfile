@@ -7,7 +7,7 @@
 
 # ---------- builder: compile TS -> dist ----------
 # Pinned to 26.12.1: Node security release 2026-10-21 (CVE-2026-106069, -106072, -105482, -105483, -111497).
-FROM node:26.12.1-alpine AS builder
+FROM node:26.13.0-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 # --ignore-scripts skips the `prepare`→husky git-hook step (no .git / no husky in CI).
@@ -19,7 +19,7 @@ RUN npx tsc && cp src/db/schema.sql src/db/schema.mysql.sql dist/db/ \
 
 # ---------- runtime: prod deps + dist only ----------
 # Pinned to 26.12.1: Node security release 2026-10-21 (CVE-2026-106069, -106072, -105482, -105483, -111497).
-FROM node:26.12.1-alpine AS runtime
+FROM node:26.13.0-alpine AS runtime
 LABEL org.opencontainers.image.source="https://github.com/marijnvandevoorde/claude-coach"
 # tzdata = local-time cron. SQLite (if used) is Node's built-in node:sqlite.
 # The Garmin fetcher is native TypeScript (src/garmin) — no Python, nothing to pip-install.
