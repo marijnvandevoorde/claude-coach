@@ -48,7 +48,7 @@
     "mysql2": "^3.24.6",
     "open": "^11.0.4",
     "undici": "^8.12.4",
-    "web-push": "^3.6.7"
+    "web-push": "^4.0.0"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
